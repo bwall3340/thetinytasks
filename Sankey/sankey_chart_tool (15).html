@@ -1,0 +1,3819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sankey Chart Builder - The Tiny Tasks</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-sankey/0.12.3/d3-sankey.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.6;
+            color: #1e293b;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            min-height: 100vh;
+            padding: 0;
+            padding-top: 80px; /* Space for fixed header */
+        }
+
+        /* Header Navigation */
+        .main-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+            z-index: 1000;
+        }
+
+        .nav-brand h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            text-transform: lowercase;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            margin: 0;
+        }
+
+        /* Hamburger Menu */
+        .hamburger-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            cursor: pointer;
+            padding: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .hamburger-menu span {
+            width: 24px;
+            height: 2px;
+            background: #1e293b;
+            border-radius: 2px;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .hamburger-menu.active span:nth-child(1) {
+            transform: rotate(45deg) translate(5px, 5px);
+        }
+
+        .hamburger-menu.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .hamburger-menu.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(7px, -6px);
+        }
+
+        /* Mobile Menu */
+        .mobile-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(20px);
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .mobile-menu.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .mobile-menu-content {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 300px;
+            height: 100vh;
+            background: #ffffff;
+            padding: 2rem;
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .mobile-menu.active .mobile-menu-content {
+            transform: translateX(0);
+        }
+
+        .mobile-menu-content h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            color: #1e293b;
+        }
+
+        .mobile-menu-content ul {
+            list-style: none;
+        }
+
+        .mobile-menu-content li {
+            margin-bottom: 1rem;
+        }
+
+        .mobile-menu-content a {
+            color: #64748b;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.75rem 0;
+            display: block;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .mobile-menu-content a:hover {
+            color: #6366f1;
+            background: rgba(99, 102, 241, 0.1);
+            padding-left: 1rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            border-radius: 16px;
+            backdrop-filter: blur(20px);
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            text-transform: lowercase;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .controls {
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.8);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+            backdrop-filter: blur(20px);
+        }
+
+        .control-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 0.875rem;
+            letter-spacing: 0.025em;
+        }
+
+        .file-input {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .file-input input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 0.8rem 1.5rem;
+            background: linear-gradient(135deg, #6366F1, #8b5cf6);
+            color: #ffffff;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            border: 2px dashed transparent;
+            letter-spacing: 0.5px;
+        }
+
+        .file-input:hover .file-input-label {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+        }
+
+        .control-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        select, input[type="number"], textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            border-radius: 8px;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.9);
+            font-family: inherit;
+        }
+
+        select:focus, input[type="number"]:focus, textarea:focus {
+            outline: none;
+            border-color: rgba(99, 102, 241, 0.3);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+            font-family: 'Inter', monospace;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #10B981, #059669);
+            color: #ffffff;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            width: 100%;
+            margin-top: 0.5rem;
+            letter-spacing: 0.5px;
+            font-family: inherit;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+        }
+
+        .chart-container {
+            padding: 2rem;
+            min-height: 600px;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            overflow: auto;
+            position: relative;
+        }
+
+        .zoom-controls {
+            position: absolute;
+            bottom: 1rem;
+            right: 1rem;
+            z-index: 100;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .fullscreen-controls {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            z-index: 100;
+        }
+
+        .fullscreen-btn {
+            background: rgba(99, 102, 241, 0.9);
+            color: white;
+            border: none;
+            padding: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .fullscreen-btn:hover {
+            background: rgba(99, 102, 241, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        }
+
+        /* Fullscreen overlay */
+        .fullscreen-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 9999;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(30px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .fullscreen-overlay.active {
+            display: flex;
+        }
+
+        .fullscreen-overlay .fullscreen-controls {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            z-index: 100;
+        }
+
+        .fullscreen-overlay .zoom-controls {
+            position: absolute;
+            bottom: 1rem;
+            right: 1rem;
+            z-index: 100;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .fullscreen-overlay .fullscreen-btn {
+            background: rgba(239, 68, 68, 0.9);
+        }
+
+        .fullscreen-overlay .fullscreen-btn:hover {
+            background: rgba(239, 68, 68, 1);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+
+        .fullscreen-chart-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .zoom-btn {
+            background: rgba(99, 102, 241, 0.9);
+            color: white;
+            border: none;
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            font-family: inherit;
+        }
+
+        .zoom-btn:hover {
+            background: rgba(99, 102, 241, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        }
+
+        #chart {
+            cursor: grab;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+        }
+
+        #chart.dragging {
+            cursor: grabbing;
+        }
+
+        .status {
+            padding: 1rem 1.5rem;
+            margin: 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        .status.success {
+            background: rgba(16, 185, 129, 0.1);
+            color: #065f46;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .status.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #991b1b;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .status.info {
+            background: rgba(99, 102, 241, 0.1);
+            color: #3730a3;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+
+        .sample-data {
+            background: rgba(99, 102, 241, 0.05);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .sample-data h3 {
+            color: #6366F1;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .sample-data pre {
+            background: rgba(99, 102, 241, 0.1);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.875rem;
+            color: #1e293b;
+            font-family: 'Inter', monospace;
+        }
+
+        /* Simple Path Controls */
+        .simple-path-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(16, 185, 129, 0.05);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 6px;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+
+        .simple-path-controls label {
+            font-weight: 500;
+            color: #1e293b;
+        }
+
+        .simple-path-controls select {
+            padding: 5px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            background: white;
+            font-size: 14px;
+            min-width: 120px;
+        }
+
+        .simple-path-controls select:disabled {
+            background: #f9fafb;
+            color: #9ca3af;
+        }
+
+        .simple-path-controls button {
+            padding: 5px 12px;
+            background: #dc2626;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .simple-path-controls button:hover {
+            background: #b91c1c;
+        }
+
+        /* Fullscreen path controls positioning */
+        #fullscreenPathControls {
+            position: absolute;
+            bottom: 140px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            z-index: 1001;
+        }
+
+        /* Fullscreen sizing controls positioning */
+        #fullscreenSizingControls {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            z-index: 1001;
+        }
+
+        /* Dynamic Chart Sizing Controls */
+        .chart-sizing-controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 10px;
+            background: rgba(99, 102, 241, 0.05);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 6px;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+
+        .sizing-control-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .sizing-control-group label {
+            font-weight: 500;
+            color: #1e293b;
+            min-width: 90px;
+        }
+
+        .size-btn {
+            width: 28px;
+            height: 28px;
+            background: #6366f1;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .size-btn:hover {
+            background: #5856eb;
+        }
+
+        .sizing-control-group span {
+            min-width: 40px;
+            text-align: center;
+            font-weight: 600;
+            color: #6366f1;
+        }
+
+        .sizing-info {
+            margin-left: auto;
+            font-size: 12px;
+            color: #64748b;
+            font-style: italic;
+        }
+
+        .link {
+            fill-opacity: 0.7;
+            transition: all 0.3s ease;
+            stroke: none;
+            cursor: pointer;
+        }
+
+        .link:hover {
+            fill-opacity: 0.9;
+            filter: brightness(1.1);
+        }
+
+        .link.selected {
+            fill-opacity: 1;
+            filter: brightness(1.2) drop-shadow(0 0 8px rgba(0,0,0,0.3));
+        }
+
+        .link.faded {
+            fill-opacity: 0.15;
+            filter: grayscale(0.5);
+        }
+
+        .node rect {
+            cursor: pointer;
+            shape-rendering: crispEdges;
+            transition: all 0.3s ease;
+            stroke-width: 0;
+            stroke: none;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        }
+
+        .node rect:hover {
+            filter: brightness(1.1) drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        }
+
+        .node rect.selected {
+            filter: brightness(1.2) drop-shadow(0 0 10px rgba(0,0,0,0.4));
+        }
+
+        .node rect.faded {
+            opacity: 0.2;
+            filter: grayscale(0.7);
+        }
+
+        .node text.faded {
+            opacity: 0.3;
+        }
+
+        .selection-info {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            max-width: 300px;
+        }
+
+        .selection-info h4 {
+            margin-bottom: 10px;
+            color: #60a5fa;
+            font-size: 1rem;
+        }
+
+        .selection-info .item {
+            margin-bottom: 5px;
+            padding: 3px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .selection-info .clear-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 0.8rem;
+        }
+
+        .selection-info .clear-btn:hover {
+            background: #dc2626;
+        }
+
+        .node text {
+            pointer-events: none;
+            stroke: rgba(255,255,255,0.8);
+            stroke-width: 0.5px;
+            paint-order: stroke fill;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 12px 15px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            pointer-events: none;
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(5px);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            body {
+                padding-top: 80px;
+                padding-left: 1rem;
+                padding-right: 1rem;
+                padding-bottom: 1rem;
+            }
+
+            .main-header {
+                padding: 0 1rem;
+            }
+
+            .nav-brand h2 {
+                font-size: 1.25rem;
+            }
+
+            .current-tool {
+                font-size: 0.75rem;
+            }
+
+            .container {
+                border-radius: 12px;
+                margin: 1rem auto;
+            }
+
+            .header {
+                padding: 1.5rem;
+            }
+
+            .header h1 {
+                font-size: clamp(1.25rem, 5vw, 2rem);
+            }
+
+            .controls {
+                padding: 1.5rem;
+            }
+
+            .control-row {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .chart-container {
+                padding: 1rem;
+            }
+
+            .zoom-controls {
+                top: 0.5rem;
+                right: 0.5rem;
+                gap: 0.25rem;
+            }
+
+            .zoom-btn {
+                padding: 0.4rem 0.6rem;
+                font-size: 0.75rem;
+            }
+
+            .status {
+                margin: 1rem;
+                padding: 0.75rem 1rem;
+            }
+
+            .sample-data {
+                margin: 1rem;
+                padding: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .control-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Accessibility */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header Navigation -->
+    <nav class="main-header">
+        <div class="nav-brand">
+            <a href="../index.html" style="text-decoration: none; color: inherit;">
+                <h2>the tiny tasks</h2>
+            </a>
+        </div>
+        <div class="hamburger-menu" id="hamburger-menu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </nav>
+
+    <!-- Mobile Menu Overlay -->
+    <div class="mobile-menu" id="mobile-menu">
+        <div class="mobile-menu-content">
+            <h3>Tools</h3>
+            <ul>
+                <li><a href="../index.html">← Back to Tools</a></li>
+                <li><a href="../WhiteBackgroundRemover/index.html">Background Remover</a></li>
+                <li><a href="#" onclick="window.location.reload()">Refresh Tool</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>🌊 Sankey Chart Builder</h1>
+            <p>Create beautiful flow diagrams from your Excel data</p>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label>📁 Upload Excel File (.xlsx, .xls, .csv)</label>
+                <div class="file-input">
+                    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+                    <label for="fileInput" class="file-input-label">
+                        Choose File or Drag & Drop
+                    </label>
+                </div>
+            </div>
+
+            <div class="control-row">
+                <div class="control-group">
+                    <label>📊 Source Column</label>
+                    <select id="sourceColumn">
+                        <option value="">Select source column...</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>🎯 Target Column</label>
+                    <select id="targetColumn">
+                        <option value="">Select target column...</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>📈 Value Column</label>
+                    <select id="valueColumn">
+                        <option value="">Select value column...</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-row">
+                <div class="control-group">
+                    <label>🎨 Color Palette</label>
+                    <select id="colorPalette">
+                        <option value="professional">Professional (16 colors)</option>
+                        <option value="vibrant">Vibrant (16 colors)</option>
+                        <option value="modern">Modern (16 colors)</option>
+                        <option value="extended">Extended (32 colors)</option>
+                        <option value="comprehensive">Comprehensive (128 colors)</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>📐 Chart Width</label>
+                    <input type="number" id="chartWidth" value="1200" min="400" max="2000">
+                </div>
+                <div class="control-group">
+                    <label>📏 Chart Height</label>
+                    <input type="number" id="chartHeight" value="600" min="300" max="1200">
+                </div>
+            </div>
+
+            <div class="control-row">
+                <div class="control-group">
+                    <label>🔧 Node Padding</label>
+                    <input type="number" id="nodePadding" value="15" min="8" max="50">
+                </div>
+                <div class="control-group"></div>
+                <div class="control-group"></div>
+            </div>
+
+
+            <button class="btn" onclick="generateChart()">🚀 Generate Sankey Chart</button>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="btn" id="downloadPngBtn" onclick="downloadPNG()" style="display: none; flex: 1;">📥 Download as PNG</button>
+                <button class="btn" id="downloadJpgBtn" onclick="downloadJPG()" style="display: none; flex: 1;">📥 Download as JPG</button>
+            </div>
+
+            <div class="sample-data">
+                <h3>📋 Sample Data Format</h3>
+                <pre>Source,Target,Value
+Energy,Electricity,100
+Energy,Heat,80
+Electricity,Industry,60
+Electricity,Residential,40
+Heat,Industry,50
+Heat,Residential,30</pre>
+            </div>
+        </div>
+
+        <div id="status"></div>
+        <div class="chart-container" id="chartContainer">
+            <div class="fullscreen-controls">
+                <button class="fullscreen-btn" onclick="toggleFullscreen()" id="fullscreenBtn">⛶</button>
+            </div>
+            <div class="zoom-controls" id="zoomControls" style="display: none;">
+                <button class="zoom-btn" onclick="zoomIn()">🔍+</button>
+                <button class="zoom-btn" onclick="zoomOut()">🔍-</button>
+                <button class="zoom-btn" onclick="resetZoom()">⌂</button>
+            </div>
+            <div id="chart"></div>
+        </div>
+
+        <!-- Simple Path Tracing Controls -->
+        <div class="simple-path-controls" id="pathTracingControls" style="display: none;">
+            <label>From:</label>
+            <select id="fromNode">
+                <option value="">Select starting node...</option>
+            </select>
+            <label>To:</label>
+            <select id="toNode" disabled>
+                <option value="">Select destination...</option>
+            </select>
+            <button onclick="clearPathTracing()">Clear</button>
+        </div>
+
+        <!-- Dynamic Chart Sizing Controls -->
+        <div class="chart-sizing-controls" id="chartSizingControls" style="display: none;">
+            <div class="sizing-control-group">
+                <label>Column Width:</label>
+                <button class="size-btn" onclick="adjustColumnWidth(-20)">−</button>
+                <span id="columnWidthValue">200</span>
+                <button class="size-btn" onclick="adjustColumnWidth(20)">+</button>
+            </div>
+            <div class="sizing-control-group">
+                <label>Node Spacing:</label>
+                <button class="size-btn" onclick="adjustNodeSpacing(-2)">−</button>
+                <span id="nodeSpacingValue">15</span>
+                <button class="size-btn" onclick="adjustNodeSpacing(2)">+</button>
+            </div>
+            <div class="sizing-info">
+                <span id="chartDimensionsInfo">Chart: Auto-sized</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fullscreen overlay -->
+    <div class="fullscreen-overlay" id="fullscreenOverlay">
+        <div class="fullscreen-controls">
+            <button class="fullscreen-btn" onclick="toggleFullscreen()" id="fullscreenOverlayBtn">✕</button>
+        </div>
+        <div class="zoom-controls">
+            <button class="zoom-btn" onclick="zoomIn()">🔍+</button>
+            <button class="zoom-btn" onclick="zoomOut()">🔍-</button>
+            <button class="zoom-btn" onclick="resetZoom()">⌂</button>
+        </div>
+
+        <!-- Simple Path Tracing Controls for Fullscreen -->
+        <div class="simple-path-controls" id="fullscreenPathControls" style="display: none;">
+            <label>From:</label>
+            <select id="fullscreenFromNode">
+                <option value="">Select starting node...</option>
+            </select>
+            <label>To:</label>
+            <select id="fullscreenToNode" disabled>
+                <option value="">Select destination...</option>
+            </select>
+            <button onclick="clearPathTracing()">Clear</button>
+        </div>
+
+        <!-- Dynamic Chart Sizing Controls for Fullscreen -->
+        <div class="chart-sizing-controls" id="fullscreenSizingControls" style="display: none;">
+            <div class="sizing-control-group">
+                <label>Column Width:</label>
+                <button class="size-btn" onclick="adjustColumnWidth(-20)">−</button>
+                <span id="fullscreenColumnWidthValue">200</span>
+                <button class="size-btn" onclick="adjustColumnWidth(20)">+</button>
+            </div>
+            <div class="sizing-control-group">
+                <label>Node Spacing:</label>
+                <button class="size-btn" onclick="adjustNodeSpacing(-2)">−</button>
+                <span id="fullscreenNodeSpacingValue">15</span>
+                <button class="size-btn" onclick="adjustNodeSpacing(2)">+</button>
+            </div>
+            <div class="sizing-info">
+                <span id="fullscreenChartDimensionsInfo">Chart: Auto-sized</span>
+            </div>
+        </div>
+
+        <div class="fullscreen-chart-content" id="fullscreenChart"></div>
+    </div>
+
+    <script>
+        let currentData = null;
+        let currentSankeyData = null; // Store the processed Sankey data for fullscreen
+        let tooltip = null;
+        let selectedNodes = new Set();
+        let selectedLinks = new Set();
+        let selectionInfo = null;
+        let zoomBehavior = null;
+        let currentZoom = d3.zoomIdentity;
+        let currentSankeyNodes = [];
+
+        // Control flag to prevent autoScale conflicts during transform restoration
+        window.skipAutoScale = false;
+
+        // Get the chart title position for alignment
+        function getChartTitlePosition() {
+            return {
+                x: autoChartWidth / 2,  // Title is positioned at width/2
+                y: 30                   // Title Y position
+            };
+        }
+
+        // Calculate viewBox for top-aligned positioning
+        function calculateTopAlignedViewBox(containerWidth, containerHeight) {
+            const titlePos = getChartTitlePosition();
+            const topOffset = 20; // Small offset from top to prevent cropping
+
+            return {
+                x: titlePos.x - (containerWidth / 2),    // Center horizontally on title
+                y: titlePos.y - topOffset,                // Align top with small offset
+                width: containerWidth,
+                height: containerHeight
+            };
+        }
+
+        // Path tracing variables
+        let pathTracingActive = false;
+        let currentPath = [];
+        let pathFromNode = null;
+        let pathToNode = null;
+
+        // Dynamic sizing variables
+        let columnWidth = 200; // Width between columns
+        let nodeSpacing = 15;  // Space between nodes
+        let autoChartWidth = 1200;
+        let autoChartHeight = 600;
+        let regenerateTimeout = null; // For debouncing chart updates
+
+        // Selection management functions
+        function clearSelection() {
+            selectedNodes.clear();
+            selectedLinks.clear();
+            updateVisualization();
+            updateSelectionInfo();
+        }
+
+        function isCtrlPressed(event) {
+            return event.ctrlKey || event.metaKey; // Support both Ctrl and Cmd (Mac)
+        }
+
+        function toggleNodeSelection(nodeName, event) {
+            if (isCtrlPressed(event)) {
+                // Multi-select mode
+                if (selectedNodes.has(nodeName)) {
+                    selectedNodes.delete(nodeName);
+                } else {
+                    selectedNodes.add(nodeName);
+                }
+            } else {
+                // Single select mode
+                selectedNodes.clear();
+                selectedLinks.clear();
+                selectedNodes.add(nodeName);
+            }
+            updateVisualization();
+            updateSelectionInfo();
+        }
+
+        function toggleLinkSelection(linkId, event) {
+            if (isCtrlPressed(event)) {
+                // Multi-select mode
+                if (selectedLinks.has(linkId)) {
+                    selectedLinks.delete(linkId);
+                } else {
+                    selectedLinks.add(linkId);
+                }
+            } else {
+                // Single select mode
+                selectedNodes.clear();
+                selectedLinks.clear();
+                selectedLinks.add(linkId);
+            }
+            updateVisualization();
+            updateSelectionInfo();
+        }
+
+        function updateVisualization() {
+            // Check if we're in fullscreen mode and update the appropriate chart
+            const fullscreenOverlay = document.getElementById('fullscreenOverlay');
+            const isFullscreen = fullscreenOverlay && fullscreenOverlay.classList.contains('active');
+
+            const chartSelector = isFullscreen ? '#fullscreenChart svg' : '#chart svg';
+            const svg = d3.select(chartSelector);
+            if (!svg.node()) return;
+
+            const hasSelection = selectedNodes.size > 0 || selectedLinks.size > 0;
+
+            if (pathTracingActive) {
+                // When path tracing is active, only highlight exact path elements
+                svg.select('.zoom-group').selectAll('.node rect')
+                    .classed('selected', d => selectedNodes.has(d.name))
+                    .classed('faded', d => hasSelection && !selectedNodes.has(d.name));
+
+                svg.select('.zoom-group').selectAll('.node text')
+                    .classed('faded', d => hasSelection && !selectedNodes.has(d.name));
+
+                svg.select('.zoom-group').selectAll('.link')
+                    .classed('selected', (d, i) => selectedLinks.has(i))
+                    .classed('faded', (d, i) => hasSelection && !selectedLinks.has(i));
+            } else {
+                // Normal selection behavior - show connected elements
+                svg.select('.zoom-group').selectAll('.node rect')
+                    .classed('selected', d => selectedNodes.has(d.name))
+                    .classed('faded', d => hasSelection && !selectedNodes.has(d.name) && !isNodeConnectedToSelection(d));
+
+                svg.select('.zoom-group').selectAll('.node text')
+                    .classed('faded', d => hasSelection && !selectedNodes.has(d.name) && !isNodeConnectedToSelection(d));
+
+                svg.select('.zoom-group').selectAll('.link')
+                    .classed('selected', (d, i) => selectedLinks.has(i))
+                    .classed('faded', (d, i) => hasSelection && !selectedLinks.has(i) && !isLinkConnectedToSelection(d));
+            }
+        }
+
+        function isNodeConnectedToSelection(node) {
+            // Check if node is connected to any selected nodes or links
+            const fullscreenOverlay = document.getElementById('fullscreenOverlay');
+            const isFullscreen = fullscreenOverlay && fullscreenOverlay.classList.contains('active');
+            const chartSelector = isFullscreen ? '#fullscreenChart svg' : '#chart svg';
+
+            const svg = d3.select(chartSelector);
+            const links = svg.select('.zoom-group').selectAll('.link').data();
+            
+            return links.some((link, i) => {
+                if (selectedLinks.has(i)) {
+                    return link.source.name === node.name || link.target.name === node.name;
+                }
+                return false;
+            }) || (selectedNodes.size > 0 && links.some(link => 
+                (selectedNodes.has(link.source.name) && link.target.name === node.name) ||
+                (selectedNodes.has(link.target.name) && link.source.name === node.name)
+            ));
+        }
+
+        function isLinkConnectedToSelection(link) {
+            // Check if link is connected to any selected nodes
+            return selectedNodes.has(link.source.name) || selectedNodes.has(link.target.name);
+        }
+
+        function updateSelectionInfo() {
+            // Remove existing selection info
+            if (selectionInfo) {
+                selectionInfo.remove();
+                selectionInfo = null;
+            }
+
+            if (selectedNodes.size === 0 && selectedLinks.size === 0) return;
+
+            // Create selection info panel
+            selectionInfo = d3.select('body')
+                .append('div')
+                .attr('class', 'selection-info');
+
+            let infoHTML = '<h4>📌 Selection</h4>';
+            
+            if (selectedNodes.size > 0) {
+                infoHTML += '<div><strong>Nodes:</strong></div>';
+                selectedNodes.forEach(nodeName => {
+                    infoHTML += `<div class="item">• ${nodeName}</div>`;
+                });
+            }
+
+            if (selectedLinks.size > 0) {
+                infoHTML += '<div><strong>Flows:</strong></div>';
+                const fullscreenOverlay = document.getElementById('fullscreenOverlay');
+                const isFullscreen = fullscreenOverlay && fullscreenOverlay.classList.contains('active');
+                const chartSelector = isFullscreen ? '#fullscreenChart svg' : '#chart svg';
+
+                const svg = d3.select(chartSelector);
+                const links = svg.select('.zoom-group').selectAll('.link').data();
+                
+                selectedLinks.forEach(linkIndex => {
+                    const link = links[linkIndex];
+                    if (link) {
+                        infoHTML += `<div class="item">• ${link.source.name} → ${link.target.name} (${link.value.toLocaleString()})</div>`;
+                    }
+                });
+            }
+
+            infoHTML += '<button class="clear-btn" onclick="clearSelection()">Clear Selection</button>';
+            infoHTML += '<div style="margin-top: 10px; font-size: 0.8rem; opacity: 0.7;">Ctrl+Click to multi-select</div>';
+
+            selectionInfo.html(infoHTML);
+        }
+
+        // Initialize tooltip
+        function initTooltip() {
+            tooltip = d3.select("body").append("div")
+                .attr("class", "tooltip")
+                .style("opacity", 0);
+        }
+
+        // File input handling
+        document.getElementById('fileInput').addEventListener('change', handleFile);
+
+        function handleFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Clear the sample chart when user uploads their own data
+            document.getElementById('chart').innerHTML = '';
+            document.getElementById('downloadPngBtn').style.display = 'none';
+            document.getElementById('downloadJpgBtn').style.display = 'none';
+
+            console.log('File selected:', file.name, file.type, file.size); // Debug logging
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    let data;
+                    const fileName = file.name.toLowerCase();
+                    console.log('File loaded, processing...'); // Debug logging
+
+                    if (fileName.endsWith('.csv')) {
+                        // Parse CSV
+                        const text = e.target.result;
+                        console.log('CSV text length:', text.length); // Debug logging
+                        console.log('First 200 characters:', text.substring(0, 200)); // Debug logging
+                        data = parseCSV(text);
+                    } else {
+                        // Parse Excel
+                        const workbook = XLSX.read(e.target.result, {type: 'binary'});
+                        const sheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[sheetName];
+                        data = XLSX.utils.sheet_to_json(worksheet);
+                    }
+
+                    if (!data || data.length === 0) {
+                        showStatus('No data found in file. Please check the file format.', 'error');
+                        return;
+                    }
+
+                    currentData = data;
+                    populateColumnSelects(data);
+                    showStatus(`Successfully loaded ${data.length} rows from ${file.name}`, 'success');
+                } catch (error) {
+                    console.error('File processing error:', error); // Debug logging
+                    showStatus(`Error reading file: ${error.message}`, 'error');
+                }
+            };
+
+            reader.onerror = function() {
+                console.error('FileReader error'); // Debug logging
+                showStatus('Error reading file', 'error');
+            };
+
+            if (file.name.toLowerCase().endsWith('.csv')) {
+                reader.readAsText(file);
+            } else {
+                reader.readAsBinaryString(file);
+            }
+        }
+
+        function parseCSV(text) {
+            // Remove BOM character if present
+            if (text.charCodeAt(0) === 0xFEFF) {
+                text = text.substr(1);
+            }
+            
+            const lines = text.trim().split('\n').filter(line => line.trim() !== ''); // Remove empty lines
+            
+            if (lines.length === 0) {
+                console.error('CSV file appears to be empty');
+                return [];
+            }
+            
+            const headers = lines[0].split(',').map(h => h.trim().replace(/^["']|["']$/g, '')); // Remove quotes and trim
+            console.log('CSV Headers detected:', headers); // Debug logging
+            
+            const data = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line === '') continue; // Skip empty lines
+                
+                const values = line.split(',').map(v => v.trim().replace(/^["']|["']$/g, '')); // Remove quotes
+                const row = {};
+                
+                headers.forEach((header, index) => {
+                    if (header !== '') { // Only add non-empty headers
+                        row[header] = values[index] || '';
+                    }
+                });
+                
+                // Only add rows that have at least one non-empty value
+                if (Object.values(row).some(value => value !== '')) {
+                    data.push(row);
+                }
+            }
+
+            console.log('Parsed CSV data:', data.length, 'rows'); // Debug logging
+            console.log('Sample row:', data[0]); // Debug logging
+            
+            return data;
+        }
+
+        function populateColumnSelects(data) {
+            console.log('populateColumnSelects called with:', data); // Debug logging
+            
+            if (!data || data.length === 0) {
+                console.error('No data provided to populateColumnSelects');
+                return;
+            }
+
+            const columns = Object.keys(data[0]).filter(col => col.trim() !== ''); // Filter out empty column names
+            console.log('Columns found:', columns); // Debug logging
+            
+            const selects = ['sourceColumn', 'targetColumn', 'valueColumn'];
+
+            selects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                if (!select) {
+                    console.error(`Select element with id '${selectId}' not found`);
+                    return;
+                }
+                
+                select.innerHTML = '<option value="">Select column...</option>';
+                
+                columns.forEach(column => {
+                    const option = document.createElement('option');
+                    option.value = column;
+                    option.textContent = column;
+                    select.appendChild(option);
+                });
+                
+                console.log(`Populated ${selectId} with ${columns.length} options`); // Debug logging
+            });
+        }
+
+        function showStatus(message, type = 'success') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+            
+            setTimeout(() => {
+                statusDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        function generateChart() {
+            const sourceCol = document.getElementById('sourceColumn').value;
+            const targetCol = document.getElementById('targetColumn').value;
+            const valueCol = document.getElementById('valueColumn').value;
+            let sankeyData;
+
+            try {
+                if (currentData && sourceCol && targetCol && valueCol) {
+                    // Convert tabular data to Sankey format
+                    sankeyData = convertToSankeyData(currentData, sourceCol, targetCol, valueCol);
+                } else {
+                    showStatus('Please upload data and select columns', 'error');
+                    return;
+                }
+
+                renderSankeyChart(sankeyData);
+                showStatus('Chart generated successfully!', 'success');
+            } catch (error) {
+                showStatus(`Error generating chart: ${error.message}`, 'error');
+            }
+        }
+
+        function convertToSankeyData(data, sourceCol, targetCol, valueCol) {
+            const nodes = new Set();
+            const links = [];
+
+            // Collect all unique nodes
+            data.forEach(row => {
+                if (row[sourceCol] && row[sourceCol].toString().trim()) {
+                    nodes.add(row[sourceCol].toString().trim());
+                }
+                if (row[targetCol] && row[targetCol].toString().trim()) {
+                    nodes.add(row[targetCol].toString().trim());
+                }
+            });
+
+            const nodeArray = Array.from(nodes).map(name => ({ name }));
+            
+            // Create links with node names (not indices) for D3 Sankey
+            data.forEach(row => {
+                const source = row[sourceCol] ? row[sourceCol].toString().trim() : null;
+                const target = row[targetCol] ? row[targetCol].toString().trim() : null;
+                const value = parseFloat(row[valueCol]);
+                
+                if (source && target && !isNaN(value) && value > 0) {
+                    links.push({
+                        source: source,
+                        target: target,
+                        value: value
+                    });
+                }
+            });
+
+            return { nodes: nodeArray, links };
+        }
+
+        // Modern color palettes for Sankey charts - optimized for white background contrast
+        const colorPalettes = {
+            professional: [
+                '#1e3a8a', '#2563eb', '#1d4ed8', '#2563eb', 
+                '#0891b2', '#0e7490', '#047857', '#065f46', 
+                '#166534', '#365314', '#713f12', '#92400e', 
+                '#c2410c', '#dc2626', '#b91c1c', '#991b1b'
+            ],
+            vibrant: [
+                '#4c1d95', '#5b21b6', '#7c2d12', '#9333ea', 
+                '#c026d3', '#db2777', '#e11d48', '#dc2626', 
+                '#ea580c', '#f59e0b', '#eab308', '#ca8a04', 
+                '#84cc16', '#22c55e', '#059669', '#0d9488'
+            ],
+            modern: [
+                '#0f172a', '#1e293b', '#334155', '#475569', 
+                '#64748b', '#374151', '#111827', '#1f2937', 
+                '#4b5563', '#6b7280', '#047857', '#059669', 
+                '#0891b2', '#0e7490', '#155e75', '#164e63'
+            ],
+            extended: [
+                // Deep blues and purples - high contrast
+                '#0f172a', '#1e1b4b', '#312e81', '#3730a3', '#4338ca', '#4f46e5', '#6366f1', '#7c3aed',
+                // Blues to cyans - medium to dark tones
+                '#1e40af', '#2563eb', '#3b82f6', '#1d4ed8', '#0284c7', '#0891b2', '#0e7490', '#155e75',
+                // Teals and greens - rich tones
+                '#134e4a', '#115e59', '#0f766e', '#0d9488', '#14b8a6', '#059669', '#047857', '#065f46',
+                // Warm colors - rich and saturated
+                '#365314', '#4d7c0f', '#65a30d', '#84cc16', '#a16207', '#ca8a04', '#d97706', '#ea580c',
+                // Reds and magentas - deep tones
+                '#7f1d1d', '#991b1b', '#b91c1c', '#dc2626', '#be123c', '#e11d48', '#be185d', '#a21caf'
+            ],
+            comprehensive: [
+                // Deep Blues - High Contrast (1-16)
+                '#1e3a8a', '#1d4ed8', '#2563eb', '#3b82f6', '#1e40af', '#2563eb', '#0ea5e9', '#0284c7',
+                '#0369a1', '#075985', '#0c4a6e', '#164e63', '#155e75', '#0891b2', '#0e7490', '#082f49',
+                
+                // Rich Teals & Cyans - Vibrant (17-32)
+                '#134e4a', '#115e59', '#0f766e', '#0d9488', '#14b8a6', '#2dd4bf', '#06b6d4', '#0891b2',
+                '#083344', '#164e63', '#155e75', '#0e7490', '#0c4a6e', '#075985', '#0369a1', '#0284c7',
+                
+                // Forest & Emerald Greens - Strong (33-48)
+                '#065f46', '#047857', '#059669', '#10b981', '#166534', '#15803d', '#16a34a', '#22c55e',
+                '#064e3b', '#047857', '#059669', '#10b981', '#14b8a6', '#0d9488', '#0f766e', '#115e59',
+                
+                // Lime & Yellow Greens - Bright (49-64)
+                '#365314', '#4d7c0f', '#65a30d', '#84cc16', '#713f12', '#92400e', '#a16207', '#ca8a04',
+                '#d97706', '#f59e0b', '#fbbf24', '#eab308', '#facc15', '#fde047', '#365314', '#4d7c0f',
+                
+                // Warm Oranges - Bold (65-80)
+                '#ea580c', '#f97316', '#fb923c', '#c2410c', '#dc2626', '#ef4444', '#dc2626', '#b91c1c',
+                '#991b1b', '#7f1d1d', '#92400e', '#a16207', '#ca8a04', '#d97706', '#f59e0b', '#ea580c',
+                
+                // Rich Reds - Vibrant (81-96)
+                '#991b1b', '#b91c1c', '#dc2626', '#ef4444', '#7f1d1d', '#991b1b', '#b91c1c', '#dc2626',
+                '#be123c', '#e11d48', '#f43f5e', '#ec4899', '#db2777', '#be185d', '#a21caf', '#c026d3',
+                
+                // Deep Purples - Rich (97-112)
+                '#581c87', '#6b21a8', '#7c2d12', '#9333ea', '#a855f7', '#8b5cf6', '#7c3aed', '#6d28d9',
+                '#5b21b6', '#4c1d95', '#312e81', '#1e1b4b', '#581c87', '#6b21a8', '#7c2d12', '#9333ea',
+                
+                // Magentas & Roses - Striking (113-128)
+                '#a21caf', '#c026d3', '#d946ef', '#e879f9', '#be185d', '#db2777', '#ec4899', '#f472b6',
+                '#be123c', '#e11d48', '#f43f5e', '#fb7185', '#4c1d95', '#5b21b6', '#6d28d9', '#7c3aed'
+            ]
+        };
+
+        function getSelectedPalette() {
+            const paletteType = document.getElementById('colorPalette').value;
+            return colorPalettes[paletteType] || colorPalettes.professional;
+        }
+
+        // Enhanced color blending for smooth flow transitions
+        function blendColors(color1, color2, ratio) {
+            // Convert hex colors to RGB
+            function hexToRgb(hex) {
+                const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                return result ? {
+                    r: parseInt(result[1], 16),
+                    g: parseInt(result[2], 16),
+                    b: parseInt(result[3], 16)
+                } : null;
+            }
+            
+            // Convert RGB to hex
+            function rgbToHex(r, g, b) {
+                return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+            }
+            
+            const rgb1 = hexToRgb(color1);
+            const rgb2 = hexToRgb(color2);
+            
+            if (!rgb1 || !rgb2) return color1; // Fallback
+            
+            // Blend RGB values
+            const blendedR = Math.round(rgb1.r * (1 - ratio) + rgb2.r * ratio);
+            const blendedG = Math.round(rgb1.g * (1 - ratio) + rgb2.g * ratio);
+            const blendedB = Math.round(rgb1.b * (1 - ratio) + rgb2.b * ratio);
+            
+            return rgbToHex(blendedR, blendedG, blendedB);
+        }
+
+        function assignColorsToStages(nodes) {
+            const selectedPalette = getSelectedPalette();
+            const nodeColorMap = new Map();
+            
+            // Group nodes by their horizontal position (stage/column)
+            const stageWidth = 200; // Approximate width of each stage
+            const nodesByStage = new Map();
+            
+            nodes.forEach(node => {
+                const stage = Math.round(node.x0 / stageWidth);
+                if (!nodesByStage.has(stage)) {
+                    nodesByStage.set(stage, []);
+                }
+                nodesByStage.get(stage).push(node);
+            });
+            
+            // Sequential color assignment for visual cohesion (top-left to bottom-right)
+            let globalColorIndex = 0;
+            
+            // Sort stages by position (left to right)
+            const sortedStages = Array.from(nodesByStage.keys()).sort((a, b) => a - b);
+            
+            sortedStages.forEach(stage => {
+                const stageNodes = nodesByStage.get(stage);
+                
+                // Sort nodes within each stage by vertical position (top to bottom)
+                stageNodes.sort((a, b) => ((a.y0 + a.y1) / 2) - ((b.y0 + b.y1) / 2));
+                
+                // Assign colors sequentially
+                stageNodes.forEach(node => {
+                    const colorIndex = globalColorIndex % selectedPalette.length;
+                    nodeColorMap.set(node.name, selectedPalette[colorIndex]);
+                    globalColorIndex++;
+                });
+            });
+            
+            return nodeColorMap;
+        }
+
+        function generateUniqueColors(count) {
+            // This function is now mainly for fallback - the main logic is in assignColorsToStages
+            const selectedPalette = getSelectedPalette();
+            
+            if (count <= selectedPalette.length) {
+                return selectedPalette.slice(0, count);
+            } else {
+                const colors = [...selectedPalette];
+                const goldenRatio = 0.618033988749895;
+                let hue = Math.random();
+                
+                for (let i = selectedPalette.length; i < count; i++) {
+                    hue += goldenRatio;
+                    hue %= 1;
+                    const saturation = 0.6 + (Math.random() * 0.3);
+                    const lightness = 0.4 + (Math.random() * 0.3);
+                    colors.push(`hsl(${Math.floor(hue * 360)}, ${Math.floor(saturation * 100)}%, ${Math.floor(lightness * 100)}%)`);
+                }
+                return colors;
+            }
+        }
+
+        function calculateNodeValues(sankeyData) {
+            // Calculate input and output values for each node after Sankey processing
+            const nodeValues = new Map();
+            
+            // Initialize all nodes
+            sankeyData.nodes.forEach((node, i) => {
+                nodeValues.set(node.name, {
+                    index: i,
+                    inValue: 0,
+                    outValue: 0,
+                    totalValue: 0
+                });
+            });
+            
+            // Calculate values from processed links
+            sankeyData.links.forEach(link => {
+                const sourceName = link.source.name;
+                const targetName = link.target.name;
+                
+                if (nodeValues.has(sourceName)) {
+                    nodeValues.get(sourceName).outValue += link.value;
+                }
+                if (nodeValues.has(targetName)) {
+                    nodeValues.get(targetName).inValue += link.value;
+                }
+            });
+            
+            // Set total value as max of in/out
+            nodeValues.forEach(node => {
+                node.totalValue = Math.max(node.inValue, node.outValue);
+            });
+            
+            return nodeValues;
+        }
+
+        function downloadPNG() {
+            const svg = document.querySelector('#chart svg');
+            if (!svg) {
+                showStatus('No chart to download. Please generate a chart first.', 'error');
+                return;
+            }
+
+            // Clone the SVG to avoid modifying the original
+            const svgClone = svg.cloneNode(true);
+
+            // Remove background to make it transparent
+            svgClone.style.background = 'none';
+
+            // Get SVG dimensions
+            const width = parseInt(svgClone.getAttribute('width'));
+            const height = parseInt(svgClone.getAttribute('height'));
+
+            // Convert SVG to string with proper XML namespace
+            const svgData = '<?xml version="1.0" encoding="UTF-8"?>' +
+                           new XMLSerializer().serializeToString(svgClone);
+
+            // Create a blob and download as SVG first, then convert to PNG
+            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const URL = window.URL || window.webkitURL || window;
+            const blobURL = URL.createObjectURL(svgBlob);
+
+            // Create image from SVG
+            const img = new Image();
+            img.onload = function() {
+                // Create a canvas element
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                // Set canvas size with higher resolution for better quality
+                const scale = 3; // Higher scale for vector-like quality
+                canvas.width = width * scale;
+                canvas.height = height * scale;
+                canvas.style.width = width + 'px';
+                canvas.style.height = height + 'px';
+                ctx.scale(scale, scale);
+
+                // Don't fill background - leave it transparent for PNG
+
+                // Draw the SVG image
+                ctx.drawImage(img, 0, 0);
+                URL.revokeObjectURL(blobURL);
+
+                // Convert canvas to PNG and download
+                canvas.toBlob(function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'sankey-chart.png';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showStatus('PNG downloaded successfully!', 'success');
+                }, 'image/png');
+            };
+
+            img.onerror = function() {
+                URL.revokeObjectURL(blobURL);
+                showStatus('Error generating image. Please try again.', 'error');
+            };
+
+            img.src = blobURL;
+        }
+
+        function downloadJPG() {
+            const svg = document.querySelector('#chart svg');
+            if (!svg) {
+                showStatus('No chart to download. Please generate a chart first.', 'error');
+                return;
+            }
+
+            // Clone the SVG to avoid modifying the original
+            const svgClone = svg.cloneNode(true);
+
+            // Get SVG dimensions
+            const width = parseInt(svgClone.getAttribute('width'));
+            const height = parseInt(svgClone.getAttribute('height'));
+
+            // Convert SVG to string with proper XML namespace
+            const svgData = '<?xml version="1.0" encoding="UTF-8"?>' +
+                           new XMLSerializer().serializeToString(svgClone);
+
+            // Create a blob and download as SVG first, then convert to JPG
+            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const URL = window.URL || window.webkitURL || window;
+            const blobURL = URL.createObjectURL(svgBlob);
+
+            // Create image from SVG
+            const img = new Image();
+            img.onload = function() {
+                // Create a canvas element
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                // Set canvas size with higher resolution for better quality
+                const scale = 3; // Higher scale for vector-like quality
+                canvas.width = width * scale;
+                canvas.height = height * scale;
+                canvas.style.width = width + 'px';
+                canvas.style.height = height + 'px';
+                ctx.scale(scale, scale);
+
+                // Fill canvas with white background for JPG
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, width, height);
+
+                // Draw the SVG image
+                ctx.drawImage(img, 0, 0);
+                URL.revokeObjectURL(blobURL);
+
+                // Convert canvas to JPG and download
+                canvas.toBlob(function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'sankey-chart.jpg';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showStatus('JPG downloaded successfully!', 'success');
+                }, 'image/jpeg', 0.95);
+            };
+
+            img.onerror = function() {
+                URL.revokeObjectURL(blobURL);
+                showStatus('Error generating image. Please try again.', 'error');
+            };
+
+            img.src = blobURL;
+        }
+
+        // Calculate precise flow boundaries within a node with true-to-value sizing
+        function calculateFlowBounds(currentLink, node, linkType) {
+            const nodeHeight = node.y1 - node.y0;
+            const links = linkType === 'source' ? (node.sourceLinks || []) : (node.targetLinks || []);
+            
+            // Find the index of current link in the sorted links array
+            let currentLinkIndex = -1;
+            for (let i = 0; i < links.length; i++) {
+                if (links[i] === currentLink) {
+                    currentLinkIndex = i;
+                    break;
+                }
+            }
+            
+            if (currentLinkIndex === -1) {
+                // Fallback if link not found - calculate based on node value
+                const flowHeight = (currentLink.value / node.value) * nodeHeight;
+                const centerY = (node.y0 + node.y1) / 2;
+                return {
+                    top: centerY - flowHeight / 2,
+                    bottom: centerY + flowHeight / 2,
+                    height: flowHeight
+                };
+            }
+            
+            // Calculate exact proportional heights with NO gaps - flows must fill entire node
+            // The node height should exactly equal the sum of all flow heights
+            let currentTop = node.y0;
+            
+            // Calculate cumulative position based on exact proportions
+            for (let i = 0; i < currentLinkIndex; i++) {
+                const flowHeight = (links[i].value / node.value) * nodeHeight;
+                currentTop += flowHeight;
+            }
+            
+            // Calculate height for current flow
+            const currentFlowHeight = (currentLink.value / node.value) * nodeHeight;
+            const currentBottom = currentTop + currentFlowHeight;
+            
+            return {
+                top: currentTop,
+                bottom: currentBottom,
+                height: currentFlowHeight
+            };
+        }
+
+        // Enhanced Sankey link path generator with precise flow positioning
+        function customSankeyLinkHorizontal() {
+            return function(d) {
+                const x0 = d.source.x1;
+                const x1 = d.target.x0;
+                
+                // Get precise flow positions within nodes
+                const sourceFlowBounds = calculateFlowBounds(d, d.source, 'source');
+                const targetFlowBounds = calculateFlowBounds(d, d.target, 'target');
+                
+                const sourceTop = sourceFlowBounds.top;
+                const sourceBottom = sourceFlowBounds.bottom;
+                const targetTop = targetFlowBounds.top;
+                const targetBottom = targetFlowBounds.bottom;
+                
+                // Node avoidance disabled - using smart spacing instead
+                // Smart spacing should eliminate the need for complex flow routing
+                
+                // Default smooth curve (fallback for all cases)
+                const curvature = 0.5;
+                const xi = d3.interpolateNumber(x0, x1);
+                const x2 = xi(curvature);
+                const x3 = xi(1 - curvature);
+                
+                return `M${x0},${sourceTop}C${x2},${sourceTop} ${x3},${targetTop} ${x1},${targetTop}L${x1},${targetBottom}C${x3},${targetBottom} ${x2},${sourceBottom} ${x0},${sourceBottom}Z`;
+            };
+        }
+
+        // Simplified node avoidance with reliable flow continuity
+        function calculateNodeAvoidancePath(x0, x1, flowY, currentLink, allNodes) {
+            try {
+                if (!allNodes || allNodes.length === 0) return [];
+                
+                const avoidancePoints = [];
+                const nodeBuffer = 35; // Moderate buffer for clean routing
+                
+                // Check for nodes between source and target
+                const potentialObstacles = allNodes.filter(node => {
+                const nodeX = (node.x0 + node.x1) / 2;
+                const nodeY = (node.y0 + node.y1) / 2;
+                
+                // Node is between source and target horizontally
+                const isBetween = (Math.min(x0, x1) + 15 < nodeX && nodeX < Math.max(x0, x1) - 15);
+                
+                // Node is close to flow path vertically
+                const nodeHeight = node.y1 - node.y0;
+                const verticalOverlap = Math.abs(nodeY - flowY) < (nodeHeight / 2 + nodeBuffer);
+                
+                // Don't avoid source or target nodes of current link
+                const isCurrentLinkNode = node === currentLink.source || node === currentLink.target;
+                
+                return isBetween && verticalOverlap && !isCurrentLinkNode;
+            });
+            
+            // Create simple, reliable avoidance waypoints
+            if (potentialObstacles.length > 0) {
+                // Find the most problematic obstacle (closest to flow center)
+                const primaryObstacle = potentialObstacles.reduce((closest, current) => {
+                    const currentDistance = Math.abs(((current.y0 + current.y1) / 2) - flowY);
+                    const closestDistance = Math.abs(((closest.y0 + closest.y1) / 2) - flowY);
+                    return currentDistance < closestDistance ? current : closest;
+                });
+                
+                const obstacleX = (primaryObstacle.x0 + primaryObstacle.x1) / 2;
+                const obstacleY = (primaryObstacle.y0 + primaryObstacle.y1) / 2;
+                
+                // Always route above obstacles for consistency
+                const chartTopLimit = 180;
+                const avoidanceY = primaryObstacle.y0 > chartTopLimit ? 
+                    primaryObstacle.y0 - nodeBuffer : 
+                    primaryObstacle.y1 + nodeBuffer;
+                
+                // Create three simple waypoints for smooth arcing
+                const flowDistance = Math.abs(x1 - x0);
+                const approach1X = x0 + flowDistance * 0.25;
+                const peakX = obstacleX;
+                const approach2X = x0 + flowDistance * 0.75;
+                
+                // Only add waypoints that are actually needed
+                if (approach1X > Math.min(x0, x1) && approach1X < Math.max(x0, x1)) {
+                    avoidancePoints.push({ x: approach1X, y: flowY + (avoidanceY - flowY) * 0.5 });
+                }
+                
+                avoidancePoints.push({ x: peakX, y: avoidanceY });
+                
+                if (approach2X > Math.min(x0, x1) && approach2X < Math.max(x0, x1)) {
+                    avoidancePoints.push({ x: approach2X, y: flowY + (avoidanceY - flowY) * 0.5 });
+                }
+            }
+            
+            return avoidancePoints.sort((a, b) => a.x - b.x);
+            } catch (error) {
+                console.warn('Node avoidance calculation failed:', error);
+                return []; // Return empty array to fall back to standard flow
+            }
+        }
+
+        // Flow path creation with exact thickness preservation
+        function createCustomFlowPath(x0, x1, sourceTop, sourceBottom, targetTop, targetBottom, waypoints) {
+            const sourceHeight = sourceBottom - sourceTop;
+            const targetHeight = targetBottom - targetTop;
+            
+            // Flow thickness must remain EXACTLY the same - no thinning allowed
+            // Both source and target heights should be identical for proper flow conservation
+            if (Math.abs(sourceHeight - targetHeight) > 0.01) {
+                console.warn('Flow thickness mismatch:', sourceHeight, 'vs', targetHeight);
+            }
+            
+            const exactFlowThickness = sourceHeight; // Use source thickness as the true thickness
+            
+            let path = `M${x0},${sourceTop}`;
+            
+            if (waypoints.length === 0) {
+                // Standard smooth curve with exact thickness preservation
+                const curvature = 0.5;
+                const xi = d3.interpolateNumber(x0, x1);
+                const x2 = xi(curvature);
+                const x3 = xi(1 - curvature);
+                
+                // Ensure target position maintains exact source thickness
+                const correctedTargetTop = targetTop;
+                const correctedTargetBottom = correctedTargetTop + exactFlowThickness;
+                
+                path += `C${x2},${sourceTop} ${x3},${correctedTargetTop} ${x1},${correctedTargetTop}`;
+                path += `L${x1},${correctedTargetBottom}`;
+                path += `C${x3},${correctedTargetBottom} ${x2},${sourceBottom} ${x0},${sourceBottom}Z`;
+                
+                return path;
+            } else {
+                // Create path with EXACT thickness through waypoints - no thinning allowed
+                const totalDistance = Math.abs(x1 - x0);
+                let prevX = x0;
+                let prevTopY = sourceTop;
+                let prevBottomY = sourceBottom;
+                
+                waypoints.forEach((waypoint, i) => {
+                    // Calculate top and bottom positions maintaining EXACT thickness
+                    const waypointTopY = waypoint.y - exactFlowThickness / 2;
+                    const waypointBottomY = waypoint.y + exactFlowThickness / 2;
+                    
+                    // Create smooth curves with consistent control points
+                    const controlDistance = 0.3;
+                    const controlX1 = prevX + (waypoint.x - prevX) * controlDistance;
+                    const controlX2 = waypoint.x - (waypoint.x - prevX) * controlDistance;
+                    
+                    // Top edge curve
+                    path += `C${controlX1},${prevTopY} ${controlX2},${waypointTopY} ${waypoint.x},${waypointTopY}`;
+                    
+                    // Update tracking variables
+                    prevX = waypoint.x;
+                    prevTopY = waypointTopY;
+                    prevBottomY = waypointBottomY;
+                });
+                
+                // Final curve to target with EXACT thickness preservation
+                const finalControlDistance = 0.3;
+                const finalControlX1 = prevX + (x1 - prevX) * finalControlDistance;
+                const finalControlX2 = x1 - (x1 - prevX) * finalControlDistance;
+                
+                // Ensure target maintains exact thickness
+                const correctedTargetTop = targetTop;
+                const correctedTargetBottom = correctedTargetTop + exactFlowThickness;
+                
+                path += `C${finalControlX1},${prevTopY} ${finalControlX2},${correctedTargetTop} ${x1},${correctedTargetTop}`;
+                
+                // Complete the flow shape by drawing to bottom target
+                path += `L${x1},${correctedTargetBottom}`;
+                
+                // Return path maintaining EXACT thickness
+                let returnX = x1;
+                let returnBottomY = correctedTargetBottom;
+                
+                for (let i = waypoints.length - 1; i >= 0; i--) {
+                    const waypoint = waypoints[i];
+                    
+                    // Maintain exact thickness on return path
+                    const waypointBottomY = waypoint.y + exactFlowThickness / 2;
+                    
+                    const returnControlDistance = 0.3;
+                    const returnControlX1 = returnX - (returnX - waypoint.x) * returnControlDistance;
+                    const returnControlX2 = waypoint.x + (returnX - waypoint.x) * returnControlDistance;
+                    
+                    path += `C${returnControlX1},${returnBottomY} ${returnControlX2},${waypointBottomY} ${waypoint.x},${waypointBottomY}`;
+                    
+                    returnX = waypoint.x;
+                    returnBottomY = waypointBottomY;
+                }
+                
+                // Final curve back to source bottom
+                const backToSourceControlDistance = 0.3;
+                const backToSourceControlX1 = returnX - (returnX - x0) * backToSourceControlDistance;
+                const backToSourceControlX2 = x0 + (returnX - x0) * backToSourceControlDistance;
+                path += `C${backToSourceControlX1},${returnBottomY} ${backToSourceControlX2},${sourceBottom} ${x0},${sourceBottom}Z`;
+                
+                return path;
+            }
+        }
+
+        function renderSankeyChart(data, containerId = 'chart') {
+            // Store the data globally for fullscreen re-rendering
+            if (containerId === 'chart') {
+                currentSankeyData = data;
+            }
+            const chartDiv = document.getElementById(containerId);
+            chartDiv.innerHTML = '';
+
+            // Check if we're in fullscreen mode to adjust dimensions
+            const isFullscreen = containerId === 'fullscreenChart';
+            let width, height;
+
+            if (isFullscreen) {
+                // For fullscreen, maximize the screen space usage
+                const containerRect = chartDiv.getBoundingClientRect();
+
+                // Use full screen dimensions with room for controls
+                width = Math.max(autoChartWidth, containerRect.width - 100);
+                height = Math.max(autoChartHeight, containerRect.height - 200); // More room for controls
+            } else {
+                // For main chart, use default size initially, will recalculate after layout
+                width = autoChartWidth;
+                height = autoChartHeight;
+            }
+
+            // Use dynamic node spacing instead of fixed value
+            const nodePadding = nodeSpacing;
+
+            // No legend - simplified chart positioning
+            const chartTopMargin = 80; // Title + spacing only
+
+            // Calculate initial viewBox for top-aligned positioning
+            const viewBox = calculateTopAlignedViewBox(width, height);
+
+            const svg = d3.select(`#${containerId}`)
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height + 50) // Just title space
+                .attr("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`)
+                .style("background", "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)")
+                .style("border-radius", "12px");
+
+            // Create a group for all zoomable content
+            const zoomGroup = svg.append("g")
+                .attr("class", "zoom-group");
+
+            // Setup zoom behavior
+            zoomBehavior = d3.zoom()
+                .scaleExtent([0.1, 5])
+                .on("zoom", function(event) {
+                    currentZoom = event.transform;
+                    zoomGroup.attr("transform", currentZoom);
+                });
+
+            // Set initial zoom transform to identity since viewBox handles initial centering
+            const initialTransform = d3.zoomIdentity;
+            svg.call(zoomBehavior.transform, initialTransform);
+            currentZoom = initialTransform;
+
+            // Enhanced Sankey configuration with optimizations for large datasets
+            const totalNodes = data.nodes ? data.nodes.length : 20;
+            const isLargeDataset = totalNodes > 50;
+
+            // Adjust parameters based on dataset size
+            const nodeWidth = isLargeDataset ? 15 : 20; // Thinner nodes for large datasets
+            const minNodePadding = isLargeDataset ? Math.max(3, nodePadding) : Math.max(12, nodePadding);
+            const iterations = isLargeDataset ? 100 : 150; // Fewer iterations for performance
+
+            const sankey = d3.sankey()
+                .nodeId(d => d.name)
+                .nodeWidth(nodeWidth)
+                .nodePadding(minNodePadding)
+                .nodeAlign(d3.sankeyCenter) // Use center alignment instead of justify
+                .extent([[80, chartTopMargin + 20], [width - 80, height - 50]])
+                .iterations(iterations);
+
+            const sankeyData = sankey(data);
+            let { nodes, links } = sankeyData;
+
+            // Apply custom column spacing
+            nodes = applyCustomColumnSpacing(nodes, width, height);
+
+            // Recompute link paths after node repositioning
+            sankey.update({ nodes, links });
+            
+            // Store nodes globally for avoidance calculations
+            currentSankeyNodes = nodes;
+
+            // Enhanced spacing with overlap prevention and crossover reduction
+            function optimizeSpacingAndFlows() {
+                // Group nodes by column and sort by flow patterns
+                const nodesByColumn = d3.group(nodes, d => Math.round(d.x0));
+                const sortedColumns = Array.from(nodesByColumn.keys()).sort((a, b) => a - b);
+                
+                // Sort nodes within each column to minimize crossovers
+                function sortNodesForMinimalCrossing(columnNodes) {
+                    // Calculate average target position for each node
+                    const nodeTargetWeights = columnNodes.map(node => {
+                        let totalWeight = 0;
+                        let totalValue = 0;
+                        
+                        // For source nodes, consider outgoing links
+                        if (node.sourceLinks) {
+                            node.sourceLinks.forEach(link => {
+                                const targetY = (link.target.y0 + link.target.y1) / 2;
+                                totalWeight += targetY * link.value;
+                                totalValue += link.value;
+                            });
+                        }
+                        
+                        // For target nodes, consider incoming links
+                        if (node.targetLinks) {
+                            node.targetLinks.forEach(link => {
+                                const sourceY = (link.source.y0 + link.source.y1) / 2;
+                                totalWeight += sourceY * link.value;
+                                totalValue += link.value;
+                            });
+                        }
+                        
+                        const avgPosition = totalValue > 0 ? totalWeight / totalValue : (node.y0 + node.y1) / 2;
+                        return { node, avgPosition };
+                    });
+                    
+                    // Sort by weighted average position
+                    return nodeTargetWeights
+                        .sort((a, b) => a.avgPosition - b.avgPosition)
+                        .map(item => item.node);
+                }
+                
+                // Process each column with improved spacing
+                sortedColumns.forEach((columnX, columnIndex) => {
+                    const columnNodes = nodesByColumn.get(columnX);
+                    if (!columnNodes || columnNodes.length <= 1) return;
+                    
+                    // Sort nodes to minimize crossovers
+                    const sortedNodes = sortNodesForMinimalCrossing(columnNodes);
+                    
+                    // Calculate space requirements with node size awareness
+                    const availableHeight = (height - 50) - (chartTopMargin + 20);
+                    const maxNodeSpread = availableHeight * 0.9; // Use more space efficiently
+                    const totalNodeHeight = sortedNodes.reduce((sum, node) => sum + (node.y1 - node.y0), 0);
+                    
+                    // Enhanced minimum spacing with size awareness
+                    let totalMinSpacingNeeded = 0;
+                    for (let i = 0; i < sortedNodes.length - 1; i++) {
+                        const currentNode = sortedNodes[i];
+                        const nextNode = sortedNodes[i + 1];
+                        
+                        // Calculate size-aware spacing: larger nodes need more space
+                        const currentNodeHeight = currentNode.y1 - currentNode.y0;
+                        const nextNodeHeight = nextNode.y1 - nextNode.y0;
+                        const avgNodeHeight = (currentNodeHeight + nextNodeHeight) / 2;
+                        
+                        // Base spacing scales with node size
+                        const baseSpacing = Math.max(12, nodePadding);
+                        const sizeMultiplier = Math.min(2.5, avgNodeHeight / 20); // Cap multiplier at 2.5x
+                        const requiredSpacing = baseSpacing * sizeMultiplier;
+                        
+                        totalMinSpacingNeeded += requiredSpacing;
+                    }
+                    
+                    // Check if we have enough space with size-aware minimum spacing
+                    if (totalNodeHeight + totalMinSpacingNeeded > maxNodeSpread) {
+                        // More intelligent compression that preserves large node spacing
+                        const availableSpacingBudget = maxNodeSpread - totalNodeHeight;
+                        const compressionRatio = Math.max(0.3, availableSpacingBudget / totalMinSpacingNeeded);
+                        
+                        // Position nodes with intelligent compressed spacing
+                        let currentY = chartTopMargin + 20;
+                        for (let i = 0; i < sortedNodes.length; i++) {
+                            const node = sortedNodes[i];
+                            const nodeHeight = node.y1 - node.y0;
+                            
+                            node.y0 = currentY;
+                            node.y1 = currentY + nodeHeight;
+                            
+                            // Calculate next spacing if not last node
+                            if (i < sortedNodes.length - 1) {
+                                const nextNode = sortedNodes[i + 1];
+                                const nextNodeHeight = nextNode.y1 - nextNode.y0;
+                                const avgNodeHeight = (nodeHeight + nextNodeHeight) / 2;
+                                
+                                const baseSpacing = Math.max(12, nodePadding);
+                                const sizeMultiplier = Math.min(2.5, avgNodeHeight / 20);
+                                const optimalSpacing = baseSpacing * sizeMultiplier;
+                                const finalSpacing = Math.max(8, optimalSpacing * compressionRatio);
+                                
+                                currentY = node.y1 + finalSpacing;
+                            }
+                        }
+                    } else {
+                        // Calculate optimal spacing based on flow density
+                        let avgFlowDensity = 0;
+                        let flowAnalysisCount = 0;
+                        
+                        // Analyze flow connections
+                        if (columnIndex < sortedColumns.length - 1) {
+                            const nextColumn = sortedColumns[columnIndex + 1];
+                            const nextNodes = nodesByColumn.get(nextColumn) || [];
+                            let flowCount = 0;
+                            
+                            links.forEach(link => {
+                                if (Math.round(link.source.x0) === columnX && Math.round(link.target.x0) === nextColumn) {
+                                    flowCount++;
+                                }
+                            });
+                            
+                            avgFlowDensity += flowCount / Math.max(sortedNodes.length * nextNodes.length, 1);
+                            flowAnalysisCount++;
+                        }
+                        
+                        if (columnIndex > 0) {
+                            const prevColumn = sortedColumns[columnIndex - 1];
+                            const prevNodes = nodesByColumn.get(prevColumn) || [];
+                            let flowCount = 0;
+                            
+                            links.forEach(link => {
+                                if (Math.round(link.source.x0) === prevColumn && Math.round(link.target.x0) === columnX) {
+                                    flowCount++;
+                                }
+                            });
+                            
+                            avgFlowDensity += flowCount / Math.max(prevNodes.length * sortedNodes.length, 1);
+                            flowAnalysisCount++;
+                        }
+                        
+                        if (flowAnalysisCount > 0) {
+                            avgFlowDensity /= flowAnalysisCount;
+                        }
+                        
+                        // Calculate size-aware optimal spacing
+                        let totalOptimalSpacingNeeded = 0;
+                        const nodeSpacings = []; // Store individual spacing values
+                        
+                        for (let i = 0; i < sortedNodes.length - 1; i++) {
+                            const currentNode = sortedNodes[i];
+                            const nextNode = sortedNodes[i + 1];
+                            
+                            // Calculate size-aware spacing
+                            const currentNodeHeight = currentNode.y1 - currentNode.y0;
+                            const nextNodeHeight = nextNode.y1 - nextNode.y0;
+                            const avgNodeHeight = (currentNodeHeight + nextNodeHeight) / 2;
+                            
+                            // Enhanced spacing calculation
+                            const baseSpacing = Math.max(16, nodePadding * 1.2); // Increased base
+                            const sizeMultiplier = Math.min(2.5, avgNodeHeight / 15); // More generous for large nodes
+                            const densityBonus = avgFlowDensity * 25; // Moderate density bonus
+                            
+                            const optimalSpacing = Math.min(
+                                baseSpacing * sizeMultiplier + densityBonus, 
+                                Math.max(50, avgNodeHeight * 0.8) // Cap based on node size
+                            );
+                            
+                            nodeSpacings.push(optimalSpacing);
+                            totalOptimalSpacingNeeded += optimalSpacing;
+                        }
+                        
+                        const totalOptimalSpace = totalNodeHeight + totalOptimalSpacingNeeded;
+                        
+                        // Center the column and position nodes with individual spacing
+                        const startY = chartTopMargin + 20 + Math.max(0, (maxNodeSpread - totalOptimalSpace) / 2);
+                        let currentY = startY;
+                        
+                        sortedNodes.forEach((node, index) => {
+                            const nodeHeight = node.y1 - node.y0;
+                            node.y0 = currentY;
+                            node.y1 = currentY + nodeHeight;
+                            
+                            // Add individual spacing for next node
+                            if (index < sortedNodes.length - 1) {
+                                currentY = node.y1 + nodeSpacings[index];
+                            }
+                        });
+                        
+                        // Enhanced final overlap check with size-aware minimum gaps
+                        for (let i = 1; i < sortedNodes.length; i++) {
+                            const prevNode = sortedNodes[i - 1];
+                            const currentNode = sortedNodes[i];
+                            
+                            // Calculate size-aware minimum gap
+                            const prevNodeHeight = prevNode.y1 - prevNode.y0;
+                            const currentNodeHeight = currentNode.y1 - currentNode.y0;
+                            const avgNodeHeight = (prevNodeHeight + currentNodeHeight) / 2;
+                            
+                            // Larger nodes need larger minimum gaps
+                            const baseMinGap = Math.max(8, nodePadding * 0.8);
+                            const sizeBasedGap = Math.min(avgNodeHeight * 0.2, 30); // Cap at 30px
+                            const requiredMinGap = baseMinGap + sizeBasedGap;
+                            
+                            // Check for insufficient gap
+                            const currentGap = currentNode.y0 - prevNode.y1;
+                            if (currentGap < requiredMinGap) {
+                                const additionalSpace = requiredMinGap - currentGap;
+                                
+                                // Shift current node and all following nodes down
+                                for (let j = i; j < sortedNodes.length; j++) {
+                                    const nodeHeight = sortedNodes[j].y1 - sortedNodes[j].y0;
+                                    sortedNodes[j].y0 += additionalSpace;
+                                    sortedNodes[j].y1 = sortedNodes[j].y0 + nodeHeight;
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Recalculate link positions
+                sankey.update(sankeyData);
+            }
+            
+            optimizeSpacingAndFlows();
+
+            // Enhanced crossover minimization algorithm with better detection
+            function minimizeCrossovers() {
+                // More sophisticated crossover detection considering flow thickness
+                function countCrossovers(link1, link2) {
+                    // Skip if links share nodes (no crossing possible)
+                    if (link1.source === link2.source || link1.target === link2.target ||
+                        link1.source === link2.target || link1.target === link2.source) {
+                        return 0;
+                    }
+                    
+                    // Only check links between the same column pairs
+                    const link1SourceCol = Math.round(link1.source.x0);
+                    const link1TargetCol = Math.round(link1.target.x0);
+                    const link2SourceCol = Math.round(link2.source.x0);
+                    const link2TargetCol = Math.round(link2.target.x0);
+                    
+                    if (link1SourceCol !== link2SourceCol || link1TargetCol !== link2TargetCol) {
+                        return 0; // Links in different column pairs don't cross
+                    }
+                    
+                    // Calculate weighted positions based on flow position within nodes
+                    const source1Y = (link1.source.y0 + link1.source.y1) / 2;
+                    const target1Y = (link1.target.y0 + link1.target.y1) / 2;
+                    const source2Y = (link2.source.y0 + link2.source.y1) / 2;
+                    const target2Y = (link2.target.y0 + link2.target.y1) / 2;
+                    
+                    // Enhanced crossing detection: consider flow thickness
+                    const sourceDiff = source1Y - source2Y;
+                    const targetDiff = target1Y - target2Y;
+                    
+                    // Basic crossing check
+                    const basicCrossing = (sourceDiff * targetDiff < 0) ? 1 : 0;
+                    
+                    // Weight crossing by flow importance (larger flows matter more)
+                    const crossingWeight = basicCrossing * Math.sqrt(link1.value * link2.value);
+                    
+                    return crossingWeight;
+                }
+
+                // Calculate total crossovers for current arrangement
+                function calculateTotalCrossovers() {
+                    let totalCrossovers = 0;
+                    for (let i = 0; i < links.length; i++) {
+                        for (let j = i + 1; j < links.length; j++) {
+                            // Only count crossovers between links that don't share nodes
+                            if (links[i].source !== links[j].source && 
+                                links[i].target !== links[j].target &&
+                                links[i].source !== links[j].target &&
+                                links[i].target !== links[j].source) {
+                                totalCrossovers += countCrossovers(links[i], links[j]);
+                            }
+                        }
+                    }
+                    return totalCrossovers;
+                }
+
+                // Optimize flow ordering for each node
+                nodes.forEach(node => {
+                    // Optimize source links (outgoing flows)
+                    if (node.sourceLinks && node.sourceLinks.length > 1) {
+                        let bestOrder = [...node.sourceLinks];
+                        let bestCrossovers = calculateTotalCrossovers();
+                        
+                        // Enhanced sorting strategies with better crossover reduction
+                        const strategies = [
+                            // Strategy 1: Sort by target vertical position
+                            (a, b) => ((a.target.y0 + a.target.y1) / 2) - ((b.target.y0 + b.target.y1) / 2),
+                            
+                            // Strategy 2: Sort by flow value (largest flows first for priority)
+                            (a, b) => b.value - a.value,
+                            
+                            // Strategy 3: Weighted position considering flow importance
+                            (a, b) => {
+                                const aPos = (a.target.y0 + a.target.y1) / 2;
+                                const bPos = (b.target.y0 + b.target.y1) / 2;
+                                const aImportance = Math.log(1 + a.value) * 10;
+                                const bImportance = Math.log(1 + b.value) * 10;
+                                return (aPos + aImportance) - (bPos + bImportance);
+                            },
+                            
+                            // Strategy 4: Distance-based sorting (minimize total flow distance)
+                            (a, b) => {
+                                const aSourceY = (a.source.y0 + a.source.y1) / 2;
+                                const aTargetY = (a.target.y0 + a.target.y1) / 2;
+                                const bSourceY = (b.source.y0 + b.source.y1) / 2;
+                                const bTargetY = (b.target.y0 + b.target.y1) / 2;
+                                
+                                const aDistance = Math.abs(aTargetY - aSourceY);
+                                const bDistance = Math.abs(bTargetY - bSourceY);
+                                
+                                return aDistance - bDistance;
+                            },
+                            
+                            // Strategy 5: Anti-crossing heuristic
+                            (a, b) => {
+                                const aPos = (a.target.y0 + a.target.y1) / 2;
+                                const bPos = (b.target.y0 + b.target.y1) / 2;
+                                const sourceY = (node.y0 + node.y1) / 2;
+                                
+                                // Prefer flows that go in the same direction as the node's vertical position
+                                const aAlignment = (aPos - sourceY) * (aPos > sourceY ? 1 : -1);
+                                const bAlignment = (bPos - sourceY) * (bPos > sourceY ? 1 : -1);
+                                
+                                return bAlignment - aAlignment;
+                            }
+                        ];
+
+                        strategies.forEach(sortFn => {
+                            const testOrder = [...node.sourceLinks].sort(sortFn);
+                            node.sourceLinks = testOrder;
+                            const crossovers = calculateTotalCrossovers();
+                            
+                            if (crossovers < bestCrossovers) {
+                                bestCrossovers = crossovers;
+                                bestOrder = [...testOrder];
+                            }
+                        });
+                        
+                        node.sourceLinks = bestOrder;
+                    }
+
+                    // Optimize target links (incoming flows)
+                    if (node.targetLinks && node.targetLinks.length > 1) {
+                        let bestOrder = [...node.targetLinks];
+                        let bestCrossovers = calculateTotalCrossovers();
+                        
+                        const strategies = [
+                            // Strategy 1: Sort by source vertical position
+                            (a, b) => ((a.source.y0 + a.source.y1) / 2) - ((b.source.y0 + b.source.y1) / 2),
+                            
+                            // Strategy 2: Sort by flow value (largest flows first)
+                            (a, b) => b.value - a.value,
+                            
+                            // Strategy 3: Weighted position considering flow importance
+                            (a, b) => {
+                                const aPos = (a.source.y0 + a.source.y1) / 2;
+                                const bPos = (b.source.y0 + b.source.y1) / 2;
+                                const aImportance = Math.log(1 + a.value) * 10;
+                                const bImportance = Math.log(1 + b.value) * 10;
+                                return (aPos + aImportance) - (bPos + bImportance);
+                            },
+                            
+                            // Strategy 4: Distance-based sorting
+                            (a, b) => {
+                                const aSourceY = (a.source.y0 + a.source.y1) / 2;
+                                const aTargetY = (a.target.y0 + a.target.y1) / 2;
+                                const bSourceY = (b.source.y0 + b.source.y1) / 2;
+                                const bTargetY = (b.target.y0 + b.target.y1) / 2;
+                                
+                                const aDistance = Math.abs(aSourceY - aTargetY);
+                                const bDistance = Math.abs(bSourceY - bTargetY);
+                                
+                                return aDistance - bDistance;
+                            },
+                            
+                            // Strategy 5: Anti-crossing heuristic for incoming flows
+                            (a, b) => {
+                                const aPos = (a.source.y0 + a.source.y1) / 2;
+                                const bPos = (b.source.y0 + b.source.y1) / 2;
+                                const targetY = (node.y0 + node.y1) / 2;
+                                
+                                // Prefer flows that approach from consistent directions
+                                const aAlignment = (targetY - aPos) * (targetY > aPos ? 1 : -1);
+                                const bAlignment = (targetY - bPos) * (targetY > bPos ? 1 : -1);
+                                
+                                return bAlignment - aAlignment;
+                            }
+                        ];
+
+                        strategies.forEach(sortFn => {
+                            const testOrder = [...node.targetLinks].sort(sortFn);
+                            node.targetLinks = testOrder;
+                            const crossovers = calculateTotalCrossovers();
+                            
+                            if (crossovers < bestCrossovers) {
+                                bestCrossovers = crossovers;
+                                bestOrder = [...testOrder];
+                            }
+                        });
+                        
+                        node.targetLinks = bestOrder;
+                    }
+                });
+            }
+
+            // Initialize and properly organize sourceLinks and targetLinks
+            function initializeNodeLinks() {
+                // Clear existing links
+                nodes.forEach(node => {
+                    node.sourceLinks = [];
+                    node.targetLinks = [];
+                });
+                
+                // Populate links arrays
+                links.forEach(link => {
+                    link.source.sourceLinks.push(link);
+                    link.target.targetLinks.push(link);
+                });
+                
+                // Sort links within each node for consistent ordering
+                nodes.forEach(node => {
+                    if (node.sourceLinks.length > 0) {
+                        node.sourceLinks.sort((a, b) => {
+                            // Primary sort: target vertical position
+                            const aTargetY = (a.target.y0 + a.target.y1) / 2;
+                            const bTargetY = (b.target.y0 + b.target.y1) / 2;
+                            const positionDiff = aTargetY - bTargetY;
+                            
+                            // Secondary sort: flow value (larger flows first)
+                            if (Math.abs(positionDiff) < 1) {
+                                return b.value - a.value;
+                            }
+                            
+                            return positionDiff;
+                        });
+                    }
+                    
+                    if (node.targetLinks.length > 0) {
+                        node.targetLinks.sort((a, b) => {
+                            // Primary sort: source vertical position
+                            const aSourceY = (a.source.y0 + a.source.y1) / 2;
+                            const bSourceY = (b.source.y0 + b.source.y1) / 2;
+                            const positionDiff = aSourceY - bSourceY;
+                            
+                            // Secondary sort: flow value (larger flows first)
+                            if (Math.abs(positionDiff) < 1) {
+                                return b.value - a.value;
+                            }
+                            
+                            return positionDiff;
+                        });
+                    }
+                });
+            }
+            
+            initializeNodeLinks();
+
+            // Apply crossover minimization
+            minimizeCrossovers();
+            
+            // Reinitialize links after crossover optimization to ensure proper ordering
+            initializeNodeLinks();
+            
+            // Validate flow conservation and positioning
+            function validateFlowPositioning() {
+                let totalErrors = 0;
+                
+                nodes.forEach(node => {
+                    // Check flow conservation
+                    const sourceTotal = (node.sourceLinks || []).reduce((sum, link) => sum + link.value, 0);
+                    const targetTotal = (node.targetLinks || []).reduce((sum, link) => sum + link.value, 0);
+                    const maxTotal = Math.max(sourceTotal, targetTotal);
+                    
+                    if (Math.abs(node.value - maxTotal) > 0.01) {
+                        console.error(`Flow conservation error in node ${node.name}:`, 
+                            `Node value: ${node.value}, Source total: ${sourceTotal}, Target total: ${targetTotal}`);
+                        totalErrors++;
+                    }
+                    
+                    // Check source flow heights sum to node height
+                    if (node.sourceLinks && node.sourceLinks.length > 0) {
+                        const nodeHeight = node.y1 - node.y0;
+                        let totalFlowHeight = 0;
+                        
+                        node.sourceLinks.forEach(link => {
+                            const bounds = calculateFlowBounds(link, node, 'source');
+                            totalFlowHeight += bounds.height;
+                        });
+                        
+                        if (Math.abs(totalFlowHeight - nodeHeight) > 0.1) {
+                            console.error(`Source flow height mismatch in node ${node.name}:`, 
+                                `Node height: ${nodeHeight}, Total flow height: ${totalFlowHeight}`);
+                            totalErrors++;
+                        }
+                    }
+                    
+                    // Check target flow heights sum to node height
+                    if (node.targetLinks && node.targetLinks.length > 0) {
+                        const nodeHeight = node.y1 - node.y0;
+                        let totalFlowHeight = 0;
+                        
+                        node.targetLinks.forEach(link => {
+                            const bounds = calculateFlowBounds(link, node, 'target');
+                            totalFlowHeight += bounds.height;
+                        });
+                        
+                        if (Math.abs(totalFlowHeight - nodeHeight) > 0.1) {
+                            console.error(`Target flow height mismatch in node ${node.name}:`, 
+                                `Node height: ${nodeHeight}, Total flow height: ${totalFlowHeight}`);
+                            totalErrors++;
+                        }
+                    }
+                    
+                    // Check for flow overlaps
+                    if (node.sourceLinks && node.sourceLinks.length > 1) {
+                        for (let i = 0; i < node.sourceLinks.length - 1; i++) {
+                            const current = calculateFlowBounds(node.sourceLinks[i], node, 'source');
+                            const next = calculateFlowBounds(node.sourceLinks[i + 1], node, 'source');
+                            
+                            if (Math.abs(current.bottom - next.top) > 0.01) {
+                                console.warn(`Flow gap/overlap in node ${node.name} (source):`, 
+                                    `Current bottom: ${current.bottom}, Next top: ${next.top}`);
+                            }
+                        }
+                    }
+                    
+                    if (node.targetLinks && node.targetLinks.length > 1) {
+                        for (let i = 0; i < node.targetLinks.length - 1; i++) {
+                            const current = calculateFlowBounds(node.targetLinks[i], node, 'target');
+                            const next = calculateFlowBounds(node.targetLinks[i + 1], node, 'target');
+                            
+                            if (Math.abs(current.bottom - next.top) > 0.01) {
+                                console.warn(`Flow gap/overlap in node ${node.name} (target):`, 
+                                    `Current bottom: ${current.bottom}, Next top: ${next.top}`);
+                            }
+                        }
+                    }
+                });
+                
+                if (totalErrors === 0) {
+                    console.log('✅ Flow conservation validation passed - all values are accurate');
+                } else {
+                    console.error(`❌ Found ${totalErrors} flow conservation errors`);
+                }
+            }
+            
+            // Always run validation to ensure flow conservation accuracy
+            validateFlowPositioning();
+
+            // Calculate node values after Sankey processing
+            const nodeValues = calculateNodeValues(sankeyData);
+
+            // Assign colors using stage-based vertical sorting
+            const nodeColorMap = assignColorsToStages(nodes);
+
+            // Create enhanced gradient definitions for smoother flow consistency
+            const defs = svg.append("defs");
+            
+            links.forEach((link, i) => {
+                const sourceColor = nodeColorMap.get(link.source.name);
+                const targetColor = nodeColorMap.get(link.target.name);
+                
+                // Create smooth gradient with better color blending
+                const gradient = defs.append("linearGradient")
+                    .attr("id", `gradient-${i}`)
+                    .attr("gradientUnits", "userSpaceOnUse")
+                    .attr("x1", link.source.x1)
+                    .attr("x2", link.target.x0);
+                
+                // Enhanced gradient with smooth transitions
+                gradient.append("stop")
+                    .attr("offset", "0%")
+                    .attr("stop-color", sourceColor)
+                    .attr("stop-opacity", 0.85);
+                
+                // Add mid-point for smoother blending
+                gradient.append("stop")
+                    .attr("offset", "50%")
+                    .attr("stop-color", blendColors(sourceColor, targetColor, 0.5))
+                    .attr("stop-opacity", 0.8);
+                
+                gradient.append("stop")
+                    .attr("offset", "100%")
+                    .attr("stop-color", targetColor)
+                    .attr("stop-opacity", 0.85);
+            });
+
+            // Add title with total flow calculation
+            const totalFlow = links.reduce((sum, link) => sum + link.value, 0);
+            zoomGroup.append("text")
+                .attr("x", width / 2)
+                .attr("y", 30)
+                .attr("text-anchor", "middle")
+                .style("font-size", "22px")
+                .style("font-weight", "700")
+                .style("fill", "#1f2937")
+                .text("Sankey Flow Diagram");
+
+            zoomGroup.append("text")
+                .attr("x", width / 2)
+                .attr("y", 50)
+                .attr("text-anchor", "middle")
+                .style("font-size", "14px")
+                .style("fill", "#6b7280")
+                .text(`Total Flow: ${totalFlow.toLocaleString()} units`);
+
+            // Legend removed for cleaner appearance
+
+            // Add links with gradient colors and sharp edges
+            const linkGroup = zoomGroup.append("g").attr("class", "links");
+            
+            linkGroup.selectAll("path")
+                .data(links)
+                .join("path")
+                .attr("class", "link")
+                .attr("d", customSankeyLinkHorizontal())
+                .attr("fill", (d, i) => `url(#gradient-${i})`)
+                .on("click", function(event, d) {
+                    event.stopPropagation();
+                    const linkIndex = links.indexOf(d);
+                    toggleLinkSelection(linkIndex, event);
+                })
+                .on("mouseover", function(event, d) {
+                    if (selectedLinks.size === 0 && selectedNodes.size === 0) {
+                        d3.select(this).attr("fill-opacity", 1);
+                    }
+                    tooltip.transition().duration(200).style("opacity", .9);
+                    const percentage = ((d.value / d.source.value) * 100).toFixed(1);
+                    tooltip.html(`
+                        <strong>${d.source.name} → ${d.target.name}</strong><br/>
+                        Value: ${d.value.toLocaleString()}<br/>
+                        ${percentage}% of ${d.source.name}'s output<br/>
+                        <small>Click to select • Ctrl+Click to multi-select</small>
+                    `)
+                        .style("left", (event.pageX + 10) + "px")
+                        .style("top", (event.pageY - 28) + "px");
+                })
+                .on("mouseout", function(d) {
+                    if (selectedLinks.size === 0 && selectedNodes.size === 0) {
+                        d3.select(this).attr("fill-opacity", 0.7);
+                    }
+                    tooltip.transition().duration(500).style("opacity", 0);
+                });
+
+            // Add nodes with unique colors (vector-based rectangles)
+            const nodeGroup = zoomGroup.append("g").attr("class", "nodes");
+            
+            const node = nodeGroup.selectAll("g")
+                .data(nodes)
+                .join("g")
+                .attr("class", "node");
+
+            node.append("rect")
+                .attr("x", d => d.x0)
+                .attr("y", d => d.y0)
+                .attr("height", d => {
+                    // Ensure minimum node height for visibility, especially in large datasets
+                    const calculatedHeight = d.y1 - d.y0;
+                    const minHeight = isLargeDataset ? 8 : 12; // Smaller minimum for very dense charts
+                    return Math.max(minHeight, calculatedHeight);
+                })
+                .attr("width", d => d.x1 - d.x0)
+                .attr("fill", d => nodeColorMap.get(d.name))
+                .attr("rx", 3)
+                .attr("ry", 3)
+                .on("click", function(event, d) {
+                    event.stopPropagation();
+                    toggleNodeSelection(d.name, event);
+                })
+                .on("mouseover", function(event, d) {
+                    if (selectedNodes.size === 0 && selectedLinks.size === 0) {
+                        d3.select(this).attr("fill", d3.color(nodeColorMap.get(d.name)).brighter(0.3));
+                    }
+                    
+                    const nodeInfo = nodeValues.get(d.name);
+                    tooltip.transition().duration(200).style("opacity", .9);
+                    tooltip.html(`
+                        <strong>${d.name}</strong><br/>
+                        Total Flow: ${d.value.toLocaleString()}<br/>
+                        Input: ${nodeInfo.inValue.toLocaleString()}<br/>
+                        Output: ${nodeInfo.outValue.toLocaleString()}<br/>
+                        <small>Click to select • Ctrl+Click to multi-select</small>
+                    `)
+                        .style("left", (event.pageX + 10) + "px")
+                        .style("top", (event.pageY - 28) + "px");
+                })
+                .on("mouseout", function(event, d) {
+                    if (selectedNodes.size === 0 && selectedLinks.size === 0) {
+                        d3.select(this).attr("fill", nodeColorMap.get(d.name));
+                    }
+                    tooltip.transition().duration(500).style("opacity", 0);
+                });
+
+            // Add node labels with values
+            node.append("text")
+                .attr("x", d => d.x0 < width / 2 ? d.x1 + 8 : d.x0 - 8)
+                .attr("y", d => (d.y1 + d.y0) / 2)
+                .attr("dy", "0.35em")
+                .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
+                .style("fill", "#1f2937")
+                .style("font-weight", "600")
+                .style("font-size", "13px")
+                .style("stroke", "rgba(255,255,255,0.8)")
+                .style("stroke-width", "0.5px")
+                .style("paint-order", "stroke fill")
+                .text(d => d.name);
+
+            // Add value labels on nodes
+            node.append("text")
+                .attr("x", d => d.x0 < width / 2 ? d.x1 + 8 : d.x0 - 8)
+                .attr("y", d => (d.y1 + d.y0) / 2 + 15)
+                .attr("dy", "0.35em")
+                .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
+                .style("fill", "#374151")
+                .style("font-size", "11px")
+                .text(d => `(${d.value.toLocaleString()})`);
+
+            // Add node labels with values
+            node.append("text")
+                .attr("x", d => d.x0 < width / 2 ? d.x1 + 8 : d.x0 - 8)
+                .attr("y", d => (d.y1 + d.y0) / 2)
+                .attr("dy", "0.35em")
+                .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
+                .style("fill", "#1f2937")
+                .style("font-weight", "600")
+                .style("font-size", "13px")
+                .style("stroke", "rgba(255,255,255,0.8)")
+                .style("stroke-width", "0.5px")
+                .style("paint-order", "stroke fill")
+                .text(d => d.name);
+
+            // Add value labels on nodes
+            node.append("text")
+                .attr("x", d => d.x0 < width / 2 ? d.x1 + 8 : d.x0 - 8)
+                .attr("y", d => (d.y1 + d.y0) / 2 + 15)
+                .attr("dy", "0.35em")
+                .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
+                .style("fill", "#374151")
+                .style("font-size", "11px")
+                .text(d => `(${d.value.toLocaleString()})`);
+
+            // Show download buttons and zoom controls, clear any existing selection
+            document.getElementById('downloadPngBtn').style.display = 'block';
+            document.getElementById('downloadJpgBtn').style.display = 'block';
+            document.getElementById('zoomControls').style.display = 'flex';
+            clearSelection();
+            
+            // Note: Auto-scale disabled for initial render - chart uses viewBox positioning
+            // Manual zoom/pan controls are available through zoom buttons and drag interactions
+
+            // Add click handler to SVG background to clear selection
+            svg.on("click", function(event) {
+                if (event.target === this) {
+                    clearSelection();
+                }
+            });
+
+            // Setup path tracing and sizing controls after layout is complete (only for main chart)
+            if (containerId === 'chart') {
+                setupPathTracing();
+                setupChartSizingControls();
+
+                // Now that layout is complete, check if we need to resize for optimal fit
+                const optimalSize = calculateOptimalChartSize({ nodes, links });
+                if (Math.abs(optimalSize.width - width) > 50 || Math.abs(optimalSize.height - height) > 50) {
+                    // Significant size difference detected, re-render with optimal size
+                    setTimeout(() => {
+                        autoChartWidth = optimalSize.width;
+                        autoChartHeight = optimalSize.height;
+                        updateSizingControlValues();
+                        renderSankeyChart(currentSankeyData, 'chart');
+                    }, 100);
+                }
+            }
+        }
+
+        // Make clearSelection available globally for the selection info panel
+        window.clearSelection = clearSelection;
+
+        // Zoom control functions
+        function zoomIn() {
+            if (zoomBehavior) {
+                const fullscreenOverlay = document.getElementById('fullscreenOverlay');
+                const isFullscreen = fullscreenOverlay && fullscreenOverlay.classList.contains('active');
+
+                const targetSvg = isFullscreen ? '#fullscreenChart svg' : '#chart svg';
+                d3.select(targetSvg).transition().duration(300).call(
+                    zoomBehavior.scaleBy, 1.5
+                );
+            }
+        }
+
+        function zoomOut() {
+            if (zoomBehavior) {
+                const fullscreenOverlay = document.getElementById('fullscreenOverlay');
+                const isFullscreen = fullscreenOverlay && fullscreenOverlay.classList.contains('active');
+
+                const targetSvg = isFullscreen ? '#fullscreenChart svg' : '#chart svg';
+                d3.select(targetSvg).transition().duration(300).call(
+                    zoomBehavior.scaleBy, 1 / 1.5
+                );
+            }
+        }
+
+        function resetZoom() {
+            if (zoomBehavior) {
+                const fullscreenOverlay = document.getElementById('fullscreenOverlay');
+                const isFullscreen = fullscreenOverlay && fullscreenOverlay.classList.contains('active');
+
+                let svg, chartDiv;
+                if (isFullscreen) {
+                    svg = d3.select('#fullscreenChart svg');
+                    chartDiv = document.getElementById('fullscreenChart');
+                } else {
+                    svg = d3.select('#chart svg');
+                    chartDiv = document.getElementById('chart');
+                }
+
+                if (!svg.node() || !chartDiv) return;
+
+                // Get the actual chart div dimensions
+                const chartRect = chartDiv.getBoundingClientRect();
+                const availableWidth = chartRect.width;
+                const availableHeight = chartRect.height;
+
+                // Calculate top-aligned positioning
+                const viewBox = calculateTopAlignedViewBox(availableWidth, availableHeight);
+
+                // Create transform that positions chart at top
+                const transform = d3.zoomIdentity
+                    .translate(-viewBox.x, -viewBox.y)
+                    .scale(1);
+
+                svg.transition().duration(500).call(
+                    zoomBehavior.transform,
+                    transform
+                );
+            }
+        }
+
+        // Fullscreen functionality
+        function toggleFullscreen() {
+            const fullscreenOverlay = document.getElementById('fullscreenOverlay');
+            const fullscreenBtn = document.getElementById('fullscreenBtn');
+
+            // Clear any existing selections when switching modes
+            clearSelection();
+
+            if (fullscreenOverlay.classList.contains('active')) {
+                // Exit fullscreen
+                fullscreenOverlay.classList.remove('active');
+                fullscreenBtn.innerHTML = '⛶';
+                fullscreenBtn.title = 'Enter Fullscreen';
+                document.body.style.overflow = '';
+
+                // Reset any skip flags
+                window.skipAutoScale = false;
+
+                // Re-render the original chart to restore functionality
+                if (currentSankeyData) {
+                    renderSankeyChart(currentSankeyData, 'chart');
+
+                    // Show zoom controls for original chart
+                    document.getElementById('zoomControls').style.display = 'flex';
+                }
+
+            } else {
+                // Enter fullscreen
+                if (!currentSankeyData) {
+                    alert('No chart to display in fullscreen mode.');
+                    return;
+                }
+
+                fullscreenOverlay.classList.add('active');
+                fullscreenBtn.innerHTML = '✕';
+                fullscreenBtn.title = 'Exit Fullscreen';
+                document.body.style.overflow = 'hidden';
+
+                // Re-render chart in fullscreen container with full functionality
+                setTimeout(() => {
+                    // Clear any previous zoom state for clean fullscreen start
+                    currentZoom = d3.zoomIdentity;
+                    window.skipAutoScale = false; // Ensure autoScale runs for initial render
+                    renderSankeyChart(currentSankeyData, 'fullscreenChart');
+
+                    // Sync path tracing controls to fullscreen
+                    syncPathTracingToFullscreen();
+                }, 100);
+            }
+        }
+
+        // Auto-scale chart to fit the available viewport and center on chart content
+        function autoScaleToFit() {
+            if (!zoomBehavior) return;
+
+            // Check if we're in fullscreen mode
+            const fullscreenOverlay = document.getElementById('fullscreenOverlay');
+            const isFullscreen = fullscreenOverlay && fullscreenOverlay.classList.contains('active');
+
+            let svg, chartDiv;
+            if (isFullscreen) {
+                svg = d3.select('#fullscreenChart svg');
+                chartDiv = document.getElementById('fullscreenChart');
+            } else {
+                svg = d3.select('#chart svg');
+                chartDiv = document.getElementById('chart');
+            }
+
+            if (!svg.node() || !chartDiv) return;
+
+            // Get actual chart dimensions
+            const svgWidth = parseInt(svg.attr('width'));
+            const svgHeight = parseInt(svg.attr('height'));
+
+            // Get the actual chart div dimensions (this is where the SVG lives)
+            const chartRect = chartDiv.getBoundingClientRect();
+            const availableWidth = chartRect.width;
+            const availableHeight = chartRect.height;
+
+            // Calculate scale factors
+            const scaleX = availableWidth / svgWidth;
+            const scaleY = availableHeight / svgHeight;
+            const optimalScale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down
+
+            // Calculate container center based on the actual chart div
+            const containerCenterX = availableWidth / 2;
+            const containerCenterY = availableHeight / 2;
+
+            // Calculate top-aligned positioning with scaling
+            const viewBox = calculateTopAlignedViewBox(availableWidth, availableHeight);
+
+            let translateX, translateY;
+
+            if (optimalScale < 1) {
+                // Chart needs scaling - maintain top alignment with scaling
+                translateX = -viewBox.x * optimalScale;
+                translateY = -viewBox.y * optimalScale;
+            } else {
+                // Chart fits - use top alignment
+                translateX = -viewBox.x;
+                translateY = -viewBox.y;
+            }
+
+            const transform = d3.zoomIdentity
+                .translate(translateX, translateY)
+                .scale(optimalScale);
+
+            svg.transition()
+                .duration(100)  // Much faster transition to minimize visible movement
+                .call(zoomBehavior.transform, transform);
+        }
+
+        // Make zoom functions globally available
+        window.zoomIn = zoomIn;
+        window.zoomOut = zoomOut;
+        window.resetZoom = resetZoom;
+        window.autoScaleToFit = autoScaleToFit;
+
+        // Initialize tooltip on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initTooltip();
+            initMobileMenu();
+            loadSampleData();
+        });
+
+        // Load sample data on page load to show preview
+        function loadSampleData() {
+            // Create sample CSV-like data that goes through the normal processing
+            const sampleData = [
+                {"Source": "Solar", "Target": "Electricity Grid", "Value": 120},
+                {"Source": "Wind", "Target": "Electricity Grid", "Value": 80},
+                {"Source": "Natural Gas", "Target": "Electricity Grid", "Value": 150},
+                {"Source": "Natural Gas", "Target": "Heat Production", "Value": 90},
+                {"Source": "Electricity Grid", "Target": "Industrial", "Value": 180},
+                {"Source": "Electricity Grid", "Target": "Residential", "Value": 100},
+                {"Source": "Electricity Grid", "Target": "Commercial", "Value": 70},
+                {"Source": "Heat Production", "Target": "District Heating", "Value": 90},
+                {"Source": "Heat Production", "Target": "Residential", "Value": 30}
+            ];
+
+            try {
+                // Set the sample data as current data
+                currentData = sampleData;
+
+                // Populate column selects with the sample data
+                populateColumnSelects(sampleData);
+
+                // Pre-select the columns for the sample data
+                document.getElementById('sourceColumn').value = 'Source';
+                document.getElementById('targetColumn').value = 'Target';
+                document.getElementById('valueColumn').value = 'Value';
+
+                // Generate the chart using the normal process
+                const sankeyData = convertToSankeyData(sampleData, 'Source', 'Target', 'Value');
+                renderSankeyChart(sankeyData);
+
+                showStatus('Preview: Energy Flow Diagram - Upload your own data to get started!', 'info');
+
+                // Show download buttons for the sample chart
+                document.getElementById('downloadPngBtn').style.display = 'block';
+                document.getElementById('downloadJpgBtn').style.display = 'block';
+            } catch (error) {
+                console.error('Error loading sample data:', error);
+            }
+        }
+
+        // Dynamic Chart Sizing Functions
+        function applyCustomColumnSpacing(nodes, chartWidth, chartHeight) {
+            // Group nodes by their x position (columns)
+            const nodesByColumn = d3.group(nodes, d => Math.round(d.x0));
+            const sortedColumns = Array.from(nodesByColumn.keys()).sort((a, b) => a - b);
+
+            if (sortedColumns.length <= 1) return nodes;
+
+            // Calculate new x positions based on custom column width
+            const leftMargin = 80;
+            const rightMargin = 80;
+            const availableWidth = chartWidth - leftMargin - rightMargin;
+            const totalColumnGaps = sortedColumns.length - 1;
+            const totalColumnSpacing = totalColumnGaps * columnWidth;
+
+            // Distribute remaining space for node width
+            const nodeWidth = Math.max(20, (availableWidth - totalColumnSpacing) / sortedColumns.length);
+
+            // Apply new positions
+            sortedColumns.forEach((originalX, index) => {
+                const newX = leftMargin + index * (nodeWidth + columnWidth);
+                const nodesInColumn = nodesByColumn.get(originalX);
+
+                nodesInColumn.forEach(node => {
+                    const nodeWidthActual = node.x1 - node.x0;
+                    node.x0 = newX;
+                    node.x1 = newX + nodeWidthActual;
+                });
+            });
+
+            return nodes;
+        }
+
+        function calculateOptimalChartSize(data) {
+            if (!data || !data.nodes || !data.links) {
+                return { width: 1200, height: 600 };
+            }
+
+            // For raw data without positions, estimate stages from the structure
+            let numStages, maxNodesInStage;
+
+            if (data.nodes[0] && data.nodes[0].x0 !== undefined) {
+                // Data has layout positions
+                const nodesByX = d3.group(data.nodes, d => Math.round(d.x0));
+                numStages = Math.max(3, nodesByX.size);
+                maxNodesInStage = Math.max(...Array.from(nodesByX.values()).map(nodes => nodes.length));
+            } else {
+                // Estimate from data structure
+                const allNodes = new Set();
+                const sourceNodes = new Set();
+                const targetNodes = new Set();
+
+                data.links.forEach(link => {
+                    allNodes.add(link.source);
+                    allNodes.add(link.target);
+                    sourceNodes.add(link.source);
+                    targetNodes.add(link.target);
+                });
+
+                // Rough estimate: sqrt of nodes for stages, with minimum
+                numStages = Math.max(3, Math.ceil(Math.sqrt(allNodes.size)));
+                maxNodesInStage = Math.max(3, Math.ceil(allNodes.size / numStages));
+            }
+
+            // Calculate optimal dimensions with better scaling for large datasets
+            const minWidth = 800;
+            const minHeight = 400;
+
+            // For very large datasets, use more aggressive scaling
+            const totalNodes = data.nodes ? data.nodes.length : (data.links ? new Set([...data.links.map(l => l.source), ...data.links.map(l => l.target)]).size : 0);
+            const isLargeDataset = totalNodes > 50 || numStages > 8;
+
+            if (isLargeDataset) {
+                // Use larger base dimensions for big datasets
+                const baseWidth = Math.max(1200, numStages * columnWidth + 400);
+                const baseHeight = Math.max(800, maxNodesInStage * (nodeSpacing + 20) + 400);
+
+                autoChartWidth = Math.min(baseWidth, 5000); // Higher cap for large datasets
+                autoChartHeight = Math.min(baseHeight, 4000);
+            } else {
+                // Standard calculation for smaller datasets
+                autoChartWidth = Math.max(minWidth, numStages * columnWidth + 200);
+                autoChartHeight = Math.max(minHeight, maxNodesInStage * (nodeSpacing + 30) + 200);
+
+                // Standard caps
+                autoChartWidth = Math.min(autoChartWidth, 3000);
+                autoChartHeight = Math.min(autoChartHeight, 2000);
+            }
+
+            return { width: autoChartWidth, height: autoChartHeight };
+        }
+
+        function setupChartSizingControls() {
+            const sizingControls = document.getElementById('chartSizingControls');
+            if (sizingControls) {
+                sizingControls.style.display = 'flex';
+            }
+
+            // Auto-adjust initial values for very large datasets
+            if (currentSankeyData) {
+                const totalNodes = currentSankeyData.nodes ? currentSankeyData.nodes.length : 0;
+                if (totalNodes > 100) {
+                    // Very large dataset detected - use more compact settings
+                    columnWidth = Math.max(columnWidth, 300); // Wider columns for readability
+                    nodeSpacing = Math.max(nodeSpacing, 20);  // More spacing for visibility
+                    console.log(`Large dataset detected (${totalNodes} nodes). Adjusted settings for better visibility.`);
+                }
+            }
+
+            updateSizingControlValues();
+        }
+
+        // Cache DOM elements for better performance
+        let sizingElements = null;
+
+        function updateSizingControlValues() {
+            // Cache elements on first call
+            if (!sizingElements) {
+                sizingElements = {
+                    columnWidth: document.getElementById('columnWidthValue'),
+                    nodeSpacing: document.getElementById('nodeSpacingValue'),
+                    chartInfo: document.getElementById('chartDimensionsInfo')
+                };
+            }
+
+            // Update main values only if elements exist
+            if (sizingElements.columnWidth) sizingElements.columnWidth.textContent = columnWidth;
+            if (sizingElements.nodeSpacing) sizingElements.nodeSpacing.textContent = nodeSpacing;
+            if (sizingElements.chartInfo) {
+                sizingElements.chartInfo.textContent = `Chart: ${autoChartWidth} × ${autoChartHeight}px`;
+            }
+
+            // Also update fullscreen values if they're visible
+            const fullscreenOverlay = document.getElementById('fullscreenOverlay');
+            if (fullscreenOverlay && fullscreenOverlay.classList.contains('active')) {
+                syncFullscreenSizingValues();
+            }
+        }
+
+        function adjustColumnWidth(delta) {
+            const minColumnWidth = 50;  // Lower minimum for very dense charts
+            const maxColumnWidth = 800; // Higher maximum for large datasets
+            columnWidth = Math.max(minColumnWidth, Math.min(maxColumnWidth, columnWidth + delta));
+
+            updateSizingControlValues();
+            debouncedRegenerateChart();
+        }
+
+        function adjustNodeSpacing(delta) {
+            const minNodeSpacing = 1;   // Lower minimum for very dense charts
+            const maxNodeSpacing = 100; // Higher maximum for large datasets
+            nodeSpacing = Math.max(minNodeSpacing, Math.min(maxNodeSpacing, nodeSpacing + delta));
+
+            updateSizingControlValues();
+            debouncedRegenerateChart();
+        }
+
+        function debouncedRegenerateChart() {
+            // Clear existing timeout
+            if (regenerateTimeout) {
+                clearTimeout(regenerateTimeout);
+            }
+
+            // Set new timeout for debounced regeneration
+            regenerateTimeout = setTimeout(() => {
+                regenerateChart();
+            }, 150); // 150ms debounce delay
+        }
+
+        function regenerateChart() {
+            if (currentSankeyData) {
+                // Check if we're in fullscreen mode
+                const fullscreenOverlay = document.getElementById('fullscreenOverlay');
+                const isInFullscreen = fullscreenOverlay && fullscreenOverlay.classList.contains('active');
+
+                // Save current zoom/pan state and chart dimensions before regenerating
+                const targetContainer = isInFullscreen ? 'fullscreenChart' : 'chart';
+                const currentSvg = d3.select(`#${targetContainer} svg`);
+                let savedTransform = d3.zoomIdentity;
+                let oldChartWidth = autoChartWidth;
+                let oldChartHeight = autoChartHeight;
+
+                if (currentSvg.node()) {
+                    // Get current zoom transform and chart dimensions
+                    savedTransform = d3.zoomTransform(currentSvg.node()) || currentZoom || d3.zoomIdentity;
+                    const svgRect = currentSvg.node().getBoundingClientRect();
+                    oldChartWidth = svgRect.width || autoChartWidth;
+                    oldChartHeight = svgRect.height || autoChartHeight;
+                }
+
+                // Calculate optimal size and update controls
+                const oldAutoChartWidth = autoChartWidth;
+                const oldAutoChartHeight = autoChartHeight;
+                calculateOptimalChartSize(currentSankeyData);
+                updateSizingControlValues();
+
+                if (isInFullscreen) {
+                    // Re-render fullscreen chart
+                    renderSankeyChart(currentSankeyData, 'fullscreenChart');
+                } else {
+                    // Re-render main chart
+                    renderSankeyChart(currentSankeyData, 'chart');
+                }
+
+                // Only restore zoom/pan state if chart dimensions actually changed significantly
+                const widthChange = Math.abs(autoChartWidth - oldAutoChartWidth);
+                const heightChange = Math.abs(autoChartHeight - oldAutoChartHeight);
+                const significantChange = widthChange > 50 || heightChange > 50;
+
+                if (significantChange && savedTransform !== d3.zoomIdentity) {
+                    // Restore zoom/pan state with adjustment for size changes
+                    window.skipAutoScale = true;
+                    setTimeout(() => {
+                        restoreZoomStateWithSizeAdjustment(targetContainer, savedTransform, oldChartWidth, oldChartHeight);
+                        window.skipAutoScale = false;
+                    }, 100);
+                } else if (savedTransform !== d3.zoomIdentity) {
+                    // Small change - just restore the transform without complex calculations
+                    window.skipAutoScale = true;
+                    setTimeout(() => {
+                        const svg = d3.select(`#${targetContainer} svg`);
+                        if (svg.node() && zoomBehavior) {
+                            svg.call(zoomBehavior.transform, savedTransform);
+                            currentZoom = savedTransform;
+                        }
+                        window.skipAutoScale = false;
+                    }, 50);
+                } else {
+                    // No previous transform - ensure skipAutoScale is cleared
+                    window.skipAutoScale = false;
+                }
+            }
+        }
+
+        function restoreZoomState(containerId, transform) {
+            const svg = d3.select(`#${containerId} svg`);
+            if (svg.node() && zoomBehavior) {
+                // Apply the saved transform without triggering zoom events
+                svg.call(zoomBehavior.transform, transform);
+
+                // Update the zoom group to match
+                const zoomGroup = svg.select('.zoom-group');
+                if (zoomGroup.node()) {
+                    zoomGroup.attr("transform", transform);
+                }
+
+                // Update the global currentZoom
+                currentZoom = transform;
+            }
+        }
+
+        function restoreZoomStateWithSizeAdjustment(containerId, oldTransform, oldWidth, oldHeight) {
+            const svg = d3.select(`#${containerId} svg`);
+            if (!svg.node() || !zoomBehavior) return;
+
+            const newSvgRect = svg.node().getBoundingClientRect();
+            const newWidth = newSvgRect.width;
+            const newHeight = newSvgRect.height;
+
+            // Adjust the transform to account for size changes while preserving focal point
+            let adjustedTransform = oldTransform;
+
+            if (oldTransform !== d3.zoomIdentity) {
+                // Get the old and new chart content centers
+                const oldChartContentCenter = getChartContentCenter(); // Current content center
+
+                // For dynamic scaling, the chart content center shifts, so we need to preserve
+                // the user's focus relative to the content area
+                const containerCenterX = newWidth / 2;
+                const containerCenterY = newHeight / 2;
+
+                // Calculate the current viewport center in chart coordinates
+                const viewportCenterInChartX = (-oldTransform.x + containerCenterX) / oldTransform.k;
+                const viewportCenterInChartY = (-oldTransform.y + containerCenterY) / oldTransform.k;
+
+                // For small changes (dynamic scaling), preserve the exact same viewport center
+                // This prevents jumping while allowing the chart to expand/contract around the focus
+                const newTranslateX = -((viewportCenterInChartX * oldTransform.k) - containerCenterX);
+                const newTranslateY = -((viewportCenterInChartY * oldTransform.k) - containerCenterY);
+
+                // Create new transform that preserves the viewport center
+                adjustedTransform = d3.zoomIdentity
+                    .translate(newTranslateX, newTranslateY)
+                    .scale(oldTransform.k);
+            } else {
+                // If no previous zoom, position at top with offset
+                const viewBox = calculateTopAlignedViewBox(newWidth, newHeight);
+
+                adjustedTransform = d3.zoomIdentity
+                    .translate(-viewBox.x, -viewBox.y)
+                    .scale(1);
+            }
+
+            // Apply the adjusted transform
+            svg.call(zoomBehavior.transform, adjustedTransform);
+
+            // Update the zoom group
+            const zoomGroup = svg.select('.zoom-group');
+            if (zoomGroup.node()) {
+                zoomGroup.attr("transform", adjustedTransform);
+            }
+
+            // Update the global currentZoom
+            currentZoom = adjustedTransform;
+        }
+
+        // Path Tracing Functions
+        function setupPathTracing() {
+            const pathTracingControls = document.getElementById('pathTracingControls');
+            const fromDropdown = document.getElementById('fromNode');
+            const toDropdown = document.getElementById('toNode');
+
+            if (!pathTracingControls || !fromDropdown || !toDropdown) {
+                return;
+            }
+
+            if (!currentSankeyData || !currentSankeyData.nodes || currentSankeyData.nodes.length === 0) {
+                return;
+            }
+
+            // Show the controls
+            pathTracingControls.style.display = 'flex';
+
+            // Get node positions to determine stages
+            const nodeStages = getNodeStages();
+
+            // Populate both main and fullscreen dropdowns
+            populateFromDropdown(nodeStages, 'fromNode');
+            populateFromDropdown(nodeStages, 'fullscreenFromNode');
+
+            // Add event listeners for main controls
+            fromDropdown.addEventListener('change', function() {
+                handleFromNodeChange(this.value, nodeStages, 'fromNode', 'toNode');
+            });
+
+            toDropdown.addEventListener('change', function() {
+                handleToNodeChange(this.value);
+            });
+
+            // Add event listeners for fullscreen controls
+            const fullscreenFromDropdown = document.getElementById('fullscreenFromNode');
+            const fullscreenToDropdown = document.getElementById('fullscreenToNode');
+
+            fullscreenFromDropdown.addEventListener('change', function() {
+                handleFromNodeChange(this.value, nodeStages, 'fullscreenFromNode', 'fullscreenToNode');
+            });
+
+            fullscreenToDropdown.addEventListener('change', function() {
+                handleToNodeChange(this.value);
+            });
+        }
+
+        function handleFromNodeChange(selectedFrom, nodeStages, fromId, toId) {
+            if (selectedFrom) {
+                pathFromNode = selectedFrom;
+                populateToDropdown(selectedFrom, nodeStages, toId);
+                document.getElementById(toId).disabled = false;
+
+                // Sync the other dropdown
+                const otherFromId = fromId === 'fromNode' ? 'fullscreenFromNode' : 'fromNode';
+                document.getElementById(otherFromId).value = selectedFrom;
+            } else {
+                pathFromNode = null;
+                const toDropdown = document.getElementById(toId);
+                toDropdown.disabled = true;
+                toDropdown.innerHTML = '<option value="">Select destination...</option>';
+                clearPathTracing();
+            }
+        }
+
+        function handleToNodeChange(selectedTo) {
+            pathToNode = selectedTo;
+
+            // Sync both to dropdowns
+            document.getElementById('toNode').value = selectedTo;
+            document.getElementById('fullscreenToNode').value = selectedTo;
+
+            if (pathFromNode && selectedTo) {
+                highlightPath(pathFromNode, selectedTo);
+            } else {
+                clearPathTracing();
+            }
+        }
+
+        function getNodeStages() {
+            const nodes = currentSankeyData.nodes;
+            const links = currentSankeyData.links;
+
+            // Calculate node stages based on their x positions
+            const stages = new Map();
+            const nodePositions = new Map();
+
+            // Group nodes by their x positions (with some tolerance for floating point)
+            nodes.forEach(node => {
+                const xPos = Math.round(node.x0 / 50) * 50; // Round to nearest 50 for grouping
+                if (!nodePositions.has(xPos)) {
+                    nodePositions.set(xPos, []);
+                }
+                nodePositions.get(xPos).push(node.name);
+            });
+
+            // Sort stages by x position
+            const sortedStages = Array.from(nodePositions.keys()).sort((a, b) => a - b);
+
+            sortedStages.forEach((xPos, index) => {
+                nodePositions.get(xPos).forEach(nodeName => {
+                    stages.set(nodeName, index);
+                });
+            });
+
+            return {
+                stages: stages,
+                totalStages: sortedStages.length,
+                stagePositions: sortedStages
+            };
+        }
+
+        function populateFromDropdown(nodeStages, dropdownId) {
+            const fromDropdown = document.getElementById(dropdownId);
+            if (!fromDropdown) {
+                return;
+            }
+
+            fromDropdown.innerHTML = '<option value="">Select starting node...</option>';
+
+            const { stages, totalStages } = nodeStages;
+
+            // Get nodes that are not in the rightmost stage
+            currentSankeyData.nodes.forEach(node => {
+                const nodeStage = stages.get(node.name);
+                if (nodeStage !== undefined && nodeStage < totalStages - 1) { // Not in rightmost stage
+                    const option = document.createElement('option');
+                    option.value = node.name;
+                    option.textContent = node.name;
+                    fromDropdown.appendChild(option);
+                }
+            });
+        }
+
+        function populateToDropdown(fromNodeName, nodeStages, dropdownId) {
+            const toDropdown = document.getElementById(dropdownId);
+            toDropdown.innerHTML = '<option value="">Select destination...</option>';
+
+            // Find all nodes reachable from the selected "from" node
+            const reachableNodes = findReachableNodes(fromNodeName);
+
+            const { stages } = nodeStages;
+            const fromStage = stages.get(fromNodeName);
+
+            // Get nodes that are not in the leftmost stage and are reachable
+            currentSankeyData.nodes.forEach(node => {
+                const nodeStage = stages.get(node.name);
+                if (nodeStage > fromStage && reachableNodes.has(node.name)) { // Not in leftmost stage and reachable
+                    const option = document.createElement('option');
+                    option.value = node.name;
+                    option.textContent = node.name;
+                    toDropdown.appendChild(option);
+                }
+            });
+        }
+
+        function findReachableNodes(startNode) {
+            const reachable = new Set();
+            const visited = new Set();
+            const queue = [startNode];
+
+            while (queue.length > 0) {
+                const currentNode = queue.shift();
+                if (visited.has(currentNode)) continue;
+
+                visited.add(currentNode);
+                reachable.add(currentNode);
+
+                // Find all nodes this node connects to
+                currentSankeyData.links.forEach(link => {
+                    if (link.source.name === currentNode && !visited.has(link.target.name)) {
+                        queue.push(link.target.name);
+                    }
+                });
+            }
+
+            return reachable;
+        }
+
+        function findPath(fromNode, toNode) {
+            const path = [];
+            const visited = new Set();
+
+            function dfs(currentNode, target, currentPath) {
+                if (currentNode === target) {
+                    path.push(...currentPath);
+                    return true;
+                }
+
+                if (visited.has(currentNode)) return false;
+                visited.add(currentNode);
+
+                // Find links from current node
+                for (const link of currentSankeyData.links) {
+                    if (link.source.name === currentNode) {
+                        const newPath = [...currentPath, {
+                            source: link.source.name,
+                            target: link.target.name,
+                            value: link.value,
+                            linkIndex: currentSankeyData.links.indexOf(link)
+                        }];
+
+                        if (dfs(link.target.name, target, newPath)) {
+                            return true;
+                        }
+                    }
+                }
+
+                visited.delete(currentNode);
+                return false;
+            }
+
+            dfs(fromNode, toNode, []);
+            return path;
+        }
+
+        function highlightPath(fromNode, toNode) {
+            // Clear previous selections
+            clearSelection();
+
+            // Find the path
+            currentPath = findPath(fromNode, toNode);
+            pathTracingActive = true;
+
+            if (currentPath.length === 0) {
+                alert(`No path found from ${fromNode} to ${toNode}`);
+                return;
+            }
+
+            // Highlight the path
+            const pathNodes = new Set([fromNode]);
+            const pathLinks = new Set();
+
+            currentPath.forEach(step => {
+                pathNodes.add(step.source);
+                pathNodes.add(step.target);
+                pathLinks.add(step.linkIndex);
+            });
+
+            // Update selections with path elements
+            selectedNodes = pathNodes;
+            selectedLinks = pathLinks;
+
+            // Update visualization
+            updateVisualization();
+            updateSelectionInfo();
+        }
+
+        function clearPathTracing() {
+            pathTracingActive = false;
+            currentPath = [];
+            pathFromNode = null;
+            pathToNode = null;
+
+            // Clear main dropdowns
+            const fromDropdown = document.getElementById('fromNode');
+            const toDropdown = document.getElementById('toNode');
+
+            fromDropdown.value = '';
+            toDropdown.value = '';
+            toDropdown.disabled = true;
+            toDropdown.innerHTML = '<option value="">Select destination...</option>';
+
+            // Clear fullscreen dropdowns
+            const fullscreenFromDropdown = document.getElementById('fullscreenFromNode');
+            const fullscreenToDropdown = document.getElementById('fullscreenToNode');
+
+            fullscreenFromDropdown.value = '';
+            fullscreenToDropdown.value = '';
+            fullscreenToDropdown.disabled = true;
+            fullscreenToDropdown.innerHTML = '<option value="">Select destination...</option>';
+
+            // Clear selections
+            clearSelection();
+        }
+
+        function syncPathTracingToFullscreen() {
+            if (!currentSankeyData) return;
+
+            // Show fullscreen path controls
+            const fullscreenPathControls = document.getElementById('fullscreenPathControls');
+            if (fullscreenPathControls) {
+                fullscreenPathControls.style.display = 'flex';
+            }
+
+            // Show fullscreen sizing controls
+            const fullscreenSizingControls = document.getElementById('fullscreenSizingControls');
+            if (fullscreenSizingControls) {
+                fullscreenSizingControls.style.display = 'flex';
+                syncFullscreenSizingValues();
+            }
+
+            // Get the current node stages
+            const nodeStages = getNodeStages();
+
+            // Populate fullscreen dropdowns
+            populateFromDropdown(nodeStages, 'fullscreenFromNode');
+
+            // Sync current selections to fullscreen
+            const mainFromValue = document.getElementById('fromNode').value;
+            const mainToValue = document.getElementById('toNode').value;
+
+            if (mainFromValue) {
+                document.getElementById('fullscreenFromNode').value = mainFromValue;
+                populateToDropdown(mainFromValue, nodeStages, 'fullscreenToNode');
+                document.getElementById('fullscreenToNode').disabled = false;
+
+                if (mainToValue) {
+                    document.getElementById('fullscreenToNode').value = mainToValue;
+                }
+            }
+        }
+
+        function syncFullscreenSizingValues() {
+            const fullscreenElements = {
+                columnWidth: document.getElementById('fullscreenColumnWidthValue'),
+                nodeSpacing: document.getElementById('fullscreenNodeSpacingValue'),
+                chartInfo: document.getElementById('fullscreenChartDimensionsInfo')
+            };
+
+            if (fullscreenElements.columnWidth) fullscreenElements.columnWidth.textContent = columnWidth;
+            if (fullscreenElements.nodeSpacing) fullscreenElements.nodeSpacing.textContent = nodeSpacing;
+            if (fullscreenElements.chartInfo) {
+                fullscreenElements.chartInfo.textContent = `Chart: ${autoChartWidth} × ${autoChartHeight}px`;
+            }
+        }
+
+        // Mobile menu functionality
+        function initMobileMenu() {
+            const hamburgerMenu = document.getElementById('hamburger-menu');
+            const mobileMenu = document.getElementById('mobile-menu');
+
+            hamburgerMenu.addEventListener('click', function() {
+                hamburgerMenu.classList.toggle('active');
+                mobileMenu.classList.toggle('active');
+            });
+
+            // Close menu when clicking overlay
+            mobileMenu.addEventListener('click', function(e) {
+                if (e.target === mobileMenu) {
+                    hamburgerMenu.classList.remove('active');
+                    mobileMenu.classList.remove('active');
+                }
+            });
+
+            // Close menu and exit fullscreen on escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    // Close mobile menu
+                    hamburgerMenu.classList.remove('active');
+                    mobileMenu.classList.remove('active');
+
+                    // Exit fullscreen if active
+                    const fullscreenOverlay = document.getElementById('fullscreenOverlay');
+                    if (fullscreenOverlay && fullscreenOverlay.classList.contains('active')) {
+                        toggleFullscreen();
+                    }
+                }
+            });
+        }
+
+        // Re-scale chart when window is resized
+        window.addEventListener('resize', function() {
+            // Debounce the resize event
+            clearTimeout(window.resizeTimeout);
+            window.resizeTimeout = setTimeout(function() {
+                if (document.querySelector('#chart svg')) {
+                    autoScaleToFit();
+                }
+            }, 250);
+        });
+
+        // Drag and drop functionality
+        const fileInput = document.querySelector('.file-input');
+        const fileInputLabel = document.querySelector('.file-input-label');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            fileInput.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            fileInput.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            fileInput.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight() {
+            fileInputLabel.style.borderColor = '#4f46e5';
+            fileInputLabel.style.backgroundColor = '#eef2ff';
+        }
+
+        function unhighlight() {
+            fileInputLabel.style.borderColor = 'transparent';
+            fileInputLabel.style.backgroundColor = '';
+        }
+
+        fileInput.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length > 0) {
+                document.getElementById('fileInput').files = files;
+                handleFile({ target: { files } });
+            }
+        }
+    </script>
+</body>
+</html>

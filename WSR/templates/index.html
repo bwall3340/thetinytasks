@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logo Vectorizer Tool</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-vector-square"></i> Logo Vectorizer</h1>
+            <p>Remove white backgrounds and convert logos to scalable SVG vectors</p>
+            <div class="interface-selector">
+                <a href="/" class="interface-btn active">Auto Remove</a>
+                <a href="/interactive" class="interface-btn">Click to Remove</a>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <div class="upload-section">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-content">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <h3>Upload Your Logo</h3>
+                        <p>Drag and drop an image file here, or click to browse</p>
+                        <p class="file-types">Supports: PNG, JPG, JPEG, BMP, TIFF</p>
+                        <input type="file" id="fileInput" accept=".png,.jpg,.jpeg,.bmp,.tiff" hidden>
+                        <button class="browse-btn" onclick="document.getElementById('fileInput').click()">
+                            <i class="fas fa-folder-open"></i> Browse Files
+                        </button>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <div class="control-group">
+                        <label for="epsilonSlider">
+                            <i class="fas fa-sliders-h"></i> Detail Level
+                        </label>
+                        <input type="range" id="epsilonSlider" min="0.005" max="0.1" step="0.005" value="0.02">
+                        <span id="epsilonValue">0.02</span>
+                        <small>Lower = more detail, Higher = simpler shapes</small>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="detailMode">
+                            <i class="fas fa-eye"></i> Vectorization Mode
+                        </label>
+                        <select id="detailMode">
+                            <option value="normal">Normal (Balanced)</option>
+                            <option value="high">High Detail (Preserves fine features)</option>
+                        </select>
+                        <small>High detail mode preserves curves and fine details</small>
+                    </div>
+
+                    <button id="processBtn" class="process-btn" disabled>
+                        <i class="fas fa-magic"></i> Process Image
+                    </button>
+                </div>
+            </div>
+
+            <div class="results-section" id="resultsSection" style="display: none;">
+                <div class="progress-bar" id="progressBar" style="display: none;">
+                    <div class="progress-fill"></div>
+                    <span class="progress-text">Processing...</span>
+                </div>
+
+                <div class="results-grid">
+                    <div class="result-item">
+                        <h4><i class="fas fa-image"></i> Original Image</h4>
+                        <div class="image-container">
+                            <img id="originalImage" alt="Original">
+                        </div>
+                    </div>
+
+                    <div class="result-item">
+                        <h4><i class="fas fa-cut"></i> Background Removed</h4>
+                        <div class="image-container">
+                            <img id="noBgImage" alt="Background Removed">
+                        </div>
+                        <button class="download-btn" id="downloadPngBtn" style="display: none;">
+                            <i class="fas fa-download"></i> Download PNG
+                        </button>
+                    </div>
+
+                    <div class="result-item">
+                        <h4><i class="fas fa-shapes"></i> Binary Preview</h4>
+                        <div class="image-container">
+                            <img id="binaryImage" alt="Binary Preview">
+                        </div>
+                    </div>
+
+                    <div class="result-item">
+                        <h4><i class="fas fa-vector-square"></i> Vector SVG</h4>
+                        <div class="svg-container" id="svgContainer">
+                            <!-- SVG will be inserted here -->
+                        </div>
+                        <button class="download-btn" id="downloadSvgBtn" style="display: none;">
+                            <i class="fas fa-download"></i> Download SVG
+                        </button>
+                    </div>
+                </div>
+
+                <div class="info-panel" id="infoPanel">
+                    <h4><i class="fas fa-info-circle"></i> Processing Information</h4>
+                    <div id="processingInfo"></div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <div class="tips">
+                <h4><i class="fas fa-lightbulb"></i> Tips for Best Results</h4>
+                <ul>
+                    <li>Use images with clear logos on white backgrounds</li>
+                    <li>Higher contrast images work better</li>
+                    <li>Adjust detail level based on your needs</li>
+                    <li>SVG files are scalable and perfect for web use</li>
+                </ul>
+            </div>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

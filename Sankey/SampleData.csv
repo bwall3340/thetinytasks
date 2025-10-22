@@ -1,0 +1,36 @@
+﻿Source,Target,Value
+Coal,Electricity Generation,450
+Natural Gas,Electricity Generation,380
+Nuclear,Electricity Generation,200
+Solar,Electricity Generation,120
+Wind,Electricity Generation,150
+Hydro,Electricity Generation,90
+Electricity Generation,Industrial,420
+Electricity Generation,Residential,380
+Electricity Generation,Commercial,290
+Electricity Generation,Transportation,40
+Coal,Direct Industrial Use,180
+Natural Gas,Direct Industrial Use,220
+Natural Gas,Residential Heating,160
+Natural Gas,Commercial Heating,95
+Oil,Transportation,650
+Oil,Industrial,85
+Oil,Residential Heating,25
+Biomass,Electricity Generation,45
+Biomass,Direct Industrial Use,35
+Geothermal,Electricity Generation,15
+Geothermal,Direct Heating,8
+Industrial,Manufacturing,380
+Industrial,Mining,140
+Industrial,Chemical Processing,185
+Residential,Heating,245
+Residential,Cooling,180
+Residential,Appliances,155
+Residential,Lighting,80
+Commercial,Office Buildings,195
+Commercial,Retail,125
+Commercial,Hospitality,85
+Transportation,Cars,420
+Transportation,Trucks,180
+Transportation,Aviation,95
+Transportation,Marine,25

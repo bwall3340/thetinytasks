@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>White Background Remover - The Tiny Tasks</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.6;
+            color: #1e293b;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 120px 20px 20px 20px;
+            background: transparent;
+        }
+
+        .main-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+            z-index: 100;
+        }
+
+        .logo h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            text-transform: lowercase;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            margin: 0;
+        }
+
+        .logo a {
+            text-decoration: none;
+        }
+
+        /* Hamburger Menu */
+        .hamburger-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            cursor: pointer;
+            padding: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .hamburger-menu span {
+            width: 24px;
+            height: 2px;
+            background: #1e293b;
+            border-radius: 2px;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .hamburger-menu.active span:nth-child(1) {
+            transform: rotate(45deg) translate(5px, 5px);
+        }
+
+        .hamburger-menu.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .hamburger-menu.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(7px, -6px);
+        }
+
+        /* Mobile Menu */
+        .mobile-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(20px);
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .mobile-menu.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .mobile-menu-content {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 300px;
+            height: 100vh;
+            background: #ffffff;
+            padding: 2rem;
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .mobile-menu.active .mobile-menu-content {
+            transform: translateX(0);
+        }
+
+        .mobile-menu-content h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            color: #1e293b;
+        }
+
+        .mobile-menu-content ul {
+            list-style: none;
+        }
+
+        .mobile-menu-content li {
+            margin-bottom: 1rem;
+        }
+
+        .mobile-menu-content a {
+            color: #64748b;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.75rem 0;
+            display: block;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .mobile-menu-content a:hover {
+            color: #6366f1;
+            background: rgba(99, 102, 241, 0.1);
+            padding-left: 1rem;
+        }
+
+        .tool-container {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            border-radius: 16px;
+            padding: 2rem;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #1e293b;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            letter-spacing: -0.025em;
+        }
+        
+        .image-area {
+            border: 2px dashed rgba(226, 232, 240, 0.8);
+            border-radius: 16px;
+            margin-bottom: 2rem;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            text-align: center;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background:
+                linear-gradient(45deg, rgba(99, 102, 241, 0.05) 25%, transparent 25%),
+                linear-gradient(-45deg, rgba(99, 102, 241, 0.05) 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, rgba(99, 102, 241, 0.05) 75%),
+                linear-gradient(-45deg, transparent 75%, rgba(99, 102, 241, 0.05) 75%),
+                rgba(248, 250, 252, 0.8);
+            background-size: 20px 20px, 20px 20px, 20px 20px, 20px 20px, 100% 100%;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px, 0 0;
+            backdrop-filter: blur(10px);
+        }
+
+        .image-area:hover {
+            border-color: rgba(99, 102, 241, 0.5);
+            background:
+                linear-gradient(45deg, rgba(99, 102, 241, 0.08) 25%, transparent 25%),
+                linear-gradient(-45deg, rgba(99, 102, 241, 0.08) 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, rgba(99, 102, 241, 0.08) 75%),
+                linear-gradient(-45deg, transparent 75%, rgba(99, 102, 241, 0.08) 75%),
+                rgba(248, 250, 252, 0.9);
+            background-size: 20px 20px, 20px 20px, 20px 20px, 20px 20px, 100% 100%;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px, 0 0;
+        }
+
+        .image-area.dragover {
+            border-color: #6366f1;
+            background: rgba(99, 102, 241, 0.1);
+            transform: scale(1.02);
+        }
+        
+        .upload-prompt {
+            padding: 3rem;
+            cursor: pointer;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .upload-prompt p {
+            margin: 0.5rem 0;
+        }
+
+        .upload-prompt small {
+            color: #94a3b8;
+            font-size: 0.875rem;
+        }
+        
+        canvas {
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            border-radius: 12px;
+            cursor: crosshair;
+            max-width: 100%;
+            max-height: 500px;
+            height: auto;
+            display: block;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 2rem 0;
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn:hover {
+            background: #5856eb;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: #64748b;
+        }
+
+        .btn-secondary:hover {
+            background: #526072;
+            box-shadow: 0 8px 25px rgba(100, 116, 139, 0.3);
+        }
+
+        .btn-success {
+            background: #10b981;
+        }
+
+        .btn-success:hover {
+            background: #0ea371;
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+        }
+        
+        .tolerance-control {
+            margin: 1.5rem 0;
+            text-align: center;
+            padding: 1rem;
+            background: rgba(248, 250, 252, 0.5);
+            border-radius: 12px;
+            border: 1px solid rgba(226, 232, 240, 0.5);
+        }
+
+        .tolerance-control label {
+            margin-right: 1rem;
+            font-weight: 500;
+            color: #1e293b;
+        }
+
+        #toleranceSlider {
+            width: 250px;
+            height: 6px;
+            border-radius: 3px;
+            background: #e2e8f0;
+            outline: none;
+            margin: 0 1rem;
+        }
+
+        #toleranceSlider::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #6366f1;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+        }
+
+        #toleranceSlider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #6366f1;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+        }
+
+        #toleranceValue {
+            font-weight: 600;
+            color: #6366f1;
+            margin-left: 0.5rem;
+        }
+        
+        .instructions {
+            background: rgba(99, 102, 241, 0.05);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            backdrop-filter: blur(10px);
+        }
+
+        .instructions h3 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            color: #6366f1;
+            font-weight: 600;
+            font-size: 1.125rem;
+        }
+
+        .instructions ul {
+            margin: 0;
+            padding-left: 1.5rem;
+            color: #64748b;
+        }
+
+        .instructions li {
+            margin-bottom: 0.5rem;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 768px) {
+            .main-header {
+                padding: 0 1rem;
+            }
+
+            .container {
+                padding: 100px 1rem 1rem 1rem;
+            }
+
+            .tool-container {
+                padding: 1.5rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn {
+                width: 100%;
+                max-width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="main-header">
+        <div class="logo">
+            <a href="../index.html"><h2>the tiny tasks</h2></a>
+        </div>
+        <div class="hamburger-menu" id="hamburger-menu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </header>
+
+    <!-- Mobile Menu Overlay -->
+    <div class="mobile-menu" id="mobile-menu">
+        <div class="mobile-menu-content">
+            <h3>Tools</h3>
+            <ul>
+                <li><a href="../index.html">← Back to Tools</a></li>
+                <li><a href="../Sankey/sankey_chart_tool (15).html">Sankey Chart</a></li>
+                <li><a href="#" onclick="window.location.reload()">Refresh Tool</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="tool-container">
+            <h1>White Background Remover</h1>
+        
+        <div class="instructions">
+            <h3>How to use:</h3>
+            <ul>
+                <li>Upload an image using the upload area below</li>
+                <li>Click on any white area you want to remove</li>
+                <li>Adjust tolerance if needed to fine-tune the selection</li>
+                <li>Download the processed image with transparent background</li>
+            </ul>
+        </div>
+        
+        <div class="image-area" id="imageArea">
+            <div class="upload-prompt" id="uploadPrompt" onclick="document.getElementById('fileInput').click()">
+                <p>Click here to upload an image or drag and drop</p>
+                <p><small>Supports JPG, PNG, GIF formats</small></p>
+            </div>
+            <canvas id="imageCanvas" style="display: none;"></canvas>
+            <input type="file" id="fileInput" accept="image/*" style="display: none;">
+        </div>
+        
+        <div class="tolerance-control">
+            <label for="toleranceSlider">Color Tolerance:</label>
+            <input type="range" id="toleranceSlider" min="0" max="150" value="100">
+            <span id="toleranceValue">100</span>
+        </div>
+        
+        <div class="controls">
+            <button class="btn btn-secondary" id="resetBtn" disabled>Reset Image</button>
+            <button class="btn btn-success" id="downloadBtn" disabled>Download Result</button>
+        </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vectorizer - Logo Background Remover</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='interactive.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-vector-square"></i> Vectorizer</h1>
+            <p>Remove backgrounds and convert your logos to scalable vector graphics</p>
+            <div class="interface-selector">
+                <a href="/test" class="interface-btn">Upscaler</a>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- Upload Section -->
+            <div class="upload-section" id="uploadSection">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-content">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <h3>Upload Your Logo</h3>
+                        <p>Drag and drop an image file here, or click to browse</p>
+                        <p class="file-types">Supports: PNG, JPG, JPEG, BMP, TIFF</p>
+                        <input type="file" id="fileInput" accept=".png,.jpg,.jpeg,.bmp,.tiff" hidden>
+                        <button class="browse-btn" onclick="document.getElementById('fileInput').click()">
+                            <i class="fas fa-folder-open"></i> Browse Files
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Editor Section -->
+            <div class="editor-section" id="editorSection" style="display: none;">
+                <div class="toolbar">
+                    <div class="tool-group">
+                        <label for="toolMode">
+                            <i class="fas fa-tools"></i> Tool Mode
+                        </label>
+                        <select id="toolMode">
+                            <option value="flood">Flood Fill (Click areas)</option>
+                            <option value="brush">Brush (Paint to remove)</option>
+                            <option value="magic">Magic Wand (Smart select)</option>
+                        </select>
+                    </div>
+
+                    <div class="tool-group">
+                        <label for="toleranceSlider">
+                            <i class="fas fa-crosshairs"></i> Tolerance
+                        </label>
+                        <input type="range" id="toleranceSlider" min="1" max="100" value="15">
+                        <span id="toleranceValue">15</span>
+                        <small>Higher = removes more similar colors</small>
+                    </div>
+
+                    <div class="tool-group" id="brushGroup" style="display: none;">
+                        <label for="brushSize">
+                            <i class="fas fa-circle"></i> Brush Size
+                        </label>
+                        <input type="range" id="brushSize" min="5" max="50" value="20">
+                        <span id="brushSizeValue">20</span>
+                    </div>
+
+                    <div class="tool-group">
+                        <button id="undoBtn" class="tool-btn" disabled>
+                            <i class="fas fa-undo"></i> Undo
+                        </button>
+                        <button id="resetBtn" class="tool-btn">
+                            <i class="fas fa-refresh"></i> Reset
+                        </button>
+                        <button id="clearAllBtn" class="tool-btn">
+                            <i class="fas fa-eraser"></i> Clear All
+                        </button>
+                    </div>
+
+                    <div class="tool-group">
+                        <label for="detailLevel">
+                            <i class="fas fa-eye"></i> Vector Detail
+                        </label>
+                        <select id="detailLevel">
+                            <option value="0.0001">Extreme (Pixel Perfect)</option>
+                            <option value="0.001" selected>Ultra High</option>
+                            <option value="0.005">High</option>
+                            <option value="0.02">Normal</option>
+                            <option value="0.05">Low</option>
+                        </select>
+                    </div>
+
+                    <div class="tool-group">
+                        <button id="vectorizeBtn" class="vectorize-btn" disabled>
+                            <i class="fas fa-magic"></i> Vectorize
+                        </button>
+                    </div>
+                </div>
+
+                <div class="canvas-container">
+                    <div class="canvas-wrapper">
+                        <canvas id="imageCanvas"></canvas>
+                        <div class="canvas-overlay" id="canvasOverlay">
+                            <div class="instructions">
+                                <i class="fas fa-hand-pointer"></i>
+                                <p>Click on areas you want to remove</p>
+                                <p class="small">Use the tolerance slider to adjust sensitivity</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="preview-section" id="previewSection" style="display: none;">
+                    <h3><i class="fas fa-eye"></i> Preview</h3>
+                    <div class="preview-grid">
+                        <div class="preview-item">
+                            <h4>Background Removed</h4>
+                            <canvas id="previewCanvas"></canvas>
+                            <button class="download-btn" id="downloadPngBtn" style="display: none;">
+                                <i class="fas fa-download"></i> Download PNG
+                            </button>
+                        </div>
+                        <div class="preview-item">
+                            <h4>Vector SVG</h4>
+                            <div class="svg-container" id="svgContainer">
+                                <!-- SVG will be inserted here -->
+                            </div>
+                            <button class="download-btn" id="downloadSvgBtn" style="display: none;">
+                                <i class="fas fa-download"></i> Download SVG
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Section -->
+            <div class="progress-section" id="progressSection" style="display: none;">
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                    <span class="progress-text">Processing...</span>
+                </div>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <div class="tips">
+                <h4><i class="fas fa-lightbulb"></i> Tips</h4>
+                <ul>
+                    <li>Click on background areas you want to remove</li>
+                    <li>Adjust tolerance for better color matching</li>
+                    <li>Use undo to fix mistakes</li>
+                    <li>Higher tolerance removes more similar colors</li>
+                </ul>
+            </div>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='interactive_enhanced.js') }}"></script>
+</body>
+</html>

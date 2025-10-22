@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Vectorizer</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .upload-area { border: 2px dashed #ccc; padding: 40px; text-align: center; margin: 20px 0; }
+        .debug-output { background: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 5px; }
+        .debug-output pre { white-space: pre-wrap; font-family: monospace; }
+        .svg-output { border: 1px solid #ddd; padding: 20px; margin: 20px 0; }
+        button { background: #007cba; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #005a8b; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Vectorization Debugger</h1>
+    <p>Upload your problematic image to see detailed debugging information.</p>
+
+    <div class="upload-area" id="uploadArea">
+        <p>Drag and drop an image here, or click to browse</p>
+        <input type="file" id="fileInput" accept="image/*" style="display: none;">
+        <button onclick="document.getElementById('fileInput').click()">Choose File</button>
+    </div>
+
+    <div id="results" style="display: none;">
+        <h2>Debug Results</h2>
+
+        <div class="debug-output">
+            <h3>Analysis Summary</h3>
+            <div id="summary"></div>
+        </div>
+
+        <div class="svg-output">
+            <h3>Generated SVG</h3>
+            <div id="svgContainer"></div>
+        </div>
+
+        <div class="debug-output">
+            <h3>Detailed Console Output</h3>
+            <p>Check the browser console (F12) and server console for detailed debug information.</p>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const results = document.getElementById('results');
+
+        fileInput.addEventListener('change', handleFile);
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.background = '#f0f0f0';
+        });
+        uploadArea.addEventListener('dragleave', (e) => {
+            uploadArea.style.background = '';
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.background = '';
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                processImage(files[0]);
+            }
+        });
+
+        function handleFile(event) {
+            const file = event.target.files[0];
+            if (file) processImage(file);
+        }
+
+        async function processImage(file) {
+            console.log('Processing image:', file.name);
+
+            const formData = new FormData();
+            formData.append('image', file);
+
+            try {
+                const response = await fetch('/debug', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                console.log('Debug result:', result);
+
+                // Show results
+                results.style.display = 'block';
+
+                // Summary
+                document.getElementById('summary').innerHTML = `
+                    <p><strong>File:</strong> ${file.name}</p>
+                    <p><strong>Size:</strong> ${file.size} bytes</p>
+                    <p><strong>Type:</strong> ${file.type}</p>
+                    <p><strong>Success:</strong> ${result.success}</p>
+                    <p><strong>Contours Found:</strong> ${result.contour_count}</p>
+                    ${result.error ? `<p><strong>Error:</strong> ${result.error}</p>` : ''}
+                `;
+
+                // SVG
+                if (result.svg_content && result.svg_content !== 'No SVG generated') {
+                    document.getElementById('svgContainer').innerHTML = result.svg_content;
+                } else {
+                    document.getElementById('svgContainer').innerHTML = '<p>No SVG generated</p>';
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                results.style.display = 'block';
+                document.getElementById('summary').innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

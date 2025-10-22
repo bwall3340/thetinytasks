@@ -1,0 +1,335 @@
+﻿Source,Target,Value
+Team Budget,Training Program,250
+Team Budget,Equipment Setup,180
+Team Budget,Support Staff,200
+Team Budget,Medical Care,120
+Team Budget,Race Operations,150
+Training Program,Endurance Training,120
+Training Program,Power Development,80
+Training Program,Technical Skills,50
+Equipment Setup,Race Bikes,80
+Equipment Setup,Support Equipment,60
+Equipment Setup,Technology Systems,40
+Support Staff,Sports Directors,70
+Support Staff,Mechanics,60
+Support Staff,Medical Team,70
+Medical Care,Injury Prevention,60
+Medical Care,Performance Optimization,60
+Race Operations,Strategy Planning,80
+Race Operations,Logistics Management,70
+Endurance Training,Base Fitness,70
+Endurance Training,Specialized Training,50
+Power Development,Sprint Power,40
+Power Development,Climbing Power,40
+Technical Skills,Bike Handling,25
+Technical Skills,Tactical Awareness,25
+Race Bikes,Time Trial Setup,30
+Race Bikes,Climbing Setup,25
+Race Bikes,Sprint Setup,25
+Support Equipment,Tools,30
+Support Equipment,Spare Parts,30
+Technology Systems,Power Meters,20
+Technology Systems,Communication,20
+Sports Directors,Race Strategy,40
+Sports Directors,Team Coordination,30
+Mechanics,Bike Maintenance,35
+Mechanics,Race Support,25
+Medical Team,Health Monitoring,35
+Medical Team,Recovery Support,35
+Injury Prevention,Physiotherapy,30
+Injury Prevention,Strength Training,30
+Performance Optimization,Nutrition,30
+Performance Optimization,Recovery Protocols,30
+Strategy Planning,Stage Planning,40
+Strategy Planning,Overall Tactics,40
+Logistics Management,Travel Coordination,35
+Logistics Management,Equipment Transport,35
+Base Fitness,Aerobic Capacity,40
+Base Fitness,Endurance Base,30
+Specialized Training,Interval Training,25
+Specialized Training,Race Simulation,25
+Sprint Power,Peak Power,20
+Sprint Power,Power Endurance,20
+Climbing Power,Mountain Training,20
+Climbing Power,Weight Management,20
+Bike Handling,Cornering Skills,12
+Bike Handling,Descending Skills,13
+Tactical Awareness,Race Reading,12
+Tactical Awareness,Positioning,13
+Race Strategy,Stage Tactics,25
+Race Strategy,Team Roles,15
+Team Coordination,Communication,15
+Team Coordination,Execution,15
+Bike Maintenance,Pre-Race Prep,20
+Bike Maintenance,Component Care,15
+Race Support,Mechanical Assistance,15
+Race Support,Feed Zone Support,10
+Health Monitoring,Performance Testing,20
+Health Monitoring,Injury Assessment,15
+Recovery Support,Massage Therapy,20
+Recovery Support,Sleep Optimization,15
+Stage Planning,Individual Stages,25
+Stage Planning,Critical Moments,15
+Overall Tactics,GC Strategy,25
+Overall Tactics,Team Support,15
+Travel Coordination,Route Planning,20
+Travel Coordination,Accommodation,15
+Equipment Transport,Bike Security,20
+Equipment Transport,Setup Logistics,15
+Aerobic Capacity,VO2 Max Development,25
+Aerobic Capacity,Threshold Training,15
+Endurance Base,Long Rides,18
+Endurance Base,Recovery Rides,12
+Interval Training,High Intensity,15
+Interval Training,Tempo Work,10
+Race Simulation,Course Recon,15
+Race Simulation,Competition Practice,10
+Peak Power,Sprint Development,12
+Peak Power,Neuromuscular Power,8
+Power Endurance,Sustained Power,12
+Power Endurance,Repeatability,8
+Mountain Training,Climbing Technique,12
+Mountain Training,Altitude Training,8
+Weight Management,Body Composition,12
+Weight Management,Power to Weight,8
+Stage Tactics,Breakaway Strategy,15
+Stage Tactics,Sprint Strategy,10
+Team Roles,Domestique Work,8
+Team Roles,Leadership,7
+VO2 Max Development,Tour Performance,40
+Threshold Training,Tour Performance,25
+Long Rides,Tour Performance,30
+Recovery Rides,Tour Performance,12
+High Intensity,Tour Performance,25
+Tempo Work,Tour Performance,15
+Course Recon,Tour Performance,20
+Competition Practice,Tour Performance,10
+Sprint Development,Tour Performance,20
+Neuromuscular Power,Tour Performance,8
+Sustained Power,Tour Performance,20
+Repeatability,Tour Performance,8
+Climbing Technique,Tour Performance,20
+Altitude Training,Tour Performance,8
+Body Composition,Tour Performance,12
+Power to Weight,Tour Performance,8
+Breakaway Strategy,Tour Performance,15
+Sprint Strategy,Tour Performance,10
+Domestique Work,Tour Performance,8
+Leadership,Tour Performance,7
+Tour Performance,Stage Victories,120
+Tour Performance,Overall Classification,150
+Tour Performance,Team Success,100
+Stage Victories,Individual Recognition,60
+Stage Victories,Team Morale,60
+Overall Classification,Yellow Jersey,75
+Overall Classification,Podium Finish,75
+Team Success,Team Classification,50
+Team Success,Sponsor Satisfaction,50
+Individual Recognition,Career Achievement,60
+Team Morale,Future Success,60
+Yellow Jersey,Legacy,75
+Podium Finish,Legacy,75
+Team Classification,Collective Pride,50
+Team Budget,Training Infrastructure,8500
+Team Budget,Equipment Technology,12000
+Team Budget,Rider Salaries,45000
+Team Budget,Support Staff,15000
+Team Budget,Medical Nutrition,8000
+Team Budget,Travel Logistics,6500
+Team Budget,Performance Analysis,3500
+Training Infrastructure,Base Training,2800
+Training Infrastructure,Altitude Training,450
+Training Infrastructure,Wind Tunnel Testing,120
+Training Infrastructure,Power Data Collection,1200
+Equipment Technology,Aerodynamic Bikes,180
+Equipment Technology,Climbing Bikes,95
+Equipment Technology,Time Trial Bikes,45
+Equipment Technology,Wheels Components,380
+Equipment Technology,Clothing Helmets,240
+Equipment Technology,Electronic Systems,160
+Rider Salaries,Team Leader Development,15000
+Rider Salaries,Domestique Development,18000
+Rider Salaries,Sprinter Development,8000
+Rider Salaries,Climber Development,4000
+Support Staff,Sports Directors,4500
+Support Staff,Mechanics,3200
+Support Staff,Soigneurs,2800
+Support Staff,Nutritionists,1800
+Support Staff,Data Analysts,1200
+Support Staff,Team Doctors,1500
+Medical Nutrition,Injury Prevention,2200
+Medical Nutrition,Recovery Programs,2800
+Medical Nutrition,Race Nutrition,1800
+Medical Nutrition,Health Monitoring,1200
+Travel Logistics,Reconnaissance,1800
+Travel Logistics,Equipment Transport,2200
+Travel Logistics,Team Accommodation,1500
+Travel Logistics,Race Day Support,1000
+Performance Analysis,Power Analysis,1200
+Performance Analysis,Video Analysis,800
+Performance Analysis,Weather Modeling,600
+Performance Analysis,Tactical Planning,900
+Base Training,Endurance Development,1800
+Base Training,Interval Sessions,600
+Base Training,Recovery Sessions,400
+Altitude Training,Oxygen Adaptation,300
+Altitude Training,Mountain Preparation,150
+Wind Tunnel Testing,Position Optimization,80
+Wind Tunnel Testing,Equipment Testing,40
+Power Data Collection,Training Zones,800
+Power Data Collection,Performance Tracking,400
+Team Leader Development,GC Preparation,15000
+Domestique Development,Support Skills,12000
+Domestique Development,Sprint Leadouts,3000
+Domestique Development,Climbing Support,3000
+Sprinter Development,Sprint Power,5000
+Sprinter Development,Positioning Skills,3000
+Climber Development,Mountain Training,4000
+Sports Directors,Race Strategy,2800
+Sports Directors,Team Communication,1700
+Mechanics,Bike Maintenance,2200
+Mechanics,Race Support,1000
+Soigneurs,Massage Therapy,1800
+Soigneurs,Recovery Care,1000
+Nutritionists,Meal Planning,1200
+Nutritionists,Supplement Strategy,600
+Data Analysts,Performance Metrics,800
+Data Analysts,Competition Analysis,400
+Team Doctors,Medical Clearance,1000
+Team Doctors,Emergency Protocols,500
+Injury Prevention,Physiotherapy,1500
+Injury Prevention,Strength Training,700
+Recovery Programs,Sleep Optimization,1400
+Recovery Programs,Active Recovery,800
+Recovery Programs,Massage Sessions,600
+Race Nutrition,Energy Management,1200
+Race Nutrition,Hydration Strategy,600
+Health Monitoring,Blood Analysis,600
+Health Monitoring,Fitness Testing,600
+Reconnaissance,Course Knowledge,1200
+Reconnaissance,Hotel Selection,600
+Equipment Transport,Bike Logistics,1500
+Equipment Transport,Spare Parts,700
+Team Accommodation,Rest Quality,1000
+Team Accommodation,Nutrition Access,500
+Race Day Support,Mechanical Support,600
+Race Day Support,Feed Zone Operations,400
+Power Analysis,Training Optimization,800
+Power Analysis,Race Pacing,400
+Video Analysis,Technique Review,500
+Video Analysis,Tactical Analysis,300
+Weather Modeling,Condition Forecasting,400
+Weather Modeling,Equipment Selection,200
+Tactical Planning,Stage Strategy,600
+Tactical Planning,Team Coordination,300
+Endurance Development,Aerobic Capacity,1200
+Endurance Development,Fat Utilization,600
+Interval Sessions,VO2 Max,400
+Interval Sessions,Threshold Power,200
+Recovery Sessions,Active Rest,250
+Recovery Sessions,Mental Recovery,150
+Oxygen Adaptation,Blood Adaptation,200
+Oxygen Adaptation,Cellular Changes,100
+Mountain Preparation,Climbing Skills,100
+Mountain Preparation,Descending Skills,50
+Position Optimization,Aerodynamic Gains,50
+Position Optimization,Power Efficiency,30
+Equipment Testing,Setup Refinement,25
+Equipment Testing,Component Selection,15
+Training Zones,Power Targets,500
+Training Zones,Heart Rate Zones,300
+Performance Tracking,Progress Monitoring,250
+Performance Tracking,Fatigue Assessment,150
+GC Preparation,Stage Race Readiness,15000
+Support Skills,Peloton Control,6000
+Support Skills,Team Protection,6000
+Sprint Leadouts,Lead Train Formation,3000
+Climbing Support,Mountain Assistance,3000
+Sprint Power,Peak Power Output,3000
+Sprint Power,Power Endurance,2000
+Positioning Skills,Race Tactics,2000
+Positioning Skills,Bunch Navigation,1000
+Mountain Training,Climbing Performance,4000
+Race Strategy,Stage Tactics,1800
+Race Strategy,Overall Planning,1000
+Team Communication,Radio Coordination,1200
+Team Communication,Signal Systems,500
+Bike Maintenance,Pre Race Prep,1500
+Bike Maintenance,Component Service,700
+Race Support,Mechanical Assistance,600
+Race Support,Wheel Changes,400
+Massage Therapy,Muscle Recovery,1200
+Massage Therapy,Circulation Enhancement,600
+Recovery Care,Sleep Quality,600
+Recovery Care,Stress Management,400
+Meal Planning,Carb Loading,800
+Meal Planning,Protein Timing,400
+Supplement Strategy,Vitamin Protocol,400
+Supplement Strategy,Electrolyte Balance,200
+Performance Metrics,Data Collection,500
+Performance Metrics,Analysis Reports,300
+Competition Analysis,Rival Assessment,250
+Competition Analysis,Course Evaluation,150
+Medical Clearance,Health Certification,800
+Medical Clearance,Injury Assessment,200
+Emergency Protocols,Race Medicine,300
+Emergency Protocols,Crisis Management,200
+Stage Race Readiness,Tour Performance,15000
+Peloton Control,Field Management,3000
+Peloton Control,Pace Setting,3000
+Team Protection,Leader Support,3500
+Team Protection,Safety Management,2500
+Lead Train Formation,Sprint Success,3000
+Mountain Assistance,Climbing Success,3000
+Peak Power Output,Sprint Victories,2000
+Peak Power Output,Breakaway Power,1000
+Power Endurance,Sustained Performance,1500
+Power Endurance,Consistency,500
+Race Tactics,Positioning Success,1200
+Race Tactics,Opportunity Recognition,800
+Bunch Navigation,Safety Navigation,600
+Bunch Navigation,Energy Conservation,400
+Climbing Performance,Mountain Results,4000
+Tour Performance,Final Classification,8000
+Tour Performance,Stage Wins,4000
+Tour Performance,Team Awards,2000
+Tour Performance,Jersey Competition,1000
+Field Management,Race Control,2000
+Field Management,Strategic Positioning,1000
+Pace Setting,Tempo Control,2000
+Pace Setting,Energy Management,1000
+Leader Support,GC Protection,2500
+Leader Support,Tactical Support,1000
+Safety Management,Crash Avoidance,1500
+Safety Management,Risk Mitigation,1000
+Sprint Success,Stage Victories,2000
+Sprint Success,Points Classification,1000
+Climbing Success,Mountain Victories,2000
+Climbing Success,KOM Competition,1000
+Sprint Victories,Green Jersey Points,1500
+Sprint Victories,Stage Prestige,500
+Breakaway Power,Solo Victories,600
+Breakaway Power,Escape Success,400
+Sustained Performance,Reliable Results,1000
+Sustained Performance,Team Contribution,500
+Consistency,Daily Performance,300
+Consistency,Support Role,200
+Positioning Success,Tactical Gains,800
+Positioning Success,Strategic Advantage,400
+Opportunity Recognition,Race Wins,500
+Opportunity Recognition,Podium Places,300
+Safety Navigation,Safe Racing,400
+Safety Navigation,Efficient Movement,200
+Energy Conservation,Endurance Management,400
+Energy Conservation,Strategic Reserves,200
+Mountain Results,Climbing Victories,2500
+Mountain Results,Time Advantages,1500
+Final Classification,Yellow Jersey,4000
+Final Classification,Overall Podium,2500
+Final Classification,Top Ten Finish,1500
+Stage Wins,Individual Victories,2500
+Stage Wins,Team Recognition,1500
+Team Awards,Team Classification,1500
+Team Awards,Collective Success,500
+Jersey Competition,Special Jerseys,600
+Jersey Competition,Individual Recognition,400

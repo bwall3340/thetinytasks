@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Tiny Tasks</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Cover Page -->
+    <section class="cover-page" id="cover-page">
+        <div class="cover-content">
+            <h1 class="cover-title">the tiny tasks</h1>
+        </div>
+        <div class="scroll-indicator">
+            <div class="scroll-arrow"></div>
+            <span>scroll to explore</span>
+        </div>
+    </section>
+
+    <!-- Main Page -->
+    <section class="main-page" id="main-page">
+        <!-- Header -->
+        <header class="main-header">
+            <div class="logo">
+                <h2>the tiny tasks</h2>
+            </div>
+            <div class="hamburger-menu" id="hamburger-menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </header>
+
+        <!-- Tools Grid -->
+        <main class="tools-container">
+            <div class="tools-grid">
+                <!-- Sankey Chart Generator -->
+                <div class="tool-card" data-tool="sankey-chart">
+                    <div class="tool-icon">
+                        <svg viewBox="0 0 64 64" class="icon">
+                            <!-- Background circle -->
+                            <circle cx="32" cy="32" r="28" fill="#6366F1" stroke="#1E293B" stroke-width="2"/>
+
+                            <!-- Sankey flow paths -->
+                            <!-- Left nodes -->
+                            <rect x="8" y="18" width="8" height="12" rx="2" fill="#10B981"/>
+                            <rect x="8" y="34" width="8" height="12" rx="2" fill="#10B981"/>
+
+                            <!-- Right nodes -->
+                            <rect x="48" y="14" width="8" height="8" rx="2" fill="#1E293B"/>
+                            <rect x="48" y="26" width="8" height="16" rx="2" fill="#1E293B"/>
+                            <rect x="48" y="46" width="8" height="6" rx="2" fill="#1E293B"/>
+
+                            <!-- Flow paths (curved connections) -->
+                            <path d="M16,24 Q32,20 48,18" stroke="#F8FAFC" stroke-width="6" fill="none" opacity="0.8"/>
+                            <path d="M16,28 Q32,28 48,34" stroke="#F8FAFC" stroke-width="8" fill="none" opacity="0.8"/>
+                            <path d="M16,40 Q32,44 48,49" stroke="#F8FAFC" stroke-width="4" fill="none" opacity="0.8"/>
+
+                            <!-- Flow direction arrows -->
+                            <polygon points="44,16 47,18 44,20" fill="#F8FAFC"/>
+                            <polygon points="44,32 47,34 44,36" fill="#F8FAFC"/>
+                            <polygon points="44,47 47,49 44,51" fill="#F8FAFC"/>
+                        </svg>
+                    </div>
+                    <h3>Sankey Chart</h3>
+                    <p>Create flow diagrams to visualize data relationships</p>
+                </div>
+
+                <!-- Enhanced Background Remover -->
+                <div class="tool-card" data-tool="background-remover">
+                    <div class="tool-icon">
+                        <svg viewBox="0 0 64 64" class="icon">
+                            <!-- Background circle -->
+                            <circle cx="32" cy="32" r="28" fill="#6366F1" stroke="#1E293B" stroke-width="2"/>
+
+                            <!-- Image frame with gradient background -->
+                            <rect x="12" y="16" width="40" height="32" rx="4" fill="url(#bgGradient)" stroke="#1E293B" stroke-width="1.5"/>
+
+                            <!-- Subject/object to keep (enhanced with gradient) -->
+                            <circle cx="28" cy="32" r="8" fill="#10B981" opacity="0.9"/>
+                            <circle cx="28" cy="32" r="6" fill="#059669"/>
+
+                            <!-- Vector paths showing vectorization -->
+                            <path d="M36 20 Q42 24 40 30 Q38 36 42 40" stroke="#F8FAFC" stroke-width="2" fill="none" opacity="0.8"/>
+                            <path d="M44 22 Q48 26 46 32" stroke="#F8FAFC" stroke-width="1.5" fill="none" opacity="0.6"/>
+
+                            <!-- Multi-tool indicator -->
+                            <g transform="translate(46, 18)">
+                                <!-- Magic wand -->
+                                <rect width="8" height="2" rx="1" fill="#1E293B" transform="rotate(45)"/>
+                                <circle cx="0" cy="0" r="1.5" fill="#F8FAFC"/>
+                                <!-- Vector tool -->
+                                <path d="M-2 4 L2 4 L0 8 Z" fill="#10B981"/>
+                                <!-- Upscale arrows -->
+                                <path d="M-6 2 L-4 0 L-6 -2" stroke="#F8FAFC" stroke-width="1" fill="none"/>
+                                <path d="M6 2 L4 0 L6 -2" stroke="#F8FAFC" stroke-width="1" fill="none"/>
+                            </g>
+
+                            <!-- Sparkle effects -->
+                            <circle cx="48" cy="15" r="1" fill="#F8FAFC"/>
+                            <circle cx="52" cy="18" r="0.8" fill="#F8FAFC"/>
+                            <circle cx="49" cy="25" r="1.2" fill="#F8FAFC"/>
+                            <circle cx="18" cy="22" r="0.8" fill="#10B981"/>
+
+                            <!-- Gradient definition -->
+                            <defs>
+                                <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#F8FAFC;stop-opacity:0.8"/>
+                                    <stop offset="50%" style="stop-color:#E2E8F0;stop-opacity:0.4"/>
+                                    <stop offset="100%" style="stop-color:#F8FAFC;stop-opacity:0.2"/>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    <h3>Background Remover Pro</h3>
+                    <p>Advanced background removal with vectorization and upscaling tools</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Mobile Menu Overlay -->
+        <div class="mobile-menu" id="mobile-menu">
+            <div class="mobile-menu-content">
+                <h3>Tools</h3>
+                <ul>
+                    <li><a href="#" data-tool="sankey-chart">Sankey Chart</a></li>
+                    <li><a href="#" data-tool="background-remover">Background Remover Pro</a></li>
+                    <li><a href="#" data-tool="coming-soon">More Tools Coming Soon...</a></li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <script src="script.js"></script>
+</body>
+</html>

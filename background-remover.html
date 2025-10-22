@@ -1,0 +1,1757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Background Remover - The Tiny Tasks</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Additional styles specific to background remover */
+        .bg-remover-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 16px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .bg-remover-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .bg-remover-header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+        }
+
+        .bg-remover-header p {
+            color: #64748b;
+            font-size: 1.125rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .tool-modes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .mode-card {
+            background: rgba(255, 255, 255, 0.8);
+            border: 2px solid rgba(226, 232, 240, 0.8);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .mode-card:hover,
+        .mode-card.active {
+            border-color: #6366f1;
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(99, 102, 241, 0.15);
+        }
+
+        .mode-card.active {
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .mode-icon {
+            font-size: 3rem;
+            color: #6366f1;
+            margin-bottom: 1rem;
+        }
+
+        .mode-card h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #1e293b;
+        }
+
+        .mode-card p {
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+
+        .upload-section {
+            margin-bottom: 3rem;
+        }
+
+        .upload-area {
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 3rem 2rem;
+            text-align: center;
+            background: rgba(248, 250, 252, 0.5);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover,
+        .upload-area.dragover {
+            border-color: #6366f1;
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .upload-content i {
+            font-size: 3rem;
+            color: #6366f1;
+            margin-bottom: 1rem;
+        }
+
+        .upload-content h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #1e293b;
+        }
+
+        .upload-content p {
+            color: #64748b;
+            margin-bottom: 1rem;
+        }
+
+        .file-types {
+            font-size: 0.875rem !important;
+            color: #94a3b8 !important;
+        }
+
+        .browse-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+
+        .browse-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(99, 102, 241, 0.3);
+        }
+
+        .editor-section {
+            margin-bottom: 3rem;
+        }
+
+        .toolbar {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        .tool-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .tool-group label {
+            font-weight: 500;
+            color: #1e293b;
+            font-size: 0.875rem;
+        }
+
+        .tool-group select,
+        .tool-group input[type="range"] {
+            padding: 0.5rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background: white;
+            font-size: 0.875rem;
+        }
+
+        .tool-btn,
+        .vectorize-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tool-btn:hover,
+        .vectorize-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .tool-btn:disabled,
+        .vectorize-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .canvas-container {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            display: inline-block;
+            max-width: 100%;
+            background:
+                linear-gradient(45deg, rgba(0,0,0,0.03) 25%, transparent 25%),
+                linear-gradient(-45deg, rgba(0,0,0,0.03) 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, rgba(0,0,0,0.03) 75%),
+                linear-gradient(-45deg, transparent 75%, rgba(0,0,0,0.03) 75%);
+            background-size: 16px 16px;
+            background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        #imageCanvas {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            background: transparent;
+        }
+
+        .canvas-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            color: white;
+            text-align: center;
+        }
+
+        .instructions {
+            padding: 2rem;
+        }
+
+        .instructions i {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: #6366f1;
+        }
+
+        .preview-section {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .preview-section h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 2rem;
+            color: #1e293b;
+            text-align: center;
+        }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .preview-item {
+            text-align: center;
+        }
+
+        .preview-item h4 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #1e293b;
+        }
+
+        #previewCanvas {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1rem;
+        }
+
+        .svg-container {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 1rem;
+            background: white;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .progress-section {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .progress-bar {
+            background: rgba(226, 232, 240, 0.5);
+            border-radius: 50px;
+            height: 8px;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #6366f1, #8b5cf6);
+            height: 100%;
+            width: 0%;
+            border-radius: 50px;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .progress-text {
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            color: #64748b;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .back-btn:hover {
+            background: white;
+            color: #1e293b;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .tips {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-top: 3rem;
+        }
+
+        .tips h4 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #1e293b;
+        }
+
+        .tips ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .tips li {
+            color: #64748b;
+            margin-bottom: 0.5rem;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .tips li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #10b981;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .bg-remover-container {
+                padding: 1rem;
+                margin: 1rem;
+            }
+
+            .toolbar {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .preview-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tool-modes {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="main-header">
+        <div class="logo">
+            <h2>the tiny tasks</h2>
+        </div>
+        <div class="hamburger-menu" id="hamburger-menu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <section class="main-page" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); min-height: 100vh;">
+        <div class="bg-remover-container">
+            <a href="index.html" class="back-btn">
+                <i class="fas fa-arrow-left"></i>
+                Back to Tools
+            </a>
+
+            <div class="bg-remover-header">
+                <h1><i class="fas fa-magic"></i> Background Remover</h1>
+                <p>Remove backgrounds and vectorize your images with advanced AI-powered tools</p>
+            </div>
+
+            <!-- Tool Mode Selection -->
+            <div class="tool-modes">
+                <div class="mode-card active" data-mode="interactive">
+                    <div class="mode-icon">
+                        <i class="fas fa-hand-pointer"></i>
+                    </div>
+                    <h3>Interactive Editor</h3>
+                    <p>Click to remove backgrounds with precision control and real-time preview</p>
+                </div>
+                <div class="mode-card" data-mode="vectorizer">
+                    <div class="mode-icon">
+                        <i class="fas fa-vector-square"></i>
+                    </div>
+                    <h3>Logo Vectorizer</h3>
+                    <p>Convert logos to scalable SVG format with detailed vector paths</p>
+                </div>
+                <div class="mode-card" data-mode="upscaler">
+                    <div class="mode-icon">
+                        <i class="fas fa-expand-arrows-alt"></i>
+                    </div>
+                    <h3>Image Upscaler</h3>
+                    <p>Enhance and upscale images while preserving edges and details</p>
+                </div>
+            </div>
+
+            <!-- Upload Section -->
+            <div class="upload-section" id="uploadSection">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-content">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <h3>Upload Your Image</h3>
+                        <p>Drag and drop an image file here, or click to browse</p>
+                        <p class="file-types">Supports: PNG, JPG, JPEG, BMP, TIFF</p>
+                        <input type="file" id="fileInput" accept=".png,.jpg,.jpeg,.bmp,.tiff" hidden>
+                        <button class="browse-btn" onclick="document.getElementById('fileInput').click()">
+                            <i class="fas fa-folder-open"></i> Browse Files
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Editor Section -->
+            <div class="editor-section" id="editorSection" style="display: none;">
+                <div class="toolbar">
+                    <div class="tool-group">
+                        <label for="toolMode">
+                            <i class="fas fa-tools"></i> Tool Mode
+                        </label>
+                        <select id="toolMode">
+                            <option value="remove">Remove (Click to delete)</option>
+                            <option value="flatten">Flatten (Click to average color)</option>
+                            <option value="brush">Brush (Paint to remove)</option>
+                            <option value="magic">Magic Wand (Smart select)</option>
+                        </select>
+                    </div>
+
+                    <div class="tool-group">
+                        <label for="toleranceSlider">
+                            <i class="fas fa-crosshairs"></i> Tolerance
+                        </label>
+                        <input type="range" id="toleranceSlider" min="1" max="100" value="15">
+                        <span id="toleranceValue">15</span>
+                    </div>
+
+                    <div class="tool-group" id="brushGroup" style="display: none;">
+                        <label for="brushSize">
+                            <i class="fas fa-circle"></i> Brush Size
+                        </label>
+                        <input type="range" id="brushSize" min="5" max="50" value="20">
+                        <span id="brushSizeValue">20</span>
+                    </div>
+
+                    <div class="tool-group">
+                        <button id="undoBtn" class="tool-btn" disabled>
+                            <i class="fas fa-undo"></i> Undo
+                        </button>
+                        <button id="resetBtn" class="tool-btn">
+                            <i class="fas fa-refresh"></i> Reset
+                        </button>
+                        <button id="startNewBtn" class="tool-btn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                            <i class="fas fa-plus"></i> Start New
+                        </button>
+                    </div>
+
+                    <div class="tool-group" id="vectorDetailGroup" style="display: none;">
+                        <label for="detailLevel">
+                            <i class="fas fa-eye"></i> Detail Level
+                        </label>
+                        <select id="detailLevel">
+                            <option value="0.0001">Extreme (Pixel Perfect)</option>
+                            <option value="0.001" selected>Ultra High</option>
+                            <option value="0.005">High</option>
+                            <option value="0.02">Normal</option>
+                            <option value="0.05">Low</option>
+                        </select>
+                    </div>
+
+                    <div class="tool-group" id="upscaleGroup" style="display: none;">
+                        <label for="scaleFactorSlider">
+                            <i class="fas fa-expand-arrows-alt"></i> Scale Factor
+                        </label>
+                        <input type="range" id="scaleFactorSlider" min="1" max="8" value="2">
+                        <span id="scaleFactorValue">2x</span>
+                    </div>
+
+                    <div class="tool-group" id="upscaleMethodGroup" style="display: none;">
+                        <label for="upscaleMethod">
+                            <i class="fas fa-cogs"></i> Method
+                        </label>
+                        <select id="upscaleMethod">
+                            <option value="smart_edge" selected>Smart Edge</option>
+                            <option value="super_resolution">Super Resolution</option>
+                            <option value="pixel_art">Pixel Art</option>
+                            <option value="hybrid">Hybrid</option>
+                        </select>
+                    </div>
+
+                    <div class="tool-group" id="enhancementGroup" style="display: none;">
+                        <label for="logoType">
+                            <i class="fas fa-palette"></i> Logo Type
+                        </label>
+                        <select id="logoType">
+                            <option value="styled" selected>Styled (Gradients/Effects)</option>
+                            <option value="flat_color">Flat Color</option>
+                        </select>
+                    </div>
+
+                    <div class="tool-group" id="sharpeningGroup" style="display: none;">
+                        <label>
+                            <i class="fas fa-adjust"></i> Enhancements
+                        </label>
+                        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem;">
+                                <input type="checkbox" id="preserveContrast" checked>
+                                Preserve Contrast
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem;">
+                                <input type="checkbox" id="flattenBackground">
+                                Flatten Background
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem;">
+                                <input type="checkbox" id="enhanceEdges" checked>
+                                Enhance Edges
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="tool-group" id="vectorizeButtonGroup" style="display: none;">
+                        <button id="vectorizeBtn" class="vectorize-btn" disabled>
+                            <i class="fas fa-vector-square"></i> Vectorize
+                        </button>
+                    </div>
+
+                    <div class="tool-group" id="upscaleButtonGroup" style="display: none;">
+                        <button id="upscaleBtn" class="vectorize-btn" disabled>
+                            <i class="fas fa-expand-arrows-alt"></i> Upscale
+                        </button>
+                    </div>
+                </div>
+
+                <div class="canvas-container">
+                    <div class="canvas-wrapper">
+                        <canvas id="imageCanvas"></canvas>
+                        <div class="canvas-overlay" id="canvasOverlay">
+                            <div class="instructions">
+                                <i class="fas fa-hand-pointer"></i>
+                                <p id="instructionText">Click on areas you want to remove</p>
+                                <p class="small" id="instructionSubtext">Use the tolerance slider to adjust sensitivity</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Download Section -->
+                <div class="download-section" id="downloadSection" style="display: none;">
+                    <div style="text-align: center; padding: 1rem; background: rgba(255, 255, 255, 0.8); border-radius: 12px; border: 1px solid rgba(226, 232, 240, 0.8);">
+                        <h4 style="margin-bottom: 1rem; color: #1e293b;"><i class="fas fa-download"></i> Download Results</h4>
+                        <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                            <button class="download-btn" id="downloadPngBtn" style="display: none;">
+                                <i class="fas fa-download"></i> Download PNG
+                            </button>
+                            <button class="download-btn" id="downloadSvgBtn" style="display: none;">
+                                <i class="fas fa-download"></i> Download SVG
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Section -->
+            <div class="progress-section" id="progressSection" style="display: none;">
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+                <span class="progress-text">Processing your image...</span>
+            </div>
+
+            <!-- Tips Section -->
+            <div class="tips">
+                <h4><i class="fas fa-lightbulb"></i> Tips for Best Results</h4>
+                <ul>
+                    <li>Use <strong>Remove</strong> tool to delete unwanted background areas</li>
+                    <li>Use <strong>Flatten</strong> tool to smooth color variations and gradients</li>
+                    <li>Adjust tolerance for better color matching precision</li>
+                    <li>Interactive mode gives you the most control for editing</li>
+                    <li>Vectorizer mode is perfect for logos and simple graphics</li>
+                    <li>Upscaler mode enhances image quality with advanced algorithms</li>
+                    <li>Higher tolerance removes/flattens more similar colors</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Mobile Menu Overlay -->
+    <div class="mobile-menu" id="mobile-menu">
+        <div class="mobile-menu-content">
+            <h3>Tools</h3>
+            <ul>
+                <li><a href="index.html#sankey-chart">Sankey Chart</a></li>
+                <li><a href="background-remover.html">Background Remover</a></li>
+                <li><a href="#" data-tool="coming-soon">More Tools Coming Soon...</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        // Background Remover Specific JavaScript
+        let currentMode = 'interactive';
+        let canvas, ctx, originalImageData, editHistory = [];
+        let isDrawing = false;
+        let processedImageData = null; // Store processed results
+        let currentState = 'original'; // Track current display state: 'original', 'processed'
+
+        // Mode switching
+        document.querySelectorAll('.mode-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const previousMode = currentMode;
+                document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('active'));
+                this.classList.add('active');
+                currentMode = this.dataset.mode;
+
+                // Reset to original image when switching tools (except for first load)
+                if (canvas && originalImageData && previousMode !== currentMode) {
+                    resetToOriginal();
+                }
+
+                updateUIForMode();
+
+                // Enable/disable buttons based on mode and whether image is loaded
+                const hasImage = canvas && originalImageData;
+                if (hasImage) {
+                    if (currentMode === 'vectorizer') {
+                        document.getElementById('vectorizeBtn').disabled = false;
+                    } else if (currentMode === 'upscaler') {
+                        document.getElementById('upscaleBtn').disabled = false;
+                    }
+                }
+            });
+        });
+
+        function updateUIForMode() {
+            const vectorDetailGroup = document.getElementById('vectorDetailGroup');
+            const upscaleGroup = document.getElementById('upscaleGroup');
+            const upscaleMethodGroup = document.getElementById('upscaleMethodGroup');
+            const enhancementGroup = document.getElementById('enhancementGroup');
+            const sharpeningGroup = document.getElementById('sharpeningGroup');
+            const vectorizeButtonGroup = document.getElementById('vectorizeButtonGroup');
+            const upscaleButtonGroup = document.getElementById('upscaleButtonGroup');
+            const instructionText = document.getElementById('instructionText');
+            const instructionSubtext = document.getElementById('instructionSubtext');
+
+            // Hide all mode-specific controls first
+            vectorDetailGroup.style.display = 'none';
+            upscaleGroup.style.display = 'none';
+            upscaleMethodGroup.style.display = 'none';
+            enhancementGroup.style.display = 'none';
+            sharpeningGroup.style.display = 'none';
+            vectorizeButtonGroup.style.display = 'none';
+            upscaleButtonGroup.style.display = 'none';
+
+            switch(currentMode) {
+                case 'interactive':
+                    instructionText.textContent = 'Click areas to remove or flatten colors';
+                    instructionSubtext.textContent = 'Choose Remove to delete areas, or Flatten to average colors. Results appear instantly!';
+                    break;
+                case 'vectorizer':
+                    vectorDetailGroup.style.display = 'block';
+                    vectorizeButtonGroup.style.display = 'block';
+                    instructionText.textContent = 'Edit image, then click Vectorize';
+                    instructionSubtext.textContent = 'Remove/flatten areas first, then convert to scalable vector format';
+                    break;
+                case 'upscaler':
+                    upscaleGroup.style.display = 'block';
+                    upscaleMethodGroup.style.display = 'block';
+                    enhancementGroup.style.display = 'block';
+                    sharpeningGroup.style.display = 'block';
+                    upscaleButtonGroup.style.display = 'block';
+                    instructionText.textContent = 'Edit image, then click Upscale';
+                    instructionSubtext.textContent = 'Remove/flatten areas first, then enhance and upscale with advanced options';
+                    break;
+            }
+        }
+
+        // File upload handling
+        const fileInput = document.getElementById('fileInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const uploadSection = document.getElementById('uploadSection');
+        const editorSection = document.getElementById('editorSection');
+
+        fileInput.addEventListener('change', handleFileSelect);
+        uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('Please select an image file.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                loadImageToCanvas(e.target.result);
+                uploadSection.style.display = 'none';
+                editorSection.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function loadImageToCanvas(imageSrc) {
+            const image = new Image();
+            image.onload = function() {
+                canvas = document.getElementById('imageCanvas');
+                ctx = canvas.getContext('2d');
+
+                const maxWidth = 800;
+                const maxHeight = 600;
+                let { width, height } = image;
+
+                if (width > maxWidth || height > maxHeight) {
+                    const ratio = Math.min(maxWidth / width, maxHeight / height);
+                    width *= ratio;
+                    height *= ratio;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                ctx.drawImage(image, 0, 0, width, height);
+
+                originalImageData = ctx.getImageData(0, 0, width, height);
+                editHistory = [originalImageData];
+
+                document.getElementById('canvasOverlay').style.display = 'none';
+
+                // Enable buttons based on current mode
+                if (currentMode === 'vectorizer') {
+                    document.getElementById('vectorizeBtn').disabled = false;
+                } else if (currentMode === 'upscaler') {
+                    document.getElementById('upscaleBtn').disabled = false;
+                }
+
+                setupCanvasInteraction();
+            };
+            image.src = imageSrc;
+        }
+
+        function setupCanvasInteraction() {
+            const toolMode = document.getElementById('toolMode');
+            const toleranceSlider = document.getElementById('toleranceSlider');
+            const toleranceValue = document.getElementById('toleranceValue');
+            const brushSize = document.getElementById('brushSize');
+            const brushSizeValue = document.getElementById('brushSizeValue');
+            const brushGroup = document.getElementById('brushGroup');
+            const scaleFactorSlider = document.getElementById('scaleFactorSlider');
+            const scaleFactorValue = document.getElementById('scaleFactorValue');
+
+            toleranceSlider.addEventListener('input', () => {
+                toleranceValue.textContent = toleranceSlider.value;
+            });
+
+            brushSize.addEventListener('input', () => {
+                brushSizeValue.textContent = brushSize.value;
+            });
+
+            if (scaleFactorSlider) {
+                scaleFactorSlider.addEventListener('input', () => {
+                    scaleFactorValue.textContent = scaleFactorSlider.value + 'x';
+                });
+            }
+
+            toolMode.addEventListener('change', () => {
+                brushGroup.style.display = toolMode.value === 'brush' ? 'block' : 'none';
+            });
+
+            canvas.addEventListener('click', handleCanvasClick);
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mouseup', handleMouseUp);
+        }
+
+        function handleCanvasClick(e) {
+            const toolMode = document.getElementById('toolMode').value;
+            if (toolMode === 'brush') return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left) * (canvas.width / rect.width));
+            const y = Math.floor((e.clientY - rect.top) * (canvas.height / rect.height));
+            const tolerance = parseInt(document.getElementById('toleranceSlider').value);
+
+            if (toolMode === 'remove') {
+                removeBackground(x, y, tolerance);
+            } else if (toolMode === 'flatten') {
+                flattenArea(x, y, tolerance);
+            }
+        }
+
+        function handleMouseDown(e) {
+            if (document.getElementById('toolMode').value !== 'brush') return;
+            isDrawing = true;
+            handleBrushAction(e);
+        }
+
+        function handleMouseMove(e) {
+            if (!isDrawing || document.getElementById('toolMode').value !== 'brush') return;
+            handleBrushAction(e);
+        }
+
+        function handleMouseUp() {
+            if (isDrawing) {
+                isDrawing = false;
+                saveToHistory();
+            }
+        }
+
+        function handleBrushAction(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left) * (canvas.width / rect.width));
+            const y = Math.floor((e.clientY - rect.top) * (canvas.height / rect.height));
+            const brushSize = parseInt(document.getElementById('brushSize').value);
+
+            brushRemove(x, y, brushSize);
+        }
+
+        function removeBackground(startX, startY, tolerance) {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            const targetColor = getPixelColor(data, startX, startY, canvas.width);
+            const visited = new Set();
+            const stack = [{ x: startX, y: startY }];
+
+            while (stack.length > 0) {
+                const { x, y } = stack.pop();
+                const key = `${x},${y}`;
+
+                if (visited.has(key) || x < 0 || x >= canvas.width || y < 0 || y >= canvas.height) {
+                    continue;
+                }
+
+                const currentColor = getPixelColor(data, x, y, canvas.width);
+                if (colorDistance(targetColor, currentColor) <= tolerance) {
+                    visited.add(key);
+                    setPixelTransparent(data, x, y, canvas.width);
+
+                    stack.push({ x: x + 1, y });
+                    stack.push({ x: x - 1, y });
+                    stack.push({ x, y: y + 1 });
+                    stack.push({ x, y: y - 1 });
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+            saveToHistory();
+
+            // Auto-apply mode-specific processing
+            setTimeout(() => applyModeProcessing(), 100);
+        }
+
+        function flattenArea(startX, startY, tolerance) {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            const targetColor = getPixelColor(data, startX, startY, canvas.width);
+            const visited = new Set();
+            const stack = [{ x: startX, y: startY }];
+            const pixelsToFlatten = [];
+
+            // First pass: identify all pixels in the similar color area
+            while (stack.length > 0) {
+                const { x, y } = stack.pop();
+                const key = `${x},${y}`;
+
+                if (visited.has(key) || x < 0 || x >= canvas.width || y < 0 || y >= canvas.height) {
+                    continue;
+                }
+
+                const currentColor = getPixelColor(data, x, y, canvas.width);
+                if (colorDistance(targetColor, currentColor) <= tolerance) {
+                    visited.add(key);
+                    pixelsToFlatten.push({ x, y, color: currentColor });
+
+                    stack.push({ x: x + 1, y });
+                    stack.push({ x: x - 1, y });
+                    stack.push({ x, y: y + 1 });
+                    stack.push({ x, y: y - 1 });
+                }
+            }
+
+            // Calculate average color of the selected area
+            if (pixelsToFlatten.length > 0) {
+                let totalR = 0, totalG = 0, totalB = 0, totalA = 0;
+
+                pixelsToFlatten.forEach(pixel => {
+                    totalR += pixel.color.r;
+                    totalG += pixel.color.g;
+                    totalB += pixel.color.b;
+                    totalA += pixel.color.a;
+                });
+
+                const avgColor = {
+                    r: Math.round(totalR / pixelsToFlatten.length),
+                    g: Math.round(totalG / pixelsToFlatten.length),
+                    b: Math.round(totalB / pixelsToFlatten.length),
+                    a: Math.round(totalA / pixelsToFlatten.length)
+                };
+
+                // Apply average color to all pixels in the area
+                pixelsToFlatten.forEach(pixel => {
+                    setPixelColor(data, pixel.x, pixel.y, canvas.width, avgColor);
+                });
+
+                ctx.putImageData(imageData, 0, 0);
+                saveToHistory();
+
+                // Auto-apply mode-specific processing
+                setTimeout(() => applyModeProcessing(), 100);
+            }
+        }
+
+        function brushRemove(centerX, centerY, size) {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            const radius = size / 2;
+
+            for (let x = Math.max(0, centerX - radius); x < Math.min(canvas.width, centerX + radius); x++) {
+                for (let y = Math.max(0, centerY - radius); y < Math.min(canvas.height, centerY + radius); y++) {
+                    const distance = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+                    if (distance <= radius) {
+                        setPixelTransparent(data, x, y, canvas.width);
+                    }
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+
+            // Auto-apply mode-specific processing for brush tool too
+            setTimeout(() => applyModeProcessing(), 100);
+        }
+
+        function getPixelColor(data, x, y, width) {
+            const index = (y * width + x) * 4;
+            return {
+                r: data[index],
+                g: data[index + 1],
+                b: data[index + 2],
+                a: data[index + 3]
+            };
+        }
+
+        function setPixelTransparent(data, x, y, width) {
+            const index = (y * width + x) * 4;
+            data[index + 3] = 0; // Set alpha to 0
+        }
+
+        function setPixelColor(data, x, y, width, color) {
+            const index = (y * width + x) * 4;
+            data[index] = color.r;     // Red
+            data[index + 1] = color.g; // Green
+            data[index + 2] = color.b; // Blue
+            data[index + 3] = color.a; // Alpha
+        }
+
+        function colorDistance(color1, color2) {
+            return Math.sqrt(
+                Math.pow(color1.r - color2.r, 2) +
+                Math.pow(color1.g - color2.g, 2) +
+                Math.pow(color1.b - color2.b, 2)
+            );
+        }
+
+        function saveToHistory() {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            editHistory.push(imageData);
+            document.getElementById('undoBtn').disabled = editHistory.length <= 1;
+        }
+
+        // Tool actions
+        document.getElementById('undoBtn').addEventListener('click', () => {
+            if (editHistory.length > 1) {
+                editHistory.pop();
+                const previousState = editHistory[editHistory.length - 1];
+                ctx.putImageData(previousState, 0, 0);
+                document.getElementById('undoBtn').disabled = editHistory.length <= 1;
+            }
+        });
+
+        function resetToOriginal() {
+            // Reset to original image
+            if (originalImageData) {
+                canvas.width = originalImageData.width;
+                canvas.height = originalImageData.height;
+                ctx.putImageData(originalImageData, 0, 0);
+                editHistory = [originalImageData];
+                document.getElementById('undoBtn').disabled = true;
+
+                // Clear processed state
+                processedImageData = null;
+                currentState = 'original';
+                updateResetButton();
+
+                // Remove any processing indicators
+                const indicator = document.querySelector('.processed-indicator');
+                if (indicator) indicator.remove();
+
+                // Reset canvas container styling
+                const canvasContainer = document.querySelector('.canvas-container');
+                canvasContainer.style.overflow = 'visible';
+                canvasContainer.style.maxHeight = 'none';
+                // Hide download section
+                document.getElementById('downloadSection').style.display = 'none';
+            }
+        }
+
+        document.getElementById('resetBtn').addEventListener('click', resetToOriginal);
+
+        document.getElementById('startNewBtn').addEventListener('click', () => {
+            // Clear canvas and reset to upload state
+            if (canvas) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                canvas.width = 0;
+                canvas.height = 0;
+            }
+
+            // Reset all variables
+            originalImageData = null;
+            editHistory = [];
+            processedImageData = null;
+            currentState = 'original';
+
+            // Show upload overlay and hide download section
+            document.getElementById('canvasOverlay').style.display = 'flex';
+            document.getElementById('downloadSection').style.display = 'none';
+
+            // Disable all buttons
+            document.getElementById('undoBtn').disabled = true;
+            document.getElementById('vectorizeBtn').disabled = true;
+            document.getElementById('upscaleBtn').disabled = true;
+
+            // Remove any processing indicators
+            const indicator = document.querySelector('.processed-indicator');
+            if (indicator) indicator.remove();
+
+            // Reset instructions
+            document.getElementById('instructionText').textContent = 'Click on areas you want to remove';
+            document.getElementById('instructionSubtext').textContent = 'Use the tolerance slider to adjust sensitivity';
+        });
+
+        function applyModeProcessing() {
+            if (currentMode === 'interactive') {
+                // Just show download options for background removed image
+                showDownloadOptions();
+            } else if (currentMode === 'upscaler') {
+                // Enable upscaler button after background processing
+                document.getElementById('upscaleBtn').disabled = false;
+                document.getElementById('upscaleBtn').innerHTML = '<i class="fas fa-expand-arrows-alt"></i> Ready to Upscale';
+            }
+            // For vectorizer mode, user must click the button
+            // No auto-processing
+        }
+
+        function showDownloadOptions() {
+            const downloadSection = document.getElementById('downloadSection');
+            const downloadPngBtn = document.getElementById('downloadPngBtn');
+
+            downloadSection.style.display = 'block';
+            downloadPngBtn.style.display = 'inline-block';
+        }
+
+        async function autoVectorize() {
+            const downloadSection = document.getElementById('downloadSection');
+            const downloadSvgBtn = document.getElementById('downloadSvgBtn');
+
+            // Ask user if they want to vectorize current edited image or original
+            if (originalImageData && currentState !== 'original') {
+                const useEdited = confirm("Do you want to vectorize your current edited image, or reset to the original image first?\n\nClick OK to use your current edited image.\nClick Cancel to reset to original (recommended for best results).");
+
+                if (!useEdited) {
+                    resetToOriginal();
+                }
+            }
+
+            // Show progress
+            const progressSection = document.getElementById('progressSection');
+            const progressFill = document.querySelector('.progress-fill');
+            const progressText = document.querySelector('.progress-text');
+
+            progressSection.style.display = 'block';
+            progressText.textContent = 'Preparing image for vectorization...';
+
+            try {
+                // Convert canvas to blob for upload
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+
+                // Create form data
+                const formData = new FormData();
+                formData.append('image', blob, 'edited-image.png');
+                formData.append('epsilon', document.getElementById('detailLevel').value);
+
+                progressText.textContent = 'Sending to vectorization engine...';
+                progressFill.style.width = '30%';
+
+                // Send to backend for vectorization
+                const response = await fetch('http://localhost:5000/process_interactive', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                progressText.textContent = 'Processing vectors...';
+                progressFill.style.width = '70%';
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Store the SVG content
+                    window.currentSVG = result.svg_content;
+
+                    progressText.textContent = 'Rendering vectorized preview...';
+                    progressFill.style.width = '90%';
+
+                    // Display vectorized image in canvas
+                    await displayVectorizedImage(result.binary_image);
+
+                    progressText.textContent = 'Processing complete...';
+                    showProcessedIndicator('vectorized', `${result.contour_count} vector paths created`);
+
+                    progressFill.style.width = '100%';
+
+                    // Hide progress and show results
+                    setTimeout(() => {
+                        progressSection.style.display = 'none';
+                        downloadSection.style.display = 'block';
+                        downloadSvgBtn.style.display = 'inline-block';
+                        document.getElementById('downloadPngBtn').style.display = 'inline-block';
+
+                        // Show success message with contour count
+                        showVectorizationComplete(result.contour_count);
+                    }, 500);
+
+                } else {
+                    throw new Error(result.error || 'Vectorization failed');
+                }
+
+            } catch (error) {
+                console.error('Vectorization error:', error);
+                progressSection.style.display = 'none';
+
+                let errorMessage = 'Vectorization failed';
+                let helpText = '';
+
+                // Provide specific error messages based on error type
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    errorMessage = 'Cannot connect to vectorization service';
+                    helpText = '<br><small style="opacity: 0.8; font-size: 0.85em;">Make sure the Python backend is running on port 5000<br>Run: <code style="background: rgba(255,255,255,0.2); padding: 2px 4px; border-radius: 3px;">python WSR/app.py</code></small>';
+                } else if (error.message.includes('CORS')) {
+                    errorMessage = 'Cross-origin request blocked';
+                    helpText = '<br><small style="opacity: 0.8; font-size: 0.85em;">Backend CORS configuration issue</small>';
+                } else if (error.message.includes('500')) {
+                    errorMessage = 'Server processing error';
+                    helpText = '<br><small style="opacity: 0.8; font-size: 0.85em;">Check backend logs for details</small>';
+                }
+
+                // Show error message
+                const errorMsg = document.createElement('div');
+                errorMsg.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+                    color: white;
+                    padding: 1.5rem 2rem;
+                    border-radius: 12px;
+                    font-weight: 500;
+                    z-index: 1000;
+                    box-shadow: 0 8px 32px rgba(239, 68, 68, 0.3);
+                    text-align: center;
+                    max-width: 400px;
+                `;
+                errorMsg.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${errorMessage}${helpText}`;
+
+                document.body.appendChild(errorMsg);
+
+                setTimeout(() => {
+                    errorMsg.style.opacity = '0';
+                    errorMsg.style.transition = 'opacity 0.3s ease';
+                    setTimeout(() => document.body.removeChild(errorMsg), 300);
+                }, 5000); // Show longer for helpful messages
+            }
+        }
+
+        function showProcessedIndicator(type, details) {
+            // Remove any existing indicators
+            const existingIndicator = document.querySelector('.processed-indicator');
+            if (existingIndicator) {
+                existingIndicator.remove();
+            }
+
+            // Create a simple corner indicator
+            const indicator = document.createElement('div');
+            indicator.className = 'processed-indicator';
+            indicator.style.cssText = `
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                color: white;
+                padding: 0.5rem 1rem;
+                border-radius: 6px;
+                font-weight: 500;
+                font-size: 0.75rem;
+                z-index: 5;
+                box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+                pointer-events: none;
+            `;
+
+            const icon = type === 'vectorized' ? 'vector-square' : 'expand-arrows-alt';
+            const text = type === 'vectorized' ? 'Vectorized' : 'Upscaled';
+
+            indicator.innerHTML = `<i class="fas fa-${icon}"></i> ${text}<br><small style="opacity: 0.8;">${details}</small>`;
+
+            // Add to canvas wrapper
+            const canvasWrapper = document.querySelector('.canvas-wrapper');
+            canvasWrapper.style.position = 'relative';
+            canvasWrapper.appendChild(indicator);
+
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (indicator.parentNode) {
+                    indicator.style.opacity = '0';
+                    indicator.style.transition = 'opacity 0.3s ease';
+                    setTimeout(() => indicator.remove(), 300);
+                }
+            }, 5000);
+        }
+
+        function showVectorizationComplete(contourCount) {
+            // Create a temporary success message
+            const successMsg = document.createElement('div');
+            successMsg.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                color: white;
+                padding: 1rem 2rem;
+                border-radius: 8px;
+                font-weight: 500;
+                z-index: 1000;
+                box-shadow: 0 8px 32px rgba(16, 185, 129, 0.3);
+                text-align: center;
+            `;
+
+            const message = contourCount
+                ? `Vectorization Complete!<br><small style="opacity: 0.8; font-size: 0.8em;">${contourCount} vector paths generated</small>`
+                : 'Vectorization Complete!';
+
+            successMsg.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+
+            document.body.appendChild(successMsg);
+
+            setTimeout(() => {
+                successMsg.style.opacity = '0';
+                successMsg.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => document.body.removeChild(successMsg), 300);
+            }, 3000);
+        }
+
+        async function autoUpscale() {
+            const scaleFactorSlider = document.getElementById('scaleFactorSlider');
+            const scaleFactor = parseInt(scaleFactorSlider.value);
+
+            // Show progress
+            const progressSection = document.getElementById('progressSection');
+            const progressFill = document.querySelector('.progress-fill');
+            const progressText = document.querySelector('.progress-text');
+
+            progressSection.style.display = 'block';
+            progressText.textContent = 'Preparing image for upscaling...';
+
+            try {
+                // Convert canvas to blob for upload
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+
+                // Create form data with upscaling parameters
+                const formData = new FormData();
+                formData.append('image', blob, 'edited-image.png');
+                formData.append('scale_factor', scaleFactor);
+                formData.append('method', document.getElementById('upscaleMethod').value);
+                formData.append('preserve_contrast', document.getElementById('preserveContrast').checked);
+                formData.append('logo_type', document.getElementById('logoType').value);
+
+                // Add background flattening if enabled
+                if (document.getElementById('flattenBackground').checked) {
+                    formData.append('flatten_background', 'true');
+                    formData.append('tolerance', document.getElementById('toleranceSlider').value);
+                }
+
+                progressText.textContent = 'Sending to upscaling engine...';
+                progressFill.style.width = '30%';
+
+                // Send to backend for upscaling
+                const response = await fetch('http://localhost:5000/process_upscale', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                progressText.textContent = 'Upscaling and enhancing image...';
+                progressFill.style.width = '70%';
+
+                const result = await response.json();
+
+                if (result.success) {
+                    progressText.textContent = 'Rendering upscaled image...';
+                    progressFill.style.width = '90%';
+
+                    // Display upscaled image in canvas
+                    await displayUpscaledImage(result.upscaled_image);
+
+                    // Show upscale indicator
+                    showProcessedIndicator('upscaled', `${result.original_size} → ${result.upscaled_size}`);
+
+                    progressFill.style.width = '100%';
+
+                    // Hide progress and show results
+                    setTimeout(() => {
+                        progressSection.style.display = 'none';
+                        showDownloadOptions();
+
+                        // Show success message with details
+                        showUpscalingComplete(result);
+                    }, 500);
+
+                } else {
+                    throw new Error(result.error || 'Upscaling failed');
+                }
+
+            } catch (error) {
+                console.error('Upscaling error:', error);
+                progressSection.style.display = 'none';
+
+                // Show error message
+                showUpscalingError(error);
+            }
+        }
+
+        async function displayVectorizedImage(base64Image) {
+            // Display vectorized binary image in canvas
+            return new Promise(resolve => {
+                const img = new Image();
+                img.onload = () => {
+                    // Store the vectorized image data
+                    const tempCanvas = document.createElement('canvas');
+                    const tempCtx = tempCanvas.getContext('2d');
+                    tempCanvas.width = img.width;
+                    tempCanvas.height = img.height;
+                    tempCtx.drawImage(img, 0, 0);
+
+                    processedImageData = tempCtx.getImageData(0, 0, img.width, img.height);
+
+                    // Update main canvas with vectorized image
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+
+                    // Update state
+                    currentState = 'processed';
+                    updateResetButton();
+
+                    resolve();
+                };
+                img.src = 'data:image/png;base64,' + base64Image;
+            });
+        }
+
+        async function displayUpscaledImage(base64Image) {
+            // Store current state as processed
+            return new Promise(resolve => {
+                const img = new Image();
+                img.onload = () => {
+                    // Store the full-resolution processed image data
+                    const tempCanvas = document.createElement('canvas');
+                    const tempCtx = tempCanvas.getContext('2d');
+                    tempCanvas.width = img.width;
+                    tempCanvas.height = img.height;
+                    tempCtx.drawImage(img, 0, 0);
+                    processedImageData = tempCtx.getImageData(0, 0, img.width, img.height);
+
+                    // Calculate display size to fit screen while preserving aspect ratio
+                    const maxDisplayWidth = 800;
+                    const maxDisplayHeight = 600;
+
+                    let displayWidth = img.width;
+                    let displayHeight = img.height;
+
+                    // Scale down for display if needed
+                    if (img.width > maxDisplayWidth || img.height > maxDisplayHeight) {
+                        const scaleRatio = Math.min(maxDisplayWidth / img.width, maxDisplayHeight / img.height);
+                        displayWidth = Math.floor(img.width * scaleRatio);
+                        displayHeight = Math.floor(img.height * scaleRatio);
+                    }
+
+                    // Update main canvas to display size
+                    canvas.width = displayWidth;
+                    canvas.height = displayHeight;
+
+                    // Draw scaled image for display (high quality scaling)
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+                    ctx.drawImage(img, 0, 0, displayWidth, displayHeight);
+
+                    // Store the actual dimensions for download
+                    canvas.setAttribute('data-actual-width', img.width);
+                    canvas.setAttribute('data-actual-height', img.height);
+
+                    // Update canvas container
+                    const canvasContainer = document.querySelector('.canvas-container');
+                    canvasContainer.style.overflow = 'visible';
+                    canvasContainer.style.maxHeight = 'none';
+
+                    // Update state
+                    currentState = 'processed';
+                    updateResetButton();
+
+                    resolve();
+                };
+                img.src = 'data:image/png;base64,' + base64Image;
+            });
+        }
+
+        function showUpscalingComplete(result) {
+            // Create a temporary success message with details
+            const successMsg = document.createElement('div');
+            successMsg.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+                color: white;
+                padding: 1.5rem 2rem;
+                border-radius: 12px;
+                font-weight: 500;
+                z-index: 1000;
+                box-shadow: 0 8px 32px rgba(99, 102, 241, 0.3);
+                text-align: center;
+            `;
+
+            const details = result.upscaled_size && result.original_size
+                ? `<br><small style="opacity: 0.8; font-size: 0.85em;">${result.original_size} → ${result.upscaled_size}<br>Method: ${result.method}</small>`
+                : '';
+
+            successMsg.innerHTML = `<i class="fas fa-expand-arrows-alt"></i> Image Upscaled ${result.scale_factor}x!${details}`;
+
+            document.body.appendChild(successMsg);
+
+            setTimeout(() => {
+                successMsg.style.opacity = '0';
+                successMsg.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => document.body.removeChild(successMsg), 300);
+            }, 3000);
+        }
+
+        function showUpscalingError(error) {
+            let errorMessage = 'Upscaling failed';
+            let helpText = '';
+
+            // Provide specific error messages
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                errorMessage = 'Cannot connect to upscaling service';
+                helpText = '<br><small style="opacity: 0.8; font-size: 0.85em;">Make sure the Python backend is running</small>';
+            } else if (error.message.includes('500')) {
+                errorMessage = 'Server processing error';
+                helpText = '<br><small style="opacity: 0.8; font-size: 0.85em;">Check if all Python dependencies are installed</small>';
+            }
+
+            const errorMsg = document.createElement('div');
+            errorMsg.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+                color: white;
+                padding: 1.5rem 2rem;
+                border-radius: 12px;
+                font-weight: 500;
+                z-index: 1000;
+                box-shadow: 0 8px 32px rgba(239, 68, 68, 0.3);
+                text-align: center;
+                max-width: 400px;
+            `;
+            errorMsg.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${errorMessage}${helpText}`;
+
+            document.body.appendChild(errorMsg);
+
+            setTimeout(() => {
+                errorMsg.style.opacity = '0';
+                errorMsg.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => document.body.removeChild(errorMsg), 300);
+            }, 5000);
+        }
+
+        function updateResetButton() {
+            const resetBtn = document.getElementById('resetBtn');
+            if (currentState === 'processed') {
+                resetBtn.innerHTML = '<i class="fas fa-undo"></i> Show Original';
+                resetBtn.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+            } else {
+                resetBtn.innerHTML = '<i class="fas fa-refresh"></i> Reset';
+                resetBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            }
+        }
+
+        // Client-side functions removed - now using Python backend integration
+
+        // Button event listeners
+        document.getElementById('vectorizeBtn').addEventListener('click', () => {
+            autoVectorize();
+        });
+
+        document.getElementById('upscaleBtn').addEventListener('click', () => {
+            autoUpscale();
+        });
+
+        // Download functionality
+        document.getElementById('downloadPngBtn').addEventListener('click', () => {
+            const link = document.createElement('a');
+
+            // Set appropriate filename based on mode
+            if (currentMode === 'upscaler') {
+                link.download = 'upscaled-image.png';
+            } else if (currentMode === 'vectorizer') {
+                link.download = 'vectorized-preview.png';
+            } else {
+                link.download = 'background-removed.png';
+            }
+
+            // For upscaled images, download the full-resolution version
+            if (currentState === 'processed' && processedImageData && currentMode === 'upscaler') {
+                const actualWidth = parseInt(canvas.getAttribute('data-actual-width'));
+                const actualHeight = parseInt(canvas.getAttribute('data-actual-height'));
+
+                if (actualWidth && actualHeight) {
+                    // Create a temporary canvas with full resolution
+                    const downloadCanvas = document.createElement('canvas');
+                    const downloadCtx = downloadCanvas.getContext('2d');
+                    downloadCanvas.width = actualWidth;
+                    downloadCanvas.height = actualHeight;
+                    downloadCtx.putImageData(processedImageData, 0, 0);
+                    link.href = downloadCanvas.toDataURL();
+                } else {
+                    link.href = canvas.toDataURL();
+                }
+            } else {
+                link.href = canvas.toDataURL();
+            }
+
+            link.click();
+        });
+
+        document.getElementById('downloadSvgBtn').addEventListener('click', () => {
+            if (window.currentSVG) {
+                const blob = new Blob([window.currentSVG], { type: 'image/svg+xml' });
+                const link = document.createElement('a');
+                link.download = 'vectorized.svg';
+                link.href = URL.createObjectURL(blob);
+                link.click();
+            }
+        });
+
+        // Test backend connection on page load
+        async function testBackendConnection() {
+            try {
+                const response = await fetch('http://localhost:5000/', {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                console.log('Backend connection: OK');
+                return true;
+            } catch (error) {
+                console.warn('Backend connection failed:', error);
+                showBackendConnectionWarning();
+                return false;
+            }
+        }
+
+        function showBackendConnectionWarning() {
+            const warning = document.createElement('div');
+            warning.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+                color: white;
+                padding: 1rem 1.5rem;
+                border-radius: 8px;
+                font-weight: 500;
+                z-index: 1000;
+                box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+                max-width: 300px;
+                font-size: 0.875rem;
+            `;
+            warning.innerHTML = `
+                <i class="fas fa-exclamation-triangle"></i> Backend Offline<br>
+                <small style="opacity: 0.9;">Vectorizer requires Python backend.<br>
+                Run: <code style="background: rgba(255,255,255,0.2); padding: 1px 3px; border-radius: 2px;">python WSR/app.py</code></small>
+            `;
+
+            document.body.appendChild(warning);
+
+            setTimeout(() => {
+                warning.style.opacity = '0';
+                warning.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => {
+                    if (warning.parentNode) {
+                        warning.parentNode.removeChild(warning);
+                    }
+                }, 300);
+            }, 8000);
+        }
+
+        // Initialize
+        updateUIForMode();
+
+        // Test connection after a short delay
+        setTimeout(() => {
+            testBackendConnection();
+        }, 1000);
+    </script>
+</body>
+</html>
