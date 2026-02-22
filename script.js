@@ -55,6 +55,7 @@ class TinyTasksApp {
     }
 
     handleInitialLoad() {
+        if (!this.coverPage) return;
         // Ensure cover page is visible on load
         this.coverPage.style.transform = 'translateY(0)';
         this.coverPage.style.display = 'flex';
@@ -160,7 +161,7 @@ class TinyTasksApp {
     }
 
     transitionToMainPage() {
-        if (this.isTransitioning || !this.isOnCoverPage) return;
+        if (!this.coverPage || this.isTransitioning || !this.isOnCoverPage) return;
 
         console.log('🚀 Starting transition to main page');
 
@@ -191,7 +192,7 @@ class TinyTasksApp {
     }
 
     transitionToCoverPage() {
-        if (this.isTransitioning || this.isOnCoverPage) return;
+        if (!this.coverPage || this.isTransitioning || this.isOnCoverPage) return;
 
         console.log('🔙 Returning to cover page');
 
