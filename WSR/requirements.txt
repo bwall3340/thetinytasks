@@ -1,9 +1,8 @@
-opencv-python==4.9.0.80
+opencv-python-headless==4.9.0.80
 Pillow==10.2.0
 numpy==1.26.4
 scikit-image==0.22.0
-click==8.1.7
-gradio==4.16.0
 Flask==3.0.0
 Flask-CORS==4.0.0
 scipy
+gunicorn
