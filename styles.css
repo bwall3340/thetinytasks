@@ -183,7 +183,11 @@ body {
     position: relative;
     min-height: 100vh;
     max-height: 100vh; /* Lock to viewport height */
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    background:
+        radial-gradient(ellipse 70% 55% at 10% 20%, rgba(99, 102, 241, 0.22) 0%, transparent 100%),
+        radial-gradient(ellipse 60% 70% at 90% 80%, rgba(168, 85, 247, 0.2) 0%, transparent 100%),
+        radial-gradient(ellipse 50% 40% at 55% 0%,  rgba(236, 72, 153, 0.1) 0%, transparent 100%),
+        linear-gradient(135deg, #f0f4ff 0%, #faf5ff 100%);
     padding-top: 80px;
     overflow-y: auto; /* Allow internal scrolling */
     box-sizing: border-box;
@@ -262,28 +266,85 @@ body {
     justify-items: center;
 }
 
-/* Tool Cards */
+/* Tool Cards — Apple Liquid Glass */
 .tool-card {
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(226, 232, 240, 0.8);
-    border-radius: 16px;
+    position: relative;
+    overflow: hidden;
+    /* Translucent glass fill */
+    background: rgba(255, 255, 255, 0.28);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border-radius: 28px;
+    /* Luminous glass edge */
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    /* Layered shadows: ambient + depth + inner-top highlight */
+    box-shadow:
+        0 2px 8px  rgba(0, 0, 0, 0.06),
+        0 8px 32px rgba(0, 0, 0, 0.09),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.04);
     padding: 2rem;
     text-align: center;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    backdrop-filter: blur(20px);
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     max-width: 320px;
     width: 100%;
 }
 
+/* Specular edge — the bright line where light hits the glass rim */
+.tool-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 8%;
+    right: 8%;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.85) 25%,
+        rgba(255, 255, 255, 1)    50%,
+        rgba(255, 255, 255, 0.85) 75%,
+        transparent
+    );
+    z-index: 2;
+    pointer-events: none;
+}
+
+/* Inner upper-half reflection — like light refracting through the top of the glass */
+.tool-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 52%;
+    background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.18) 0%,
+        rgba(255, 255, 255, 0.05) 55%,
+        transparent 100%
+    );
+    border-radius: 28px 28px 0 0;
+    pointer-events: none;
+    z-index: 1;
+}
+
 .tool-card:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
-    border-color: rgba(99, 102, 241, 0.3);
+    transform: translateY(-6px) scale(1.015);
+    background: rgba(255, 255, 255, 0.38);
+    border-color: rgba(255, 255, 255, 0.75);
+    box-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.08),
+        0 20px 52px rgba(99, 102, 241, 0.14),
+        inset 0 1px 0 rgba(255, 255, 255, 1),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.03);
 }
 
 .tool-icon {
     margin-bottom: 1.5rem;
+    position: relative;
+    z-index: 3;
 }
 
 .tool-icon .icon {
@@ -291,10 +352,13 @@ body {
     height: 64px;
     margin: 0 auto;
     transition: transform 0.3s ease;
+    /* Soft drop shadow on the icon for depth */
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.18));
 }
 
 .tool-card:hover .icon {
     transform: scale(1.1);
+    filter: drop-shadow(0 6px 18px rgba(99, 102, 241, 0.3));
 }
 
 .tool-card h3 {
@@ -302,12 +366,16 @@ body {
     font-weight: 600;
     margin-bottom: 0.5rem;
     color: #1e293b;
+    position: relative;
+    z-index: 3;
 }
 
 .tool-card p {
-    color: #64748b;
+    color: #475569;
     font-size: 0.875rem;
     line-height: 1.5;
+    position: relative;
+    z-index: 3;
 }
 
 /* Mobile Menu */
