@@ -1,7 +1,7 @@
 providers = ["python"]
 
 [phases.install]
-cmds = ["pip install -r WSR/requirements.txt"]
+cmds = ["python3 -m pip install -r WSR/requirements.txt"]
 
 [start]
 cmd = "cd WSR && gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120"
