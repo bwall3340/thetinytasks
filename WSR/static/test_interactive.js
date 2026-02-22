@@ -22,16 +22,8 @@ class TestInteractiveEditor {
 
     getApiBaseUrl() {
         // Check if running locally or on AWS
-        const hostname = window.location.hostname;
-
-        if (hostname === 'localhost' || hostname === '127.0.0.1') {
-            // Local development
-            return '';
-        } else {
-            // Production - Replace with your actual API Gateway URL
-            const API_GATEWAY_URL = 'https://YOUR-API-ID.execute-api.us-east-1.amazonaws.com/prod';
-            return API_GATEWAY_URL;
-        }
+        // Always use relative URLs — served by the same origin in all environments
+        return '';
     }
 
     init() {

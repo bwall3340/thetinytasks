@@ -19,22 +19,8 @@ class InteractiveBackgroundRemover {
     }
 
     getApiBaseUrl() {
-        // Check if running locally or on AWS
-        const hostname = window.location.hostname;
-
-        if (hostname === 'localhost' || hostname === '127.0.0.1') {
-            // Local development
-            return '';
-        } else {
-            // Production - Replace with your actual API Gateway URL
-            // Format: https://YOUR-API-ID.execute-api.REGION.amazonaws.com/STAGE
-            const API_GATEWAY_URL = 'https://YOUR-API-ID.execute-api.us-east-1.amazonaws.com/prod';
-
-            // You can also use an environment variable or config
-            // return window.CONFIG?.API_URL || API_GATEWAY_URL;
-
-            return API_GATEWAY_URL;
-        }
+        // Always use relative URLs — served by the same origin in all environments
+        return '';
     }
 
     setupEventListeners() {

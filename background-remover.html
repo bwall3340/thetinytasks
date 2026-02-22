@@ -711,6 +711,11 @@
 
     <script src="script.js"></script>
     <script>
+        // Resolve API base URL: use origin when served over HTTP/HTTPS, fall back to localhost for file://
+        const API_BASE = window.location.protocol === 'file:'
+            ? 'http://localhost:5000'
+            : window.location.origin;
+
         // Background Remover Specific JavaScript
         let currentMode = 'interactive';
         let canvas, ctx, originalImageData, editHistory = [];
@@ -1225,7 +1230,7 @@
                 progressFill.style.width = '30%';
 
                 // Send to backend for vectorization
-                const response = await fetch('http://localhost:5000/process_interactive', {
+                const response = await fetch(`${API_BASE}/process_interactive`, {
                     method: 'POST',
                     body: formData
                 });
@@ -1425,7 +1430,7 @@
                 progressFill.style.width = '30%';
 
                 // Send to backend for upscaling
-                const response = await fetch('http://localhost:5000/process_upscale', {
+                const response = await fetch(`${API_BASE}/process_upscale`, {
                     method: 'POST',
                     body: formData
                 });
@@ -1697,7 +1702,7 @@
         // Test backend connection on page load
         async function testBackendConnection() {
             try {
-                const response = await fetch('http://localhost:5000/', {
+                const response = await fetch(`${API_BASE}/`, {
                     method: 'GET',
                     mode: 'cors'
                 });
