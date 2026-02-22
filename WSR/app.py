@@ -32,7 +32,6 @@ def after_request(response):
     return response
 
 @app.route('/', methods=['OPTIONS'])
-@app.route('/<path:path>', methods=['OPTIONS'])
 def handle_options(path=None):
     response = jsonify({'status': 'OK'})
     response.headers.add('Access-Control-Allow-Origin', '*')
