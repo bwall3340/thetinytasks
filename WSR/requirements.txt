@@ -7,6 +7,7 @@ Flask-CORS==4.0.0
 scipy
 gunicorn
 # Market commentary module
+psycopg2-binary
 anthropic
 beautifulsoup4
 lxml

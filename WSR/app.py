@@ -32,7 +32,11 @@ SITE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'site')
 
 # ── Market commentary module ──────────────────────────────────────────────────
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-change-in-production')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///market.db')
+# Railway injects DATABASE_URL as postgres:// but SQLAlchemy 2.x requires postgresql://
+_db_url = os.environ.get('DATABASE_URL', 'sqlite:///market.db')
+if _db_url.startswith('postgres://'):
+    _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = _db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['GOOGLE_CLIENT_ID'] = os.environ.get('GOOGLE_CLIENT_ID')
 app.config['GOOGLE_CLIENT_SECRET'] = os.environ.get('GOOGLE_CLIENT_SECRET')
