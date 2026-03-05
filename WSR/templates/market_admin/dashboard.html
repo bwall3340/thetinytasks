@@ -334,9 +334,22 @@ async function validateSource(id, name) {
 
     document.getElementById('modal-title').textContent = `Validate: ${name}`;
     if (d.success) {
+        const sourceTypeBadge = d.source_type === 'pdf_direct'
+            ? '<span style="background:rgba(99,102,241,0.1);color:#6366f1;padding:0.1rem 0.4rem;border-radius:4px;font-size:0.7rem;font-weight:600;">PDF (direct)</span>'
+            : d.source_type === 'pdf_linked'
+            ? '<span style="background:rgba(99,102,241,0.1);color:#6366f1;padding:0.1rem 0.4rem;border-radius:4px;font-size:0.7rem;font-weight:600;">PDF (linked)</span>'
+            : '<span style="background:#f1f5f9;color:#64748b;padding:0.1rem 0.4rem;border-radius:4px;font-size:0.7rem;font-weight:600;">HTML</span>';
+
+        let pdfInfo = '';
+        if (d.pdf_links_found > 0) {
+            pdfInfo = `<br><strong>PDF links found:</strong> ${d.pdf_links_found}`;
+            if (d.pdf_url_used) pdfInfo += `<br><strong>PDF used:</strong> <a href="${d.pdf_url_used}" target="_blank" style="color:#6366f1;word-break:break-all;">${d.pdf_url_used}</a>`;
+        }
+
         document.getElementById('modal-body').innerHTML = `
             <p style="margin-bottom:0.75rem;font-size:0.875rem;">
-                <strong>Title:</strong> ${d.title || '(not detected)'}<br>
+                <strong>Source type:</strong> ${sourceTypeBadge}<br>
+                <strong>Title:</strong> ${d.title || '(not detected)'}${pdfInfo}<br>
                 <strong>Words extracted:</strong> ${d.word_count?.toLocaleString() ?? 0}<br>
                 <strong>HTTP status:</strong> ${d.status_code}
             </p>
