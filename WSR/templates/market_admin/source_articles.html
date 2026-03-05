@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ source.name }} Articles — Market Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; min-height: 100vh; }
+        .admin-header {
+            background: #1e293b; color: #fff;
+            padding: 0 1.5rem; height: 56px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .admin-header .brand { font-size: 0.85rem; font-weight: 600; }
+        .admin-header .brand span { color: #818cf8; }
+        .admin-header nav a { font-size: 0.8rem; color: #94a3b8; text-decoration: none; }
+        .admin-header nav a:hover { color: #fff; }
+
+        .page { max-width: 1000px; margin: 2rem auto; padding: 0 1.5rem; }
+        h2 { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.25rem; }
+        .sub { font-size: 0.85rem; color: #64748b; margin-bottom: 1.75rem; }
+
+        .article-card {
+            background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+            padding: 1.25rem 1.5rem; margin-bottom: 1rem;
+        }
+        .article-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+        .article-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.25rem; }
+        .article-meta { font-size: 0.75rem; color: #94a3b8; }
+
+        .badge { display: inline-block; padding: 0.2rem 0.55rem; border-radius: 100px;
+            font-size: 0.7rem; font-weight: 600; text-transform: capitalize; flex-shrink: 0; }
+        .badge-bullish { background: rgba(16,185,129,0.1); color: #059669; }
+        .badge-bearish { background: rgba(239,68,68,0.1); color: #dc2626; }
+        .badge-neutral  { background: rgba(245,158,11,0.1); color: #d97706; }
+        .badge-none     { background: #f1f5f9; color: #94a3b8; }
+
+        .analysis-block {
+            background: #f8fafc; border-radius: 8px; padding: 0.85rem 1rem;
+            margin-top: 0.85rem; font-size: 0.82rem; color: #475569; line-height: 1.6;
+        }
+        .analysis-block .summary { margin-bottom: 0.5rem; }
+        .analysis-block .chips { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.5rem; }
+        .chip { background: rgba(99,102,241,0.08); color: #6366f1; padding: 0.15rem 0.5rem;
+            border-radius: 100px; font-size: 0.7rem; font-weight: 500; }
+        .chip-risk { background: rgba(239,68,68,0.08); color: #dc2626; }
+
+        .no-analysis { font-size: 0.8rem; color: #94a3b8; font-style: italic; margin-top: 0.5rem; }
+
+        .empty { text-align: center; padding: 3rem; color: #94a3b8; }
+    </style>
+</head>
+<body>
+<header class="admin-header">
+    <div class="brand">the tiny tasks &nbsp;/ <span>market admin</span></div>
+    <nav><a href="{{ url_for('market_admin.dashboard') }}">&#8592; Dashboard</a></nav>
+</header>
+
+<div class="page">
+    <h2>{{ source.name }}</h2>
+    <p class="sub">
+        {{ articles|length }} most recent article{{ 's' if articles|length != 1 else '' }}
+        &nbsp;&middot;&nbsp; Frequency: {{ source.frequency }}
+        &nbsp;&middot;&nbsp; <a href="{{ source.url }}" target="_blank" style="color:#6366f1;">View source &#8599;</a>
+    </p>
+
+    {% if articles %}
+    {% for article in articles %}
+    <div class="article-card">
+        <div class="article-header">
+            <div>
+                <div class="article-title">{{ article.title or 'Untitled' }}</div>
+                <div class="article-meta">
+                    Scraped {{ article.scraped_at.strftime('%b %d, %Y %H:%M') if article.scraped_at else '?' }}
+                    {% if article.published_at %}
+                    &nbsp;&middot;&nbsp; Published {{ article.published_at.strftime('%b %d, %Y') }}
+                    {% endif %}
+                    &nbsp;&middot;&nbsp; {{ article.raw_content.split()|length if article.raw_content else 0 }} words
+                </div>
+            </div>
+            {% if article.analysis %}
+            <span class="badge badge-{{ article.analysis.market_outlook or 'none' }}">
+                {{ article.analysis.market_outlook or 'unknown' }}
+            </span>
+            {% else %}
+            <span class="badge badge-none">not analyzed</span>
+            {% endif %}
+        </div>
+
+        {% if article.analysis %}
+        <div class="analysis-block">
+            {% if article.analysis.summary %}
+            <div class="summary">{{ article.analysis.summary }}</div>
+            {% endif %}
+            <div>
+                Sentiment: <strong>{{ '%+.2f'|format(article.analysis.sentiment_score or 0) }}</strong>
+                &nbsp;&middot;&nbsp; Horizon: {{ (article.analysis.time_horizon or '').replace('_', ' ') }}
+                &nbsp;&middot;&nbsp; Confidence: {{ ((article.analysis.confidence or 0) * 100)|round|int }}%
+            </div>
+            {% if article.analysis.key_themes %}
+            <div class="chips">
+                {% for theme in article.analysis.key_themes %}
+                <span class="chip">{{ theme }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% if article.analysis.key_risks %}
+            <div class="chips" style="margin-top:0.35rem;">
+                {% for risk in article.analysis.key_risks %}
+                <span class="chip chip-risk">{{ risk }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% if article.analysis.unique_insights %}
+            <div style="margin-top:0.65rem;border-top:1px solid #e2e8f0;padding-top:0.65rem;">
+                <div style="font-size:0.72rem;font-weight:600;color:#94a3b8;margin-bottom:0.35rem;">UNIQUE INSIGHTS</div>
+                {% for insight in article.analysis.unique_insights %}
+                <div style="margin-bottom:0.3rem;">&#8226; {{ insight }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="no-analysis">No analysis yet — use "Analyze" on the dashboard to process this article.</div>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    {% else %}
+    <div class="empty">
+        <p>No articles scraped for this source yet.</p>
+        <p style="margin-top:0.5rem;font-size:0.85rem;">
+            Go back to the dashboard and click <strong>Scrape</strong> to fetch the first article.
+        </p>
+    </div>
+    {% endif %}
+</div>
+</body>
+</html>

@@ -26,6 +26,34 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 # Directory containing the static home-page files (copied in by Docker)
 SITE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'site')
 
+# ── Market commentary module ──────────────────────────────────────────────────
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-change-in-production')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///market.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['GOOGLE_CLIENT_ID'] = os.environ.get('GOOGLE_CLIENT_ID')
+app.config['GOOGLE_CLIENT_SECRET'] = os.environ.get('GOOGLE_CLIENT_SECRET')
+
+from market.models import db
+from market.admin import admin_bp, init_oauth
+from market.routes import market_bp
+
+db.init_app(app)
+init_oauth(app)
+app.register_blueprint(admin_bp)
+app.register_blueprint(market_bp)
+
+with app.app_context():
+    db.create_all()
+
+# Start background scrape scheduler (only when running under gunicorn or directly)
+if not app.debug and os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
+    try:
+        from market.scheduler import start_scheduler
+        start_scheduler(app)
+    except Exception as _sched_err:
+        app.logger.warning('Scheduler not started: %s', _sched_err)
+# ─────────────────────────────────────────────────────────────────────────────
+
 # Manual CORS headers
 @app.after_request
 def after_request(response):

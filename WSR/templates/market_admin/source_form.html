@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ 'Edit' if source else 'Add' }} Source — Market Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; min-height: 100vh; }
+        .admin-header {
+            background: #1e293b; color: #fff;
+            padding: 0 1.5rem; height: 56px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .admin-header .brand { font-size: 0.85rem; font-weight: 600; }
+        .admin-header .brand span { color: #818cf8; }
+        .admin-header nav a { font-size: 0.8rem; color: #94a3b8; text-decoration: none; }
+        .admin-header nav a:hover { color: #fff; }
+
+        .page { max-width: 640px; margin: 2rem auto; padding: 0 1.5rem; }
+        .form-card {
+            background: #fff; border: 1px solid #e2e8f0;
+            border-radius: 16px; padding: 2rem;
+        }
+        h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.35rem; }
+        .sub { font-size: 0.85rem; color: #64748b; margin-bottom: 1.75rem; }
+
+        .field { margin-bottom: 1.25rem; }
+        label { display: block; font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 0.4rem; }
+        .hint { font-size: 0.72rem; color: #94a3b8; margin-top: 0.25rem; }
+        input[type=text], input[type=url], select, textarea {
+            width: 100%; padding: 0.6rem 0.75rem;
+            border: 1.5px solid #e2e8f0; border-radius: 8px;
+            font-size: 0.875rem; font-family: inherit; color: #1e293b;
+            background: #fff; transition: border-color 0.2s;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none; border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+        }
+        textarea { resize: vertical; min-height: 80px; }
+
+        .checkbox-row { display: flex; align-items: center; gap: 0.5rem; }
+        .checkbox-row input[type=checkbox] { width: 16px; height: 16px; accent-color: #6366f1; }
+        .checkbox-row label { margin: 0; font-weight: 500; font-size: 0.85rem; }
+
+        .actions { display: flex; gap: 0.75rem; margin-top: 1.75rem; }
+        .btn { display: inline-flex; align-items: center; gap: 0.4rem;
+            padding: 0.6rem 1.25rem; border-radius: 8px; font-size: 0.875rem;
+            font-weight: 500; cursor: pointer; text-decoration: none; border: none; transition: all 0.2s; }
+        .btn-primary { background: #6366f1; color: #fff; }
+        .btn-primary:hover { background: #4f46e5; }
+        .btn-secondary { background: #f1f5f9; color: #475569; }
+        .btn-secondary:hover { background: #e2e8f0; }
+
+        .selector-section {
+            background: #f8fafc; border: 1px solid #e2e8f0;
+            border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1.25rem;
+        }
+        .selector-section h3 { font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 0.75rem; }
+    </style>
+</head>
+<body>
+<header class="admin-header">
+    <div class="brand">the tiny tasks &nbsp;/ <span>market admin</span></div>
+    <nav><a href="{{ url_for('market_admin.dashboard') }}">&#8592; Dashboard</a></nav>
+</header>
+
+<div class="page">
+    <div class="form-card">
+        <h2>{{ 'Edit Source' if source else 'Add New Source' }}</h2>
+        <p class="sub">
+            Configure how to scrape this source. Use CSS selectors to target specific page sections —
+            leave blank to use automatic detection.
+        </p>
+
+        <form method="POST">
+            <div class="field">
+                <label for="name">Source name *</label>
+                <input type="text" id="name" name="name" required
+                       value="{{ source.name if source else '' }}"
+                       placeholder="e.g. JPMorgan Asset Management">
+            </div>
+
+            <div class="field">
+                <label for="url">URL to scrape *</label>
+                <input type="url" id="url" name="url" required
+                       value="{{ source.url if source else '' }}"
+                       placeholder="https://example.com/market-outlook">
+                <div class="hint">The exact page URL where the commentary is published.</div>
+            </div>
+
+            <div class="field">
+                <label for="frequency">Publication frequency *</label>
+                <select id="frequency" name="frequency">
+                    {% for f in ['daily', 'weekly', 'monthly', 'quarterly', 'annual'] %}
+                    <option value="{{ f }}"
+                        {{ 'selected' if source and source.frequency == f else
+                           ('selected' if not source and f == 'monthly' else '') }}>
+                        {{ f | capitalize }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <div class="hint">Used by the scheduler to determine how often to re-scrape.</div>
+            </div>
+
+            <div class="selector-section">
+                <h3>CSS Selectors (optional — leave blank for auto-detection)</h3>
+                <div class="field">
+                    <label for="content_selector">Content selector</label>
+                    <input type="text" id="content_selector" name="content_selector"
+                           value="{{ source.content_selector if source else '' }}"
+                           placeholder="e.g. .article-body, #main-content p">
+                    <div class="hint">CSS selector for the main article body. Use browser DevTools to find it.</div>
+                </div>
+                <div class="field">
+                    <label for="title_selector">Title selector</label>
+                    <input type="text" id="title_selector" name="title_selector"
+                           value="{{ source.title_selector if source else '' }}"
+                           placeholder="e.g. h1.article-title">
+                </div>
+                <div class="field" style="margin-bottom:0;">
+                    <label for="date_selector">Date selector</label>
+                    <input type="text" id="date_selector" name="date_selector"
+                           value="{{ source.date_selector if source else '' }}"
+                           placeholder="e.g. time.published-date">
+                    <div class="hint">Element with a <code>datetime</code> attribute or visible date text.</div>
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="notes">Notes</label>
+                <textarea id="notes" name="notes" placeholder="Any notes about this source, selector quirks, etc.">{{ source.notes if source else '' }}</textarea>
+            </div>
+
+            {% if source %}
+            <div class="checkbox-row">
+                <input type="checkbox" id="active" name="active"
+                       {{ 'checked' if source.active else '' }}>
+                <label for="active">Active (included in scheduled scraping)</label>
+            </div>
+            {% endif %}
+
+            <div class="actions">
+                <button type="submit" class="btn btn-primary">
+                    {{ 'Save changes' if source else 'Add source' }}
+                </button>
+                <a href="{{ url_for('market_admin.dashboard') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

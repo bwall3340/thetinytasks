@@ -6,3 +6,11 @@ Flask==3.0.0
 Flask-CORS==4.0.0
 scipy
 gunicorn
+# Market commentary module
+anthropic
+beautifulsoup4
+lxml
+Flask-SQLAlchemy
+authlib
+APScheduler
+requests

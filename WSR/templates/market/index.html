@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Outlook — The Tiny Tasks</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: radial-gradient(ellipse 70% 55% at 10% 20%, rgba(99,102,241,0.18) 0%, transparent 100%),
+                        radial-gradient(ellipse 60% 70% at 90% 80%, rgba(168,85,247,0.16) 0%, transparent 100%),
+                        linear-gradient(135deg, #f0f4ff 0%, #faf5ff 100%);
+            min-height: 100vh;
+            color: #1e293b;
+        }
+
+        /* ── Header bar ── */
+        .site-header {
+            position: sticky; top: 0; z-index: 100;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(226,232,240,0.8);
+            height: 64px;
+            display: flex; align-items: center;
+            padding: 0 1.5rem; gap: 1rem;
+        }
+        .site-header a.home-link {
+            font-size: 0.85rem; font-weight: 500; color: #6366f1;
+            text-decoration: none; display: flex; align-items: center; gap: 0.35rem;
+        }
+        .site-header a.home-link:hover { text-decoration: underline; }
+        .site-header h1 {
+            font-size: 1.1rem; font-weight: 700; color: #1e293b;
+            letter-spacing: -0.02em;
+        }
+        .site-header .sep { color: #cbd5e1; }
+
+        /* ── Layout ── */
+        .page { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+        /* ── Glass card ── */
+        .card {
+            background: rgba(255,255,255,0.7);
+            backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid rgba(255,255,255,0.6);
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05), 0 8px 32px rgba(0,0,0,0.07),
+                        inset 0 1px 0 rgba(255,255,255,0.9);
+            padding: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em;
+            text-transform: uppercase; color: #94a3b8; margin-bottom: 1rem;
+        }
+
+        /* ── Consensus hero ── */
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+        @media (max-width: 700px) { .hero-grid { grid-template-columns: 1fr; } }
+
+        .outlook-badge {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.4rem 1rem; border-radius: 100px;
+            font-size: 0.8rem; font-weight: 600; letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .badge-bullish { background: rgba(16,185,129,0.12); color: #059669; }
+        .badge-bearish { background: rgba(239,68,68,0.12);  color: #dc2626; }
+        .badge-neutral  { background: rgba(245,158,11,0.12); color: #d97706; }
+
+        .outlook-label {
+            font-size: 2.5rem; font-weight: 800; letter-spacing: -0.04em;
+            text-transform: capitalize; line-height: 1;
+            margin: 0.5rem 0 0.25rem;
+        }
+        .ol-bullish { color: #059669; }
+        .ol-bearish { color: #dc2626; }
+        .ol-neutral  { color: #d97706; }
+
+        .confidence-row {
+            font-size: 0.9rem; color: #64748b; margin-bottom: 1rem;
+        }
+        .confidence-row strong { color: #1e293b; }
+
+        .sentiment-bar-wrap { margin-top: 0.75rem; }
+        .sentiment-label { font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.3rem;
+            display: flex; justify-content: space-between; }
+        .sentiment-track {
+            height: 8px; border-radius: 4px;
+            background: linear-gradient(to right, #dc2626, #f59e0b, #059669);
+            position: relative;
+        }
+        .sentiment-thumb {
+            position: absolute; top: -4px; width: 16px; height: 16px;
+            border-radius: 50%; background: #fff;
+            border: 2px solid #6366f1;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+            transform: translateX(-50%);
+        }
+
+        .breakdown-row {
+            display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;
+        }
+        .breakdown-chip {
+            padding: 0.25rem 0.65rem; border-radius: 100px;
+            font-size: 0.75rem; font-weight: 500;
+        }
+        .chip-bullish { background: rgba(16,185,129,0.1); color: #059669; }
+        .chip-bearish { background: rgba(239,68,68,0.1); color: #dc2626; }
+        .chip-neutral  { background: rgba(245,158,11,0.1); color: #d97706; }
+
+        /* ── Meta stats ── */
+        .meta-stats {
+            display: flex; flex-direction: column; gap: 0.75rem; justify-content: center;
+        }
+        .stat-row { display: flex; justify-content: space-between; align-items: baseline; }
+        .stat-label { font-size: 0.8rem; color: #64748b; }
+        .stat-value { font-size: 1.1rem; font-weight: 700; color: #1e293b; }
+
+        /* ── Asset views grid ── */
+        .asset-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 1rem;
+        }
+        .asset-card {
+            background: rgba(255,255,255,0.5);
+            border: 1px solid rgba(255,255,255,0.5);
+            border-radius: 14px;
+            padding: 1rem;
+            text-align: center;
+        }
+        .asset-name { font-size: 0.75rem; color: #64748b; text-transform: capitalize;
+            margin-bottom: 0.4rem; font-weight: 500; }
+        .asset-view {
+            font-size: 0.85rem; font-weight: 700; text-transform: capitalize;
+            margin-bottom: 0.25rem;
+        }
+        .av-overweight  { color: #059669; }
+        .av-underweight { color: #dc2626; }
+        .av-neutral      { color: #d97706; }
+        .asset-conf { font-size: 0.7rem; color: #94a3b8; }
+
+        /* ── Themes ── */
+        .theme-row {
+            display: flex; align-items: center; gap: 0.75rem;
+            margin-bottom: 0.65rem;
+        }
+        .theme-name { font-size: 0.85rem; color: #1e293b; width: 160px; flex-shrink: 0;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .theme-bar-track { flex: 1; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+        .theme-bar-fill  { height: 100%; background: linear-gradient(90deg, #6366f1, #a855f7);
+            border-radius: 4px; transition: width 0.6s ease; }
+        .theme-pct { font-size: 0.75rem; color: #94a3b8; width: 36px; text-align: right; }
+
+        /* ── Unique insights ── */
+        .insight-card {
+            border-left: 3px solid #6366f1;
+            background: rgba(99,102,241,0.04);
+            border-radius: 0 12px 12px 0;
+            padding: 0.85rem 1rem;
+            margin-bottom: 0.75rem;
+        }
+        .insight-text { font-size: 0.9rem; color: #1e293b; line-height: 1.5; margin-bottom: 0.35rem; }
+        .insight-meta { font-size: 0.75rem; color: #94a3b8; }
+        .insight-outlook { display: inline-block; padding: 0.1rem 0.4rem; border-radius: 4px;
+            font-size: 0.65rem; font-weight: 600; text-transform: uppercase; margin-left: 0.35rem; }
+
+        /* ── Recent articles ── */
+        .article-row {
+            display: flex; gap: 1rem; align-items: flex-start;
+            padding: 0.85rem 0;
+            border-bottom: 1px solid rgba(226,232,240,0.6);
+        }
+        .article-row:last-child { border-bottom: none; }
+        .article-dot {
+            width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 5px;
+        }
+        .dot-bullish { background: #059669; }
+        .dot-bearish { background: #dc2626; }
+        .dot-neutral  { background: #d97706; }
+        .dot-none     { background: #cbd5e1; }
+        .article-title { font-size: 0.875rem; font-weight: 500; color: #1e293b; margin-bottom: 0.2rem; }
+        .article-meta  { font-size: 0.75rem; color: #94a3b8; }
+
+        /* ── Main grid layout ── */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+        @media (max-width: 800px) { .main-grid { grid-template-columns: 1fr; } }
+
+        /* ── Empty state ── */
+        .empty { text-align: center; padding: 3rem 1rem; color: #94a3b8; }
+        .empty h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; color: #64748b; }
+        .empty p { font-size: 0.875rem; line-height: 1.6; }
+    </style>
+</head>
+<body>
+
+<header class="site-header">
+    <a href="/" class="home-link">&#8592; the tiny tasks</a>
+    <span class="sep">|</span>
+    <h1>Market Outlook</h1>
+</header>
+
+<div class="page">
+
+    {% if consensus %}
+
+    <!-- ── Consensus hero ── -->
+    <div class="card" style="margin-bottom:1.25rem;">
+        <div class="section-title">Market Consensus</div>
+        <div class="hero-grid">
+            <div>
+                <span class="outlook-badge badge-{{ consensus.market_outlook }}">
+                    {{ consensus.market_outlook }}
+                </span>
+                <div class="outlook-label ol-{{ consensus.market_outlook }}">
+                    {{ consensus.market_outlook | capitalize }}
+                </div>
+                <div class="confidence-row">
+                    <strong>{{ consensus.outlook_confidence }}%</strong> of analysts agree
+                    &nbsp;&middot;&nbsp;
+                    {{ consensus.total_sources }} source{{ 's' if consensus.total_sources != 1 else '' }}
+                    &nbsp;&middot;&nbsp; last {{ consensus.lookback_days }} days
+                </div>
+
+                <!-- Breakdown chips -->
+                <div class="breakdown-row">
+                    {% for outlook, count in consensus.outlook_breakdown.items() %}
+                    <span class="breakdown-chip chip-{{ outlook }}">
+                        {{ outlook | capitalize }}: {{ count }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="meta-stats">
+                <div class="stat-row">
+                    <span class="stat-label">Avg sentiment</span>
+                    <span class="stat-value" style="color:{{ '#059669' if consensus.avg_sentiment > 0.1 else ('#dc2626' if consensus.avg_sentiment < -0.1 else '#d97706') }}">
+                        {{ '%+.2f'|format(consensus.avg_sentiment) }}
+                    </span>
+                </div>
+                <div class="sentiment-bar-wrap">
+                    <div class="sentiment-label"><span>Bearish &minus;1</span><span>Neutral 0</span><span>Bullish +1</span></div>
+                    <div class="sentiment-track">
+                        <div class="sentiment-thumb" style="left: {{ ((consensus.avg_sentiment + 1) / 2 * 100) | round }}%"></div>
+                    </div>
+                </div>
+                <div class="stat-row" style="margin-top:0.5rem;">
+                    <span class="stat-label">Active sources</span>
+                    <span class="stat-value">{{ active_sources }}</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Last updated</span>
+                    <span class="stat-value" style="font-size:0.8rem;font-weight:500;">{{ consensus.updated_at }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Asset views + Themes ── -->
+    <div class="main-grid">
+
+        <!-- Asset views -->
+        <div class="card">
+            <div class="section-title">Asset Class Consensus</div>
+            {% if consensus.asset_consensus %}
+            <div class="asset-grid">
+                {% for asset, data in consensus.asset_consensus.items() %}
+                <div class="asset-card">
+                    <div class="asset-name">{{ asset | replace('_', ' ') }}</div>
+                    <div class="asset-view av-{{ data.view }}">{{ data.view | capitalize }}</div>
+                    <div class="asset-conf">{{ data.confidence }}% agree ({{ data.count }} sources)</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty"><p>Asset view data will appear here once analyses are complete.</p></div>
+            {% endif %}
+        </div>
+
+        <!-- Themes -->
+        <div class="card">
+            <div class="section-title">Top Themes</div>
+            {% if consensus.top_themes %}
+            {% for t in consensus.top_themes %}
+            <div class="theme-row">
+                <div class="theme-name">{{ t.theme | capitalize }}</div>
+                <div class="theme-bar-track">
+                    <div class="theme-bar-fill" style="width:{{ t.pct }}%"></div>
+                </div>
+                <div class="theme-pct">{{ t.pct }}%</div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="empty"><p>Theme analysis will appear here.</p></div>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <!-- ── Unique insights + Recent articles ── -->
+    <div class="main-grid">
+
+        <!-- Unique insights -->
+        <div class="card">
+            <div class="section-title">Unique &amp; Contrarian Insights</div>
+            {% if consensus.unique_insights %}
+            {% for ins in consensus.unique_insights %}
+            <div class="insight-card">
+                <div class="insight-text">"{{ ins.insight }}"</div>
+                <div class="insight-meta">
+                    {{ ins.source }} &middot; {{ ins.date }}
+                    {% if ins.outlook %}
+                    <span class="insight-outlook badge-{{ ins.outlook }}" style="background:rgba(99,102,241,0.1);color:#6366f1;">{{ ins.outlook }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="empty">
+                <h3>No contrarian views identified</h3>
+                <p>Unique or divergent opinions from individual sources will be highlighted here.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Recent articles -->
+        <div class="card">
+            <div class="section-title">Recent Commentary</div>
+            {% if recent_articles %}
+            {% for article in recent_articles %}
+            {% set outlook = article.analysis.market_outlook if article.analysis else 'none' %}
+            <div class="article-row">
+                <div class="article-dot dot-{{ outlook }}"></div>
+                <div>
+                    <div class="article-title">{{ article.title or 'Untitled' }}</div>
+                    <div class="article-meta">
+                        {{ article.source.name if article.source else '?' }}
+                        &nbsp;&middot;&nbsp;
+                        {{ article.scraped_at.strftime('%b %d, %Y') if article.scraped_at else '' }}
+                        {% if article.analysis %}
+                        &nbsp;&middot;&nbsp; {{ article.analysis.market_outlook | capitalize }}
+                        {% endif %}
+                    </div>
+                    {% if article.analysis and article.analysis.summary %}
+                    <div style="font-size:0.78rem;color:#64748b;margin-top:0.25rem;line-height:1.4;">
+                        {{ article.analysis.summary[:160] }}{{ '...' if article.analysis.summary|length > 160 else '' }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="empty"><p>No analyzed articles yet.</p></div>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <!-- ── Key Risks ── -->
+    {% if consensus.top_risks %}
+    <div class="card">
+        <div class="section-title">Key Risks Identified</div>
+        <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+            {% for r in consensus.top_risks %}
+            <span style="background:rgba(239,68,68,0.08);color:#dc2626;padding:0.3rem 0.75rem;border-radius:100px;font-size:0.8rem;font-weight:500;">
+                {{ r.risk }}
+                {% if r.count > 1 %}<span style="opacity:0.6;font-size:0.7rem;"> &times;{{ r.count }}</span>{% endif %}
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- ── No data empty state ── -->
+    <div class="card" style="text-align:center;padding:4rem 2rem;">
+        <div style="font-size:3rem;margin-bottom:1rem;opacity:0.3;">&#128202;</div>
+        <h2 style="font-size:1.25rem;font-weight:700;margin-bottom:0.75rem;">No market data yet</h2>
+        <p style="color:#64748b;font-size:0.9rem;max-width:420px;margin:0 auto;line-height:1.6;">
+            Add financial commentary sources in the
+            <a href="/market-admin/" style="color:#6366f1;font-weight:500;">admin panel</a>,
+            then scrape and analyze them to populate this dashboard.
+        </p>
+    </div>
+    {% endif %}
+
+</div>
+</body>
+</html>

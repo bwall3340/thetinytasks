@@ -305,6 +305,12 @@ class TinyTasksApp {
                 }, 500);
                 break;
 
+            case 'market-outlook':
+                setTimeout(() => {
+                    window.location.href = '/market';
+                }, 500);
+                break;
+
             default:
                 // Placeholder for other tools
                 setTimeout(() => {
