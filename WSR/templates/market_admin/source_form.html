@@ -108,6 +108,16 @@
             <div class="selector-section">
                 <h3>CSS Selectors (optional — leave blank for auto-detection)</h3>
                 <div class="field">
+                    <label for="article_link_selector">Article link selector</label>
+                    <input type="text" id="article_link_selector" name="article_link_selector"
+                           value="{{ source.article_link_selector if source else '' }}"
+                           placeholder="e.g. h2.entry-title a, .post-title a, article h2 a">
+                    <div class="hint">
+                        Use when the URL is a <strong>listing page</strong> — the scraper will follow the
+                        first matching link to reach the actual article. Leave blank if the URL is a direct article.
+                    </div>
+                </div>
+                <div class="field">
                     <label for="content_selector">Content selector</label>
                     <input type="text" id="content_selector" name="content_selector"
                            value="{{ source.content_selector if source else '' }}"

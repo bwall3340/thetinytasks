@@ -14,6 +14,8 @@ class Source(db.Model):
     content_selector = db.Column(db.String(300))
     title_selector = db.Column(db.String(200))
     date_selector = db.Column(db.String(200))
+    # When the source URL is a listing page, follow the first link matching this selector
+    article_link_selector = db.Column(db.String(300))
     frequency = db.Column(db.String(20), default='monthly')  # daily/weekly/monthly/quarterly/annual
     active = db.Column(db.Boolean, default=True)
     last_scraped = db.Column(db.DateTime)

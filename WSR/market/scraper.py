@@ -130,6 +130,26 @@ def _find_pdf_links(soup: BeautifulSoup, base_url: str) -> list:
     return [url for _, url in candidates]
 
 
+# ── Article link discovery ────────────────────────────────────────────────────
+
+def _find_article_link(soup: BeautifulSoup, base_url: str, selector: str):
+    """
+    Return the absolute URL of the first link matching `selector` on a listing page.
+    If the matched element is not an <a>, look for the first <a> inside it.
+    """
+    el = soup.select_one(selector)
+    if not el:
+        return None
+    if el.name == 'a':
+        href = el.get('href', '').strip()
+    else:
+        a = el.find('a')
+        href = (a.get('href', '').strip() if a else '')
+    if not href or href.startswith('#') or href.startswith('mailto:'):
+        return None
+    return urljoin(base_url, href)
+
+
 # ── HTML extraction ───────────────────────────────────────────────────────────
 
 def _clean_soup(soup):
@@ -244,7 +264,34 @@ def scrape_source(source) -> dict:
 
         # ── Cases 2 & 3: HTML page ────────────────────────────────────────────
         soup = _clean_soup(BeautifulSoup(response.text, 'lxml'))
-        pdf_links = _find_pdf_links(soup, source.url)
+        scraped_url = source.url
+
+        # If the source is a listing page, follow the first article link
+        article_link_selector = getattr(source, 'article_link_selector', None)
+        if article_link_selector:
+            article_url = _find_article_link(soup, source.url, article_link_selector)
+            if article_url:
+                try:
+                    article_resp = _fetch(article_url)
+                    if _is_pdf_response(article_resp):
+                        content = _extract_pdf_text(article_resp.content)
+                        word_count = len(content.split()) if content else 0
+                        if word_count < 50:
+                            return {'success': False,
+                                    'error': f'PDF at article link extracted only {word_count} words'}
+                        title = _title_from_pdf(article_resp.content)
+                        return {
+                            'success': True, 'title': title, 'content': content,
+                            'content_hash': compute_hash(content), 'published_at': None,
+                            'url': article_url, 'word_count': word_count,
+                            'source_type': 'pdf_direct',
+                        }
+                    soup = _clean_soup(BeautifulSoup(article_resp.text, 'lxml'))
+                    scraped_url = article_url
+                except Exception as e:
+                    logger.warning('Failed to follow article link %s: %s', article_url, e)
+
+        pdf_links = _find_pdf_links(soup, scraped_url)
 
         # Try linked PDFs (top 3 ranked candidates)
         pdf_result = None
@@ -292,7 +339,7 @@ def scrape_source(source) -> dict:
             'content': content,
             'content_hash': compute_hash(content),
             'published_at': published_at,
-            'url': source.url,
+            'url': scraped_url,
             'word_count': word_count,
             'source_type': source_type,
         }
@@ -305,7 +352,8 @@ def scrape_source(source) -> dict:
         return {'success': False, 'error': str(e)}
 
 
-def validate_scrape(url, content_selector=None, title_selector=None, date_selector=None) -> dict:
+def validate_scrape(url, content_selector=None, title_selector=None,
+                    date_selector=None, article_link_selector=None) -> dict:
     """
     Dry-run scrape for the admin Validate button. Never persists anything.
     """
@@ -326,6 +374,33 @@ def validate_scrape(url, content_selector=None, title_selector=None, date_select
             }
 
         soup = _clean_soup(BeautifulSoup(response.text, 'lxml'))
+        article_url_followed = None
+
+        # If article_link_selector is configured, follow the first matching link
+        if article_link_selector:
+            article_url = _find_article_link(soup, url, article_link_selector)
+            if article_url:
+                try:
+                    art_resp = _fetch(article_url, timeout=20, retries=1)
+                    if _is_pdf_response(art_resp):
+                        content = _extract_pdf_text(art_resp.content)
+                        title = _title_from_pdf(art_resp.content)
+                        return {
+                            'success': True,
+                            'source_type': 'pdf_direct',
+                            'title': title,
+                            'content_preview': content[:1500],
+                            'word_count': len(content.split()) if content else 0,
+                            'status_code': art_resp.status_code,
+                            'pdf_links_found': 0,
+                            'article_url_followed': article_url,
+                        }
+                    soup = _clean_soup(BeautifulSoup(art_resp.text, 'lxml'))
+                    url = article_url
+                    article_url_followed = article_url
+                except Exception as e:
+                    logger.warning('validate: failed to follow article link %s: %s', article_url, e)
+
         pdf_links = _find_pdf_links(soup, url)
         html_content = _extract_content(soup, content_selector)
         html_title = _extract_title(soup, title_selector)
@@ -356,7 +431,7 @@ def validate_scrape(url, content_selector=None, title_selector=None, date_select
             content_preview = html_content[:1500] if html_content else ''
             word_count = html_words
 
-        return {
+        result = {
             'success': True,
             'source_type': source_type,
             'title': html_title,
@@ -367,6 +442,9 @@ def validate_scrape(url, content_selector=None, title_selector=None, date_select
             'pdf_url_used': pdf_url_used,
             'pdf_links': pdf_links[:5],
         }
+        if article_url_followed:
+            result['article_url_followed'] = article_url_followed
+        return result
 
     except Exception as e:
         return {'success': False, 'error': str(e)}

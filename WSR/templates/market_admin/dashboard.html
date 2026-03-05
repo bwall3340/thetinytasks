@@ -353,11 +353,15 @@ async function validateSource(id, name) {
             pdfInfo = `<br><strong>PDF links found:</strong> ${d.pdf_links_found}`;
             if (d.pdf_url_used) pdfInfo += `<br><strong>PDF used:</strong> <a href="${d.pdf_url_used}" target="_blank" style="color:#6366f1;word-break:break-all;">${d.pdf_url_used}</a>`;
         }
+        let articleInfo = '';
+        if (d.article_url_followed) {
+            articleInfo = `<br><strong>Article link followed:</strong> <a href="${d.article_url_followed}" target="_blank" style="color:#6366f1;word-break:break-all;">${d.article_url_followed}</a>`;
+        }
 
         document.getElementById('modal-body').innerHTML = `
             <p style="margin-bottom:0.75rem;font-size:0.875rem;">
                 <strong>Source type:</strong> ${sourceTypeBadge}<br>
-                <strong>Title:</strong> ${d.title || '(not detected)'}${pdfInfo}<br>
+                <strong>Title:</strong> ${d.title || '(not detected)'}${articleInfo}${pdfInfo}<br>
                 <strong>Words extracted:</strong> ${d.word_count?.toLocaleString() ?? 0}<br>
                 <strong>HTTP status:</strong> ${d.status_code}
             </p>

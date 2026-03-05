@@ -48,6 +48,20 @@ app.register_blueprint(market_bp)
 
 with app.app_context():
     db.create_all()
+    # Add columns introduced after initial schema (safe to re-run — silently ignored if present)
+    _migrations = [
+        'ALTER TABLE sources ADD COLUMN article_link_selector VARCHAR(300)',
+    ]
+    try:
+        with db.engine.connect() as _conn:
+            for _sql in _migrations:
+                try:
+                    _conn.execute(db.text(_sql))
+                except Exception:
+                    pass  # column already exists
+            _conn.commit()
+    except Exception:
+        pass
 
 # Start background scrape scheduler (only when running under gunicorn or directly)
 if not app.debug and os.environ.get('WERKZEUG_RUN_MAIN') != 'true':

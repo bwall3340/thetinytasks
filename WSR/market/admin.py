@@ -121,6 +121,7 @@ def new_source():
             name=request.form['name'].strip(),
             url=request.form['url'].strip(),
             frequency=request.form.get('frequency', 'monthly'),
+            article_link_selector=request.form.get('article_link_selector', '').strip() or None,
             content_selector=request.form.get('content_selector', '').strip() or None,
             title_selector=request.form.get('title_selector', '').strip() or None,
             date_selector=request.form.get('date_selector', '').strip() or None,
@@ -145,6 +146,7 @@ def edit_source(source_id):
         source.name = request.form['name'].strip()
         source.url = request.form['url'].strip()
         source.frequency = request.form.get('frequency', 'monthly')
+        source.article_link_selector = request.form.get('article_link_selector', '').strip() or None
         source.content_selector = request.form.get('content_selector', '').strip() or None
         source.title_selector = request.form.get('title_selector', '').strip() or None
         source.date_selector = request.form.get('date_selector', '').strip() or None
@@ -268,6 +270,7 @@ def validate_source(source_id):
             content_selector=source.content_selector,
             title_selector=source.title_selector,
             date_selector=source.date_selector,
+            article_link_selector=source.article_link_selector,
         )
         return jsonify(result)
     except Exception as e:
