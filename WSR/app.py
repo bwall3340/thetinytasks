@@ -3,7 +3,7 @@
 Flask web application for Logo Vectorizer Tool
 """
 
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 import os
 import cv2
 import numpy as np
@@ -22,6 +22,9 @@ from logo_upscaler import LogoUpscaler
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+# Directory containing the static home-page files (copied in by Docker)
+SITE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'site')
 
 # Manual CORS headers
 @app.after_request
@@ -171,13 +174,38 @@ logo_upscaler = LogoUpscaler()
 
 @app.route('/')
 def index():
-    """Serve the interactive click-to-remove interface as main tool"""
-    return render_template('interactive.html')
+    """Serve the home page (title screen + tool dashboard)"""
+    return send_from_directory(SITE_DIR, 'index.html')
+
+
+@app.route('/styles.css')
+def home_styles():
+    return send_from_directory(SITE_DIR, 'styles.css')
+
+
+@app.route('/script.js')
+def home_script():
+    return send_from_directory(SITE_DIR, 'script.js')
+
+
+@app.route('/background-remover.html')
+def background_remover():
+    return send_from_directory(SITE_DIR, 'background-remover.html')
+
+
+@app.route('/Sankey/<path:filename>')
+def sankey_files(filename):
+    return send_from_directory(os.path.join(SITE_DIR, 'Sankey'), filename)
+
+
+@app.route('/WhiteBackgroundRemover/<path:filename>')
+def white_bg_remover_files(filename):
+    return send_from_directory(os.path.join(SITE_DIR, 'WhiteBackgroundRemover'), filename)
 
 
 @app.route('/interactive')
 def interactive():
-    """Serve the interactive click-to-remove interface"""
+    """Serve the vectorizer tool"""
     return render_template('interactive.html')
 
 
@@ -461,7 +489,7 @@ def too_large(e):
 
 @app.errorhandler(404)
 def not_found(e):
-    return render_template('interactive.html'), 404
+    return send_from_directory(SITE_DIR, 'index.html'), 404
 
 
 @app.errorhandler(500)

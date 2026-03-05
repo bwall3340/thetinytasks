@@ -13,4 +13,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY WSR/ .
 
+# Copy root-level static site files for the home page and other tools
+COPY index.html /app/site/index.html
+COPY styles.css /app/site/styles.css
+COPY script.js /app/site/script.js
+COPY background-remover.html /app/site/background-remover.html
+COPY Sankey/ /app/site/Sankey/
+COPY WhiteBackgroundRemover/ /app/site/WhiteBackgroundRemover/
+
 CMD gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120 --preload
