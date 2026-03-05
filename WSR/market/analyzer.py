@@ -74,8 +74,9 @@ def analyze_article(article) -> dict | None:
             messages=[{'role': 'user', 'content': prompt}],
         )
         data = _extract_json(message.content[0].text)
-        if not data:
-            logger.error('Could not parse JSON from Claude for article %s', article.id)
+        if not data or not isinstance(data, dict):
+            logger.error('Could not parse JSON dict from Claude for article %s (got: %r)',
+                         article.id, data)
             return None
 
         return {

@@ -136,8 +136,13 @@ def _find_article_link(soup: BeautifulSoup, base_url: str, selector: str):
     """
     Return the absolute URL of the first link matching `selector` on a listing page.
     If the matched element is not an <a>, look for the first <a> inside it.
+    Returns None (with a warning) if the selector is invalid CSS.
     """
-    el = soup.select_one(selector)
+    try:
+        el = soup.select_one(selector)
+    except Exception as e:
+        logger.warning('Invalid article_link_selector %r: %s', selector, e)
+        return None
     if not el:
         return None
     if el.name == 'a':
@@ -161,7 +166,11 @@ def _clean_soup(soup):
 
 def _extract_content(soup, selector=None):
     if selector:
-        els = soup.select(selector)
+        try:
+            els = soup.select(selector)
+        except Exception as e:
+            logger.warning('Invalid content_selector %r: %s', selector, e)
+            els = []
         if els:
             return '\n\n'.join(e.get_text(separator=' ', strip=True) for e in els)
 
@@ -178,7 +187,11 @@ def _extract_content(soup, selector=None):
 
 def _extract_title(soup, selector=None):
     if selector:
-        el = soup.select_one(selector)
+        try:
+            el = soup.select_one(selector)
+        except Exception as e:
+            logger.warning('Invalid title_selector %r: %s', selector, e)
+            el = None
         if el:
             return el.get_text(strip=True)[:500]
     for tag in ['h1', 'title']:
@@ -191,7 +204,11 @@ def _extract_title(soup, selector=None):
 def _extract_date(soup, selector=None):
     if not selector:
         return None
-    el = soup.select_one(selector)
+    try:
+        el = soup.select_one(selector)
+    except Exception as e:
+        logger.warning('Invalid date_selector %r: %s', selector, e)
+        return None
     if not el:
         return None
     raw = el.get('datetime') or el.get('content') or el.get_text(strip=True)
