@@ -23,6 +23,10 @@ from logo_upscaler import LogoUpscaler
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
+# Trust Railway's reverse proxy so url_for() generates https:// URLs
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
 # Directory containing the static home-page files (copied in by Docker)
 SITE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'site')
 
