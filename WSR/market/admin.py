@@ -106,7 +106,7 @@ def dashboard():
         sources=sources,
         total_articles=Article.query.count(),
         total_analyses=Analysis.query.count(),
-        pending_analysis=Article.query.filter(Article.analysis == None).count(),
+        pending_analysis=Article.query.filter(~Article.analysis.has()).count(),
         admin_user=session['admin_user'],
     )
 
@@ -137,7 +137,10 @@ def new_source():
 @admin_bp.route('/sources/<int:source_id>/edit', methods=['GET', 'POST'])
 @require_admin
 def edit_source(source_id):
-    source = Source.query.get_or_404(source_id)
+    source = db.session.get(Source, source_id)
+    if not source:
+        flash('Source not found.', 'error')
+        return redirect(url_for('market_admin.dashboard'))
     if request.method == 'POST':
         source.name = request.form['name'].strip()
         source.url = request.form['url'].strip()
@@ -157,7 +160,10 @@ def edit_source(source_id):
 @admin_bp.route('/sources/<int:source_id>/delete', methods=['POST'])
 @require_admin
 def delete_source(source_id):
-    source = Source.query.get_or_404(source_id)
+    source = db.session.get(Source, source_id)
+    if not source:
+        flash('Source not found.', 'error')
+        return redirect(url_for('market_admin.dashboard'))
     name = source.name
     db.session.delete(source)
     db.session.commit()
@@ -170,87 +176,112 @@ def delete_source(source_id):
 @admin_bp.route('/sources/<int:source_id>/scrape', methods=['POST'])
 @require_admin
 def scrape_now(source_id):
-    source = Source.query.get_or_404(source_id)
-    result = scrape_source(source)
+    try:
+        source = db.session.get(Source, source_id)
+        if not source:
+            return jsonify({'success': False, 'error': 'Source not found'}), 404
 
-    if not result['success']:
-        source.last_scrape_status = 'failed'
-        db.session.commit()
-        return jsonify({'success': False, 'error': result['error']})
+        result = scrape_source(source)
 
-    existing = Article.query.filter_by(content_hash=result['content_hash']).first()
-    if existing:
+        if not result['success']:
+            source.last_scrape_status = 'failed'
+            db.session.commit()
+            return jsonify({'success': False, 'error': result['error']})
+
+        existing = Article.query.filter_by(content_hash=result['content_hash']).first()
+        if existing:
+            source.last_scraped = datetime.utcnow()
+            source.last_scrape_status = 'duplicate'
+            db.session.commit()
+            return jsonify({'success': True, 'duplicate': True,
+                            'message': 'Content unchanged since last scrape.'})
+
+        article = Article(
+            source_id=source.id,
+            url=result['url'],
+            title=result['title'],
+            raw_content=result['content'],
+            content_hash=result['content_hash'],
+            published_at=result['published_at'],
+        )
+        db.session.add(article)
         source.last_scraped = datetime.utcnow()
-        source.last_scrape_status = 'duplicate'
+        source.last_scrape_status = 'success'
         db.session.commit()
-        return jsonify({'success': True, 'duplicate': True,
-                        'message': 'Content unchanged since last scrape.'})
 
-    article = Article(
-        source_id=source.id,
-        url=result['url'],
-        title=result['title'],
-        raw_content=result['content'],
-        content_hash=result['content_hash'],
-        published_at=result['published_at'],
-    )
-    db.session.add(article)
-    source.last_scraped = datetime.utcnow()
-    source.last_scrape_status = 'success'
-    db.session.commit()
-
-    return jsonify({
-        'success': True,
-        'article_id': article.id,
-        'title': article.title,
-        'word_count': result['word_count'],
-        'message': f'Scraped {result["word_count"]:,} words.',
-    })
+        return jsonify({
+            'success': True,
+            'article_id': article.id,
+            'title': article.title,
+            'word_count': result['word_count'],
+            'message': f'Scraped {result["word_count"]:,} words.',
+        })
+    except Exception as e:
+        logger.error('scrape_now error for source %s: %s', source_id, e)
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @admin_bp.route('/sources/<int:source_id>/analyze', methods=['POST'])
 @require_admin
 def analyze_latest(source_id):
-    article = (Article.query
-               .filter_by(source_id=source_id)
-               .filter(Article.analysis == None)
-               .order_by(Article.scraped_at.desc())
-               .first())
-    if not article:
-        return jsonify({'success': False, 'error': 'No unanalyzed articles for this source.'})
+    try:
+        source = db.session.get(Source, source_id)
+        if not source:
+            return jsonify({'success': False, 'error': 'Source not found'}), 404
 
-    result = analyze_article(article)
-    if not result:
-        return jsonify({'success': False, 'error': 'AI analysis failed. Check ANTHROPIC_API_KEY.'})
+        article = (Article.query
+                   .filter_by(source_id=source_id)
+                   .filter(~Article.analysis.has())
+                   .order_by(Article.scraped_at.desc())
+                   .first())
+        if not article:
+            return jsonify({'success': False, 'error': 'No unanalyzed articles for this source.'})
 
-    db.session.add(Analysis(article_id=article.id, **result))
-    db.session.commit()
-    return jsonify({
-        'success': True,
-        'market_outlook': result['market_outlook'],
-        'sentiment_score': result['sentiment_score'],
-        'summary': result['summary'],
-        'message': f'Analysis complete: {result["market_outlook"]} outlook.',
-    })
+        result = analyze_article(article)
+        if not result:
+            return jsonify({'success': False, 'error': 'AI analysis failed. Check ANTHROPIC_API_KEY.'})
+
+        db.session.add(Analysis(article_id=article.id, **result))
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'market_outlook': result['market_outlook'],
+            'sentiment_score': result['sentiment_score'],
+            'summary': result['summary'],
+            'message': f'Analysis complete: {result["market_outlook"]} outlook.',
+        })
+    except Exception as e:
+        logger.error('analyze_latest error for source %s: %s', source_id, e)
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @admin_bp.route('/sources/<int:source_id>/validate', methods=['POST'])
 @require_admin
 def validate_source(source_id):
-    source = Source.query.get_or_404(source_id)
-    result = validate_scrape(
-        source.url,
-        content_selector=source.content_selector,
-        title_selector=source.title_selector,
-        date_selector=source.date_selector,
-    )
-    return jsonify(result)
+    try:
+        source = db.session.get(Source, source_id)
+        if not source:
+            return jsonify({'success': False, 'error': 'Source not found'}), 404
+
+        result = validate_scrape(
+            source.url,
+            content_selector=source.content_selector,
+            title_selector=source.title_selector,
+            date_selector=source.date_selector,
+        )
+        return jsonify(result)
+    except Exception as e:
+        logger.error('validate_source error for source %s: %s', source_id, e)
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @admin_bp.route('/sources/<int:source_id>/articles')
 @require_admin
 def source_articles(source_id):
-    source = Source.query.get_or_404(source_id)
+    source = db.session.get(Source, source_id)
+    if not source:
+        flash('Source not found.', 'error')
+        return redirect(url_for('market_admin.dashboard'))
     articles = (Article.query
                 .filter_by(source_id=source_id)
                 .order_by(Article.scraped_at.desc())
@@ -264,17 +295,21 @@ def source_articles(source_id):
 @require_admin
 def analyze_all():
     """Analyze up to 20 unanalyzed articles across all sources."""
-    pending = (Article.query
-               .filter(Article.analysis == None)
-               .order_by(Article.scraped_at.desc())
-               .limit(20).all())
-    results = []
-    for article in pending:
-        data = analyze_article(article)
-        if data:
-            db.session.add(Analysis(article_id=article.id, **data))
-            results.append({'article_id': article.id, 'outlook': data['market_outlook']})
-        time.sleep(0.5)  # respect rate limits
+    try:
+        pending = (Article.query
+                   .filter(~Article.analysis.has())
+                   .order_by(Article.scraped_at.desc())
+                   .limit(20).all())
+        results = []
+        for article in pending:
+            data = analyze_article(article)
+            if data:
+                db.session.add(Analysis(article_id=article.id, **data))
+                results.append({'article_id': article.id, 'outlook': data['market_outlook']})
+            time.sleep(0.5)  # respect rate limits
 
-    db.session.commit()
-    return jsonify({'success': True, 'analyzed': len(results), 'results': results})
+        db.session.commit()
+        return jsonify({'success': True, 'analyzed': len(results), 'results': results})
+    except Exception as e:
+        logger.error('analyze_all error: %s', e)
+        return jsonify({'success': False, 'error': str(e)}), 500

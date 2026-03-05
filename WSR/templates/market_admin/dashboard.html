@@ -299,14 +299,22 @@ function setRowStatus(id, status) {
     if (cell) cell.innerHTML = `<span class="status-badge status-${status}">${status}</span>`;
 }
 
+async function safeJson(response) {
+    const ct = response.headers.get('content-type') || '';
+    if (!ct.includes('application/json')) {
+        return {success: false, error: `Server error (HTTP ${response.status})`};
+    }
+    try { return await response.json(); }
+    catch (e) { return {success: false, error: 'Invalid JSON response from server'}; }
+}
+
 async function scrapeSource(id, name) {
     showToast(`Scraping ${name}…`);
     const r = await fetch(`/market-admin/sources/${id}/scrape`, {method:'POST'});
-    const d = await r.json();
+    const d = await safeJson(r);
     if (d.success) {
         setRowStatus(id, d.duplicate ? 'duplicate' : 'success');
         showToast(d.message, 'success');
-        // Update article count
         const cell = document.querySelector(`#row-${id} td:nth-child(3)`);
         if (cell && !d.duplicate) location.reload();
     } else {
@@ -318,7 +326,7 @@ async function scrapeSource(id, name) {
 async function analyzeSource(id, name) {
     showToast(`Analyzing ${name} with Claude…`);
     const r = await fetch(`/market-admin/sources/${id}/analyze`, {method:'POST'});
-    const d = await r.json();
+    const d = await safeJson(r);
     if (d.success) {
         showToast(d.message, 'success');
         location.reload();
@@ -330,7 +338,7 @@ async function analyzeSource(id, name) {
 async function validateSource(id, name) {
     showToast(`Validating ${name}…`);
     const r = await fetch(`/market-admin/sources/${id}/validate`, {method:'POST'});
-    const d = await r.json();
+    const d = await safeJson(r);
 
     document.getElementById('modal-title').textContent = `Validate: ${name}`;
     if (d.success) {
@@ -370,8 +378,12 @@ function closeModal(e) {
 async function analyzeAll() {
     showToast('Analyzing all pending articles…');
     const r = await fetch('/market-admin/analyze-all', {method:'POST'});
-    const d = await r.json();
-    showToast(`Analyzed ${d.analyzed} article(s).`, 'success');
+    const d = await safeJson(r);
+    if (d.success) {
+        showToast(`Analyzed ${d.analyzed} article(s).`, 'success');
+    } else {
+        showToast('Error: ' + d.error, 'error');
+    }
     setTimeout(() => location.reload(), 1500);
 }
 </script>
