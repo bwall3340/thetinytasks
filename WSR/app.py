@@ -61,16 +61,15 @@ with app.app_context():
         'ALTER TABLE sources ADD COLUMN article_link_selector VARCHAR(300)',
         'ALTER TABLE sources ADD COLUMN article_link_text_filter VARCHAR(200)',
     ]
-    try:
-        with db.engine.connect() as _conn:
-            for _sql in _migrations:
-                try:
-                    _conn.execute(db.text(_sql))
-                except Exception:
-                    pass  # column already exists
-            _conn.commit()
-    except Exception:
-        pass
+    # Each migration runs in its own transaction so a "column already exists"
+    # error on one statement doesn't abort the rest (PostgreSQL behaviour).
+    for _sql in _migrations:
+        try:
+            with db.engine.connect() as _conn:
+                _conn.execute(db.text(_sql))
+                _conn.commit()
+        except Exception:
+            pass  # column already exists — safe to ignore
 
 # Start background scrape scheduler (only when running under gunicorn or directly)
 if not app.debug and os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
