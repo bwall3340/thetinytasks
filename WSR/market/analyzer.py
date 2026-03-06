@@ -67,7 +67,9 @@ def analyze_article(article) -> dict | None:
     words = article.raw_content.split()
     content = ' '.join(words[:_MAX_WORDS])
 
-    prompt = _PROMPT.format(source_name=source_name, content=content)
+    # Use replace() instead of .format() — content may contain curly braces
+    # (e.g. JSON snippets) that would cause a KeyError in .format()
+    prompt = _PROMPT.replace('{source_name}', source_name).replace('{content}', content)
 
     try:
         client = anthropic.Anthropic(api_key=api_key)
