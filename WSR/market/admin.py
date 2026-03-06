@@ -14,7 +14,7 @@ from flask import (Blueprint, flash, jsonify, redirect, render_template,
                    request, session, url_for)
 
 from .models import Analysis, Article, Source, db
-from .scraper import scrape_source, validate_scrape
+from .scraper import scrape_source, validate_scrape, discover_links
 from .analyzer import analyze_article
 
 logger = logging.getLogger(__name__)
@@ -256,6 +256,37 @@ def analyze_latest(source_id):
     except Exception as e:
         logger.error('analyze_latest error for source %s: %s\n%s',
                      source_id, e, traceback.format_exc())
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@admin_bp.route('/sources/<int:source_id>/discover-links', methods=['POST'])
+@require_admin
+def discover_source_links(source_id):
+    try:
+        source = db.session.get(Source, source_id)
+        if not source:
+            return jsonify({'success': False, 'error': 'Source not found'}), 404
+        result = discover_links(source.url)
+        return jsonify(result)
+    except Exception as e:
+        logger.error('discover_source_links error for source %s: %s', source_id, e)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@admin_bp.route('/sources/<int:source_id>/set-selector', methods=['POST'])
+@require_admin
+def set_article_selector(source_id):
+    try:
+        source = db.session.get(Source, source_id)
+        if not source:
+            return jsonify({'success': False, 'error': 'Source not found'}), 404
+        data = request.get_json() or {}
+        selector = data.get('selector', '').strip()
+        source.article_link_selector = selector or None
+        db.session.commit()
+        return jsonify({'success': True, 'selector': selector})
+    except Exception as e:
+        logger.error('set_article_selector error for source %s: %s', source_id, e)
         return jsonify({'success': False, 'error': str(e)}), 500
 
 

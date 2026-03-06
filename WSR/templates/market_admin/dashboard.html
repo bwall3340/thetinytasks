@@ -128,6 +128,57 @@
         .modal-close:hover { color: #1e293b; }
 
         .empty-table { text-align: center; padding: 3rem; color: #94a3b8; }
+
+        /* ── Discover modal ── */
+        #discover-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.4); z-index: 1000;
+            align-items: center; justify-content: center;
+        }
+        #discover-overlay.open { display: flex; }
+        #discover-box {
+            background: #fff; border-radius: 16px; padding: 1.5rem;
+            max-width: 680px; width: 95vw; max-height: 85vh;
+            overflow-y: auto; box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+        }
+        #discover-box h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.25rem; }
+        .discover-hint { font-size: 0.78rem; color: #64748b; margin-bottom: 1rem; }
+        .selector-group {
+            border: 1px solid #e2e8f0; border-radius: 10px;
+            margin-bottom: 0.75rem; overflow: hidden;
+        }
+        .selector-group-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.65rem 0.85rem; background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .selector-code {
+            font-family: monospace; font-size: 0.8rem; color: #4f46e5;
+            background: rgba(99,102,241,0.08); padding: 0.2rem 0.45rem;
+            border-radius: 5px; word-break: break-all;
+        }
+        .selector-count { font-size: 0.72rem; color: #94a3b8; margin-left: 0.5rem; }
+        .selector-examples { padding: 0.5rem 0.85rem; }
+        .selector-example {
+            font-size: 0.78rem; padding: 0.3rem 0;
+            border-bottom: 1px solid #f1f5f9; color: #475569;
+            display: flex; gap: 0.5rem; align-items: baseline;
+        }
+        .selector-example:last-child { border-bottom: none; }
+        .example-text { font-weight: 500; color: #1e293b; flex-shrink: 0; max-width: 280px;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .example-href { color: #94a3b8; font-size: 0.7rem; overflow: hidden;
+            text-overflow: ellipsis; white-space: nowrap; }
+        .btn-use-selector {
+            padding: 0.25rem 0.6rem; font-size: 0.72rem; border-radius: 6px;
+            background: #6366f1; color: #fff; border: none; cursor: pointer;
+            white-space: nowrap; flex-shrink: 0;
+        }
+        .btn-use-selector:hover { background: #4f46e5; }
+        .btn-use-selector.applied {
+            background: #059669;
+        }
+        .discover-loading { text-align: center; padding: 2rem; color: #94a3b8; font-size: 0.875rem; }
     </style>
 </head>
 <body>
@@ -244,6 +295,10 @@
                                 onclick="validateSource({{ s.id }}, '{{ s.name|e }}')">
                             Validate
                         </button>
+                        <button class="btn btn-secondary btn-sm"
+                                onclick="discoverLinks({{ s.id }}, '{{ s.name|e }}')">
+                            Discover
+                        </button>
                         <a href="{{ url_for('market_admin.source_articles', source_id=s.id) }}"
                            class="btn btn-secondary btn-sm">Articles</a>
                         <a href="{{ url_for('market_admin.edit_source', source_id=s.id) }}"
@@ -275,6 +330,16 @@
 
 <!-- Toast -->
 <div id="toast"></div>
+
+<!-- Discover Links modal -->
+<div id="discover-overlay" onclick="closeDiscover(event)">
+    <div id="discover-box">
+        <span class="modal-close" onclick="document.getElementById('discover-overlay').classList.remove('open')">&#10005;</span>
+        <h3 id="discover-title">Discover Article Links</h3>
+        <p class="discover-hint" id="discover-hint"></p>
+        <div id="discover-body"></div>
+    </div>
+</div>
 
 <!-- Validate modal -->
 <div id="modal-overlay" onclick="closeModal(event)">
@@ -377,6 +442,93 @@ async function validateSource(id, name) {
 function closeModal(e) {
     if (e.target === document.getElementById('modal-overlay'))
         document.getElementById('modal-overlay').classList.remove('open');
+}
+
+let _discoverSourceId = null;
+
+async function discoverLinks(id, name) {
+    _discoverSourceId = id;
+    document.getElementById('discover-title').textContent = `Discover Links: ${name}`;
+    document.getElementById('discover-hint').textContent = '';
+    document.getElementById('discover-body').innerHTML = '<div class="discover-loading">Scanning page for links…</div>';
+    document.getElementById('discover-overlay').classList.add('open');
+
+    const r = await fetch(`/market-admin/sources/${id}/discover-links`, {method:'POST'});
+    const d = await safeJson(r);
+
+    if (!d.success) {
+        document.getElementById('discover-body').innerHTML =
+            `<p style="color:#dc2626;font-size:0.875rem;">Error: ${d.error}</p>`;
+        return;
+    }
+
+    document.getElementById('discover-hint').textContent =
+        `Found ${d.total_links} same-domain links. Groups with more matches are likely article listings. ` +
+        `The first link matched by your selector is always used (newest article when list is sorted newest-first).`;
+
+    if (!d.groups || d.groups.length === 0) {
+        document.getElementById('discover-body').innerHTML =
+            '<p style="color:#94a3b8;font-size:0.875rem;">No candidate links found on this page.</p>';
+        return;
+    }
+
+    let html = '';
+    d.groups.forEach(group => {
+        const countLabel = group.match_count > 1
+            ? `${group.match_count} matches — likely a listing`
+            : `1 match`;
+        const examples = group.examples.map(ex =>
+            `<div class="selector-example">
+                <span class="example-text" title="${ex.text}">${ex.text}</span>
+                <span class="example-href" title="${ex.href}">${ex.href}</span>
+             </div>`
+        ).join('');
+        html += `
+        <div class="selector-group">
+            <div class="selector-group-header">
+                <div>
+                    <span class="selector-code">${group.selector}</span>
+                    <span class="selector-count">${countLabel}</span>
+                </div>
+                <button class="btn-use-selector" onclick="applySelector(${id}, '${group.selector.replace(/'/g, "\\'")}', this)">
+                    Use this
+                </button>
+            </div>
+            <div class="selector-examples">${examples}</div>
+        </div>`;
+    });
+    document.getElementById('discover-body').innerHTML = html;
+}
+
+async function applySelector(id, selector, btn) {
+    btn.textContent = 'Saving…';
+    btn.disabled = true;
+    const r = await fetch(`/market-admin/sources/${id}/set-selector`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({selector}),
+    });
+    const d = await safeJson(r);
+    if (d.success) {
+        // Mark all buttons in the modal as reset, then highlight this one
+        document.querySelectorAll('.btn-use-selector').forEach(b => {
+            b.classList.remove('applied');
+            b.textContent = 'Use this';
+            b.disabled = false;
+        });
+        btn.classList.add('applied');
+        btn.textContent = 'Applied ✓';
+        showToast(`Selector saved: ${selector}`, 'success');
+    } else {
+        btn.textContent = 'Use this';
+        btn.disabled = false;
+        showToast('Error: ' + d.error, 'error');
+    }
+}
+
+function closeDiscover(e) {
+    if (e.target === document.getElementById('discover-overlay'))
+        document.getElementById('discover-overlay').classList.remove('open');
 }
 
 async function analyzeAll() {

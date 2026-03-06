@@ -387,6 +387,102 @@ def scrape_source(source) -> dict:
         return {'success': False, 'error': str(e)}
 
 
+def _suggest_selector(a_tag) -> str:
+    """Generate a CSS selector suggestion for an <a> element based on its DOM context."""
+    el = a_tag
+    for _ in range(4):
+        parent = el.parent
+        if not parent or parent.name in ('body', 'html', '[document]', None):
+            break
+        tag = parent.name
+        classes = [c for c in (parent.get('class') or [])
+                   if c and not any(c.startswith(p) for p in ('js-', 'is-', 'has-', 'wp-'))]
+        if classes:
+            return f"{tag}.{classes[0]} a"
+        pid = parent.get('id')
+        if pid and not any(pid.startswith(p) for p in ('js-', 'menu', 'nav')):
+            return f"#{pid} a"
+        el = parent
+    return 'a'
+
+
+def discover_links(url: str) -> dict:
+    """
+    Fetch a listing page and return candidate article links grouped by suggested CSS selector.
+    Used by the admin "Discover Links" feature to help configure article_link_selector.
+    """
+    try:
+        response = _fetch(url, timeout=20, retries=1)
+        if _is_pdf_response(response):
+            return {'success': False, 'error': 'URL points to a PDF, not a listing page.'}
+
+        soup = BeautifulSoup(response.text, 'lxml')
+        base_domain = urlparse(url).netloc
+
+        # Strip navigation noise before scanning
+        for tag in soup.find_all(['nav', 'footer', 'header', 'script', 'style', 'aside']):
+            tag.decompose()
+
+        links = []
+        seen_hrefs = set()
+        for a in soup.find_all('a', href=True):
+            href = a['href'].strip()
+            if not href or href.startswith(('#', 'mailto:', 'javascript:', 'tel:')):
+                continue
+            abs_href = urljoin(url, href)
+            link_domain = urlparse(abs_href).netloc
+            if link_domain != base_domain:
+                continue
+            if abs_href in seen_hrefs:
+                continue
+            seen_hrefs.add(abs_href)
+            text = a.get_text(strip=True)
+            if len(text) < 5:
+                continue
+            suggested = _suggest_selector(a)
+            links.append({
+                'text': text[:120],
+                'href': abs_href,
+                'suggested_selector': suggested,
+            })
+
+        # Count how many links each selector would match
+        from collections import Counter
+        selector_counts = Counter(l['suggested_selector'] for l in links)
+        for link in links:
+            link['selector_match_count'] = selector_counts[link['suggested_selector']]
+
+        # Selectors with multiple matches are more likely to be listing patterns
+        links.sort(key=lambda l: -l['selector_match_count'])
+
+        # Group into unique selectors with examples
+        seen_selectors = {}
+        groups = []
+        for link in links:
+            sel = link['suggested_selector']
+            if sel not in seen_selectors:
+                seen_selectors[sel] = len(groups)
+                groups.append({
+                    'selector': sel,
+                    'match_count': link['selector_match_count'],
+                    'examples': [],
+                })
+            if len(groups[seen_selectors[sel]]['examples']) < 4:
+                groups[seen_selectors[sel]]['examples'].append({
+                    'text': link['text'],
+                    'href': link['href'],
+                })
+
+        return {
+            'success': True,
+            'url': url,
+            'total_links': len(links),
+            'groups': groups[:15],
+        }
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+
 def validate_scrape(url, content_selector=None, title_selector=None,
                     date_selector=None, article_link_selector=None) -> dict:
     """
