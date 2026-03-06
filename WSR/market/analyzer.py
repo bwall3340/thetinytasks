@@ -41,7 +41,15 @@ def _extract_json(text: str):
         return json.loads(text)
     except json.JSONDecodeError:
         pass
+    # Try JSON object
     match = re.search(r'\{[\s\S]*\}', text)
+    if match:
+        try:
+            return json.loads(match.group())
+        except json.JSONDecodeError:
+            pass
+    # Try JSON array (needed when Claude returns [] responses)
+    match = re.search(r'\[[\s\S]*\]', text)
     if match:
         try:
             return json.loads(match.group())
