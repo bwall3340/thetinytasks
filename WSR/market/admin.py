@@ -5,6 +5,7 @@ All routes under /market-admin require the admin_user session key.
 import logging
 import os
 import time
+import traceback
 from datetime import datetime
 from functools import wraps
 
@@ -253,7 +254,8 @@ def analyze_latest(source_id):
             'message': f'Analysis complete: {result["market_outlook"]} outlook.',
         })
     except Exception as e:
-        logger.error('analyze_latest error for source %s: %s', source_id, e)
+        logger.error('analyze_latest error for source %s: %s\n%s',
+                     source_id, e, traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)}), 500
 
 

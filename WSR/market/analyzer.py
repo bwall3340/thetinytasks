@@ -61,6 +61,9 @@ def analyze_article(article) -> dict | None:
         return None
 
     source_name = article.source.name if article.source else 'Unknown'
+    if not article.raw_content:
+        logger.error('Article %s has no raw_content — skipping', article.id)
+        return None
     words = article.raw_content.split()
     content = ' '.join(words[:_MAX_WORDS])
 
