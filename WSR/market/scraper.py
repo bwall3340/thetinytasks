@@ -280,19 +280,26 @@ def scrape_source(source) -> dict:
             }
 
         # ── Cases 2 & 3: HTML page ────────────────────────────────────────────
+        logger.info('[scrape] %s — HTTP %s, %d bytes',
+                    source.url, response.status_code, len(response.content))
         soup = _clean_soup(BeautifulSoup(response.text, 'lxml'))
         scraped_url = source.url
 
         # If the source is a listing page, follow the first article link
         article_link_selector = getattr(source, 'article_link_selector', None)
         if article_link_selector:
+            logger.info('[scrape] article_link_selector=%r', article_link_selector)
             article_url = _find_article_link(soup, source.url, article_link_selector)
             if article_url:
+                logger.info('[scrape] following article link: %s', article_url)
                 try:
                     article_resp = _fetch(article_url)
+                    logger.info('[scrape] article page HTTP %s, %d bytes',
+                                article_resp.status_code, len(article_resp.content))
                     if _is_pdf_response(article_resp):
                         content = _extract_pdf_text(article_resp.content)
                         word_count = len(content.split()) if content else 0
+                        logger.info('[scrape] article is direct PDF, %d words', word_count)
                         if word_count < 50:
                             return {'success': False,
                                     'error': f'PDF at article link extracted only {word_count} words'}
@@ -306,9 +313,14 @@ def scrape_source(source) -> dict:
                     soup = _clean_soup(BeautifulSoup(article_resp.text, 'lxml'))
                     scraped_url = article_url
                 except Exception as e:
-                    logger.warning('Failed to follow article link %s: %s', article_url, e)
+                    logger.warning('[scrape] failed to follow article link %s: %s', article_url, e)
+            else:
+                logger.warning('[scrape] article_link_selector %r matched nothing on %s',
+                               article_link_selector, source.url)
 
         pdf_links = _find_pdf_links(soup, scraped_url)
+        logger.info('[scrape] found %d PDF link(s) on %s: %s',
+                    len(pdf_links), scraped_url, pdf_links[:3])
 
         # Try linked PDFs (top 3 ranked candidates)
         pdf_result = None
@@ -317,11 +329,14 @@ def scrape_source(source) -> dict:
             try:
                 r = _scrape_pdf_bytes(pdf_url)
                 if r['success']:
+                    logger.info('[scrape] PDF extracted %d words from %s', r['word_count'], pdf_url)
                     pdf_result = r
                     used_pdf_url = pdf_url
                     break
+                else:
+                    logger.warning('[scrape] PDF failed (%s): %s', pdf_url, r.get('error'))
             except Exception as e:
-                logger.debug('PDF link %s failed: %s', pdf_url, e)
+                logger.warning('[scrape] PDF fetch error %s: %s', pdf_url, e)
 
         html_content = _extract_content(soup, source.content_selector)
         html_title = _extract_title(soup, source.title_selector)
@@ -329,6 +344,8 @@ def scrape_source(source) -> dict:
 
         html_words = len(html_content.split()) if html_content else 0
         pdf_words = pdf_result['word_count'] if pdf_result else 0
+        logger.info('[scrape] HTML words=%d, PDF words=%d, content_selector=%r',
+                    html_words, pdf_words, source.content_selector)
 
         # Prefer PDF when it has more content
         if pdf_result and pdf_words >= html_words:
@@ -347,6 +364,7 @@ def scrape_source(source) -> dict:
                 detail += f', {len(pdf_links)} PDF link(s) found'
                 if pdf_result is None:
                     detail += ' but none parsed successfully'
+            logger.warning('[scrape] failed for %s: %s', source.url, detail)
             return {'success': False,
                     'error': f'Only {word_count} words extracted. {detail}. Try adjusting the content selector.'}
 
