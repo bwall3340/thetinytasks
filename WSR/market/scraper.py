@@ -406,6 +406,10 @@ def _suggest_selector(a_tag) -> str:
     return 'a'
 
 
+def _strip_www(netloc: str) -> str:
+    return netloc[4:] if netloc.startswith('www.') else netloc
+
+
 def discover_links(url: str) -> dict:
     """
     Fetch a listing page and return candidate article links grouped by suggested CSS selector.
@@ -416,8 +420,10 @@ def discover_links(url: str) -> dict:
         if _is_pdf_response(response):
             return {'success': False, 'error': 'URL points to a PDF, not a listing page.'}
 
+        # Use the final URL after redirects so domain comparison works correctly
+        effective_url = response.url
         soup = BeautifulSoup(response.text, 'lxml')
-        base_domain = urlparse(url).netloc
+        base_domain = _strip_www(urlparse(effective_url).netloc)
 
         # Strip navigation noise before scanning
         for tag in soup.find_all(['nav', 'footer', 'header', 'script', 'style', 'aside']):
@@ -429,8 +435,8 @@ def discover_links(url: str) -> dict:
             href = a['href'].strip()
             if not href or href.startswith(('#', 'mailto:', 'javascript:', 'tel:')):
                 continue
-            abs_href = urljoin(url, href)
-            link_domain = urlparse(abs_href).netloc
+            abs_href = urljoin(effective_url, href)
+            link_domain = _strip_www(urlparse(abs_href).netloc)
             if link_domain != base_domain:
                 continue
             if abs_href in seen_hrefs:
