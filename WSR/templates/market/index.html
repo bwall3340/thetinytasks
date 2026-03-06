@@ -211,6 +211,69 @@
         .empty { text-align: center; padding: 3rem 1rem; color: #94a3b8; }
         .empty h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; color: #64748b; }
         .empty p { font-size: 0.875rem; line-height: 1.6; }
+
+        /* ── Disclaimer modal ── */
+        #disclaimer-overlay {
+            position: fixed; inset: 0; z-index: 9999;
+            background: rgba(15,23,42,0.7);
+            backdrop-filter: blur(6px);
+            display: flex; align-items: center; justify-content: center;
+            padding: 1.5rem;
+        }
+        #disclaimer-overlay.hidden { display: none; }
+        .disclaimer-card {
+            background: rgba(255,255,255,0.97);
+            border: 1px solid rgba(255,255,255,0.8);
+            border-radius: 24px;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.22), 0 4px 16px rgba(0,0,0,0.1);
+            max-width: 560px; width: 100%;
+            padding: 2.25rem 2.5rem;
+        }
+        .disclaimer-badge {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            background: rgba(99,102,241,0.1); color: #4338ca;
+            border: 1px solid rgba(99,102,241,0.25);
+            border-radius: 100px; font-size: 0.72rem; font-weight: 700;
+            letter-spacing: 0.05em; text-transform: uppercase;
+            padding: 0.25rem 0.65rem; margin-bottom: 1rem;
+        }
+        .disclaimer-card h2 {
+            font-size: 1.3rem; font-weight: 800; color: #0f172a;
+            letter-spacing: -0.02em; margin-bottom: 1.25rem; line-height: 1.2;
+        }
+        .disclaimer-points { list-style: none; margin-bottom: 1.5rem; }
+        .disclaimer-points li {
+            display: flex; gap: 0.65rem; align-items: flex-start;
+            font-size: 0.88rem; color: #334155; line-height: 1.55;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(226,232,240,0.6);
+        }
+        .disclaimer-points li:last-child { border-bottom: none; }
+        .disclaimer-points li .dp-icon {
+            flex-shrink: 0; margin-top: 0.05rem;
+            width: 18px; height: 18px; border-radius: 50%;
+            background: rgba(99,102,241,0.1);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.6rem; color: #6366f1; font-weight: 800;
+        }
+        .disclaimer-footer {
+            font-size: 0.75rem; color: #94a3b8; line-height: 1.5;
+            margin-bottom: 1.5rem;
+        }
+        .disclaimer-actions { display: flex; gap: 0.75rem; }
+        .disc-btn {
+            flex: 1; padding: 0.75rem 1rem; border-radius: 12px;
+            font-size: 0.9rem; font-weight: 600; cursor: pointer;
+            border: none; transition: all 0.18s; text-align: center;
+            text-decoration: none; display: inline-block;
+        }
+        .disc-btn-primary {
+            background: linear-gradient(135deg, #6366f1, #7c3aed);
+            color: #fff; box-shadow: 0 4px 12px rgba(99,102,241,0.35);
+        }
+        .disc-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(99,102,241,0.45); }
+        .disc-btn-secondary { background: #f1f5f9; color: #475569; }
+        .disc-btn-secondary:hover { background: #e2e8f0; }
     </style>
 </head>
 <body>
@@ -406,5 +469,56 @@
     {% endif %}
 
 </div>
+
+<!-- ── Disclaimer modal ── -->
+<div id="disclaimer-overlay">
+    <div class="disclaimer-card">
+        <div class="disclaimer-badge">&#9888; Important Notice</div>
+        <h2>AI-Powered Market Analysis — Not Financial Advice</h2>
+        <ul class="disclaimer-points">
+            <li>
+                <span class="dp-icon">AI</span>
+                <span>This page aggregates publicly available market commentary and analyzes it using <strong>Claude AI</strong>. Results are automated and may contain errors, omissions, or misinterpretations of the original source material.</span>
+            </li>
+            <li>
+                <span class="dp-icon">&#10003;</span>
+                <span>The information presented here is for <strong>informational and educational purposes only</strong>. It does not constitute financial, investment, or trading advice of any kind.</span>
+            </li>
+            <li>
+                <span class="dp-icon">&#10003;</span>
+                <span>You should <strong>independently verify all information</strong> before relying on it. Always consult a qualified financial professional before making any investment decisions.</span>
+            </li>
+            <li>
+                <span class="dp-icon">&#10003;</span>
+                <span>Past market outlooks and sentiment scores presented here are <strong>not indicative of future results</strong>. Markets are inherently unpredictable.</span>
+            </li>
+        </ul>
+        <p class="disclaimer-footer">
+            By clicking "I Understand", you acknowledge that this tool is experimental and AI-generated,
+            and that you will not use this information as the sole basis for any financial decision.
+        </p>
+        <div class="disclaimer-actions">
+            <button class="disc-btn disc-btn-primary" onclick="acceptDisclaimer()">I Understand</button>
+            <a class="disc-btn disc-btn-secondary" href="/">Leave</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Bump the version string whenever disclaimer language changes to force a re-prompt.
+    var DISCLAIMER_KEY = 'market_disclaimer_v1';
+
+    (function () {
+        if (localStorage.getItem(DISCLAIMER_KEY) === 'accepted') {
+            document.getElementById('disclaimer-overlay').classList.add('hidden');
+        }
+        // Otherwise overlay stays visible (default)
+    })();
+
+    function acceptDisclaimer() {
+        localStorage.setItem(DISCLAIMER_KEY, 'accepted');
+        document.getElementById('disclaimer-overlay').classList.add('hidden');
+    }
+</script>
 </body>
 </html>
