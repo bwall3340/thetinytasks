@@ -6,6 +6,7 @@ Supports HTML pages (with configurable CSS selectors) and PDF documents
 import hashlib
 import io
 import logging
+import re
 import time
 from urllib.parse import urljoin, urlparse
 
@@ -132,11 +133,23 @@ def _find_pdf_links(soup: BeautifulSoup, base_url: str) -> list:
 
 # ── Article link discovery ────────────────────────────────────────────────────
 
+_VALID_CSS_CLASS = re.compile(r'^-?[a-zA-Z_][a-zA-Z0-9_-]*$')
+
+
+def _normalize_text(text: str) -> str:
+    """Normalize smart quotes/apostrophes to ASCII so text filters work across encodings."""
+    return (text
+            .replace('\u2018', "'").replace('\u2019', "'")
+            .replace('\u201c', '"').replace('\u201d', '"')
+            .replace('\u2013', '-').replace('\u2014', '-'))
+
+
 def _find_article_link(soup: BeautifulSoup, base_url: str, selector: str,
                        text_filter: str = None):
     """
     Return the absolute URL of the first link matching `selector` on a listing page.
     If `text_filter` is set, skips links whose text does not contain it (case-insensitive).
+    Smart quotes/apostrophes are normalized before comparison.
     If the matched element is not an <a>, looks for the first <a> inside it.
     Returns None (with a warning) if the selector is invalid CSS.
     """
@@ -146,7 +159,7 @@ def _find_article_link(soup: BeautifulSoup, base_url: str, selector: str,
         logger.warning('Invalid article_link_selector %r: %s', selector, e)
         return None
 
-    needle = text_filter.lower().strip() if text_filter else None
+    needle = _normalize_text(text_filter).lower().strip() if text_filter else None
 
     for el in candidates:
         if el.name == 'a':
@@ -158,7 +171,7 @@ def _find_article_link(soup: BeautifulSoup, base_url: str, selector: str,
         href = a.get('href', '').strip()
         if not href or href.startswith('#') or href.startswith('mailto:'):
             continue
-        if needle and needle not in a.get_text(strip=True).lower():
+        if needle and needle not in _normalize_text(a.get_text(strip=True)).lower():
             continue
         return urljoin(base_url, href)
     return None
@@ -400,20 +413,32 @@ def scrape_source(source) -> dict:
 
 
 def _suggest_selector(a_tag) -> str:
-    """Generate a CSS selector suggestion for an <a> element based on its DOM context."""
+    """Generate a CSS selector suggestion for an <a> element based on its DOM context.
+
+    Only uses class names / IDs that are valid CSS identifiers. For sites using
+    utility-first CSS (Tailwind JIT) where classes contain '@', '/', '[', ']' etc.,
+    falls back to data-component or data-* attributes instead.
+    """
     el = a_tag
     for _ in range(4):
         parent = el.parent
         if not parent or parent.name in ('body', 'html', '[document]', None):
             break
         tag = parent.name
+        # Only use class names that are valid plain CSS identifiers
         classes = [c for c in (parent.get('class') or [])
-                   if c and not any(c.startswith(p) for p in ('js-', 'is-', 'has-', 'wp-'))]
+                   if c and _VALID_CSS_CLASS.match(c)
+                   and not any(c.startswith(p) for p in ('js-', 'is-', 'has-', 'wp-'))]
         if classes:
             return f"{tag}.{classes[0]} a"
         pid = parent.get('id')
-        if pid and not any(pid.startswith(p) for p in ('js-', 'menu', 'nav')):
+        if pid and _VALID_CSS_CLASS.match(pid) and not any(pid.startswith(p) for p in ('js-', 'menu', 'nav')):
             return f"#{pid} a"
+        # Fallback: use data-component or data-testid as an attribute selector
+        for attr in ('data-component', 'data-testid', 'data-block', 'data-section'):
+            val = parent.get(attr)
+            if val and _VALID_CSS_CLASS.match(val):
+                return f'[{attr}="{val}"] a'
         el = parent
     return 'a'
 
