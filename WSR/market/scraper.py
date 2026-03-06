@@ -132,27 +132,36 @@ def _find_pdf_links(soup: BeautifulSoup, base_url: str) -> list:
 
 # ── Article link discovery ────────────────────────────────────────────────────
 
-def _find_article_link(soup: BeautifulSoup, base_url: str, selector: str):
+def _find_article_link(soup: BeautifulSoup, base_url: str, selector: str,
+                       text_filter: str = None):
     """
     Return the absolute URL of the first link matching `selector` on a listing page.
-    If the matched element is not an <a>, look for the first <a> inside it.
+    If `text_filter` is set, skips links whose text does not contain it (case-insensitive).
+    If the matched element is not an <a>, looks for the first <a> inside it.
     Returns None (with a warning) if the selector is invalid CSS.
     """
     try:
-        el = soup.select_one(selector)
+        candidates = soup.select(selector)
     except Exception as e:
         logger.warning('Invalid article_link_selector %r: %s', selector, e)
         return None
-    if not el:
-        return None
-    if el.name == 'a':
-        href = el.get('href', '').strip()
-    else:
-        a = el.find('a')
-        href = (a.get('href', '').strip() if a else '')
-    if not href or href.startswith('#') or href.startswith('mailto:'):
-        return None
-    return urljoin(base_url, href)
+
+    needle = text_filter.lower().strip() if text_filter else None
+
+    for el in candidates:
+        if el.name == 'a':
+            a = el
+        else:
+            a = el.find('a')
+        if not a:
+            continue
+        href = a.get('href', '').strip()
+        if not href or href.startswith('#') or href.startswith('mailto:'):
+            continue
+        if needle and needle not in a.get_text(strip=True).lower():
+            continue
+        return urljoin(base_url, href)
+    return None
 
 
 # ── HTML extraction ───────────────────────────────────────────────────────────
@@ -287,9 +296,12 @@ def scrape_source(source) -> dict:
 
         # If the source is a listing page, follow the first article link
         article_link_selector = getattr(source, 'article_link_selector', None)
+        article_link_text_filter = getattr(source, 'article_link_text_filter', None)
         if article_link_selector:
-            logger.info('[scrape] article_link_selector=%r', article_link_selector)
-            article_url = _find_article_link(soup, source.url, article_link_selector)
+            logger.info('[scrape] article_link_selector=%r text_filter=%r',
+                        article_link_selector, article_link_text_filter)
+            article_url = _find_article_link(soup, source.url, article_link_selector,
+                                             text_filter=article_link_text_filter)
             if article_url:
                 logger.info('[scrape] following article link: %s', article_url)
                 try:
@@ -490,7 +502,8 @@ def discover_links(url: str) -> dict:
 
 
 def validate_scrape(url, content_selector=None, title_selector=None,
-                    date_selector=None, article_link_selector=None) -> dict:
+                    date_selector=None, article_link_selector=None,
+                    article_link_text_filter=None) -> dict:
     """
     Dry-run scrape for the admin Validate button. Never persists anything.
     """
@@ -515,7 +528,8 @@ def validate_scrape(url, content_selector=None, title_selector=None,
 
         # If article_link_selector is configured, follow the first matching link
         if article_link_selector:
-            article_url = _find_article_link(soup, url, article_link_selector)
+            article_url = _find_article_link(soup, url, article_link_selector,
+                                             text_filter=article_link_text_filter)
             if article_url:
                 try:
                     art_resp = _fetch(article_url, timeout=20, retries=1)

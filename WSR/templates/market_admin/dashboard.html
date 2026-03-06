@@ -178,6 +178,27 @@
         .btn-use-selector.applied {
             background: #059669;
         }
+        .btn-use-but {
+            padding: 0.25rem 0.6rem; font-size: 0.72rem; border-radius: 6px;
+            background: #f1f5f9; color: #475569; border: none; cursor: pointer;
+            white-space: nowrap; flex-shrink: 0;
+        }
+        .btn-use-but:hover { background: #e2e8f0; }
+        .filter-row {
+            display: none; padding: 0.5rem 0.85rem; background: #fffbeb;
+            border-top: 1px solid #fde68a; gap: 0.5rem; align-items: center;
+        }
+        .filter-row.open { display: flex; }
+        .filter-row input {
+            flex: 1; padding: 0.3rem 0.55rem; border: 1.5px solid #e2e8f0;
+            border-radius: 6px; font-size: 0.78rem; font-family: inherit;
+        }
+        .filter-row input:focus { outline: none; border-color: #6366f1; }
+        .btn-apply-filter {
+            padding: 0.3rem 0.65rem; font-size: 0.72rem; border-radius: 6px;
+            background: #6366f1; color: #fff; border: none; cursor: pointer; white-space: nowrap;
+        }
+        .btn-apply-filter:hover { background: #4f46e5; }
         .discover-loading { text-align: center; padding: 2rem; color: #94a3b8; font-size: 0.875rem; }
     </style>
 </head>
@@ -473,10 +494,11 @@ async function discoverLinks(id, name) {
     }
 
     let html = '';
-    d.groups.forEach(group => {
+    d.groups.forEach((group, gi) => {
         const countLabel = group.match_count > 1
             ? `${group.match_count} matches — likely a listing`
             : `1 match`;
+        const sel = group.selector.replace(/'/g, "\\'");
         const examples = group.examples.map(ex =>
             `<div class="selector-example">
                 <span class="example-text" title="${ex.text}">${ex.text}</span>
@@ -490,37 +512,56 @@ async function discoverLinks(id, name) {
                     <span class="selector-code">${group.selector}</span>
                     <span class="selector-count">${countLabel}</span>
                 </div>
-                <button class="btn-use-selector" onclick="applySelector(${id}, '${group.selector.replace(/'/g, "\\'")}', this)">
-                    Use this
-                </button>
+                <div style="display:flex;gap:0.35rem;">
+                    <button class="btn-use-selector" onclick="applySelector(${id}, '${sel}', '', this)">
+                        Use this
+                    </button>
+                    <button class="btn-use-but" onclick="toggleFilterRow('filter-${gi}')">
+                        Use this, but&hellip;
+                    </button>
+                </div>
             </div>
             <div class="selector-examples">${examples}</div>
+            <div class="filter-row" id="filter-${gi}">
+                <input type="text" placeholder="Only links containing… e.g. Monthly Market Commentary"
+                       id="filter-input-${gi}">
+                <button class="btn-apply-filter"
+                        onclick="applySelector(${id}, '${sel}', document.getElementById('filter-input-${gi}').value, this.previousElementSibling)">
+                    Apply
+                </button>
+            </div>
         </div>`;
     });
     document.getElementById('discover-body').innerHTML = html;
 }
 
-async function applySelector(id, selector, btn) {
+function toggleFilterRow(rowId) {
+    const row = document.getElementById(rowId);
+    if (row) row.classList.toggle('open');
+}
+
+async function applySelector(id, selector, text_filter, btn) {
+    const origText = btn.textContent;
     btn.textContent = 'Saving…';
     btn.disabled = true;
     const r = await fetch(`/market-admin/sources/${id}/set-selector`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({selector}),
+        body: JSON.stringify({selector, text_filter: text_filter || ''}),
     });
     const d = await safeJson(r);
     if (d.success) {
-        // Mark all buttons in the modal as reset, then highlight this one
         document.querySelectorAll('.btn-use-selector').forEach(b => {
             b.classList.remove('applied');
             b.textContent = 'Use this';
             b.disabled = false;
         });
         btn.classList.add('applied');
+        const filterNote = d.text_filter ? ` + filter "${d.text_filter}"` : '';
         btn.textContent = 'Applied ✓';
-        showToast(`Selector saved: ${selector}`, 'success');
+        showToast(`Selector saved: ${selector}${filterNote}`, 'success');
     } else {
-        btn.textContent = 'Use this';
+        btn.textContent = origText;
         btn.disabled = false;
         showToast('Error: ' + d.error, 'error');
     }

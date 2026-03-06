@@ -59,6 +59,7 @@ with app.app_context():
     # Add columns introduced after initial schema (safe to re-run — silently ignored if present)
     _migrations = [
         'ALTER TABLE sources ADD COLUMN article_link_selector VARCHAR(300)',
+        'ALTER TABLE sources ADD COLUMN article_link_text_filter VARCHAR(200)',
     ]
     try:
         with db.engine.connect() as _conn:

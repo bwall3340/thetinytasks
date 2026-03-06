@@ -123,6 +123,7 @@ def new_source():
             url=request.form['url'].strip(),
             frequency=request.form.get('frequency', 'monthly'),
             article_link_selector=request.form.get('article_link_selector', '').strip() or None,
+            article_link_text_filter=request.form.get('article_link_text_filter', '').strip() or None,
             content_selector=request.form.get('content_selector', '').strip() or None,
             title_selector=request.form.get('title_selector', '').strip() or None,
             date_selector=request.form.get('date_selector', '').strip() or None,
@@ -148,6 +149,7 @@ def edit_source(source_id):
         source.url = request.form['url'].strip()
         source.frequency = request.form.get('frequency', 'monthly')
         source.article_link_selector = request.form.get('article_link_selector', '').strip() or None
+        source.article_link_text_filter = request.form.get('article_link_text_filter', '').strip() or None
         source.content_selector = request.form.get('content_selector', '').strip() or None
         source.title_selector = request.form.get('title_selector', '').strip() or None
         source.date_selector = request.form.get('date_selector', '').strip() or None
@@ -282,9 +284,11 @@ def set_article_selector(source_id):
             return jsonify({'success': False, 'error': 'Source not found'}), 404
         data = request.get_json() or {}
         selector = data.get('selector', '').strip()
+        text_filter = data.get('text_filter', '').strip()
         source.article_link_selector = selector or None
+        source.article_link_text_filter = text_filter or None
         db.session.commit()
-        return jsonify({'success': True, 'selector': selector})
+        return jsonify({'success': True, 'selector': selector, 'text_filter': text_filter})
     except Exception as e:
         logger.error('set_article_selector error for source %s: %s', source_id, e)
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -304,6 +308,7 @@ def validate_source(source_id):
             title_selector=source.title_selector,
             date_selector=source.date_selector,
             article_link_selector=source.article_link_selector,
+            article_link_text_filter=source.article_link_text_filter,
         )
         return jsonify(result)
     except Exception as e:

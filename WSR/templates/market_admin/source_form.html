@@ -118,6 +118,16 @@
                     </div>
                 </div>
                 <div class="field">
+                    <label for="article_link_text_filter">Article link text filter</label>
+                    <input type="text" id="article_link_text_filter" name="article_link_text_filter"
+                           value="{{ source.article_link_text_filter if source else '' }}"
+                           placeholder="e.g. Monthly Market Commentary">
+                    <div class="hint">
+                        Optional. If set, only follows a link whose text <strong>contains</strong> this phrase
+                        (case-insensitive). Useful when a listing page mixes article types and you only want one category.
+                    </div>
+                </div>
+                <div class="field">
                     <label for="content_selector">Content selector</label>
                     <input type="text" id="content_selector" name="content_selector"
                            value="{{ source.content_selector if source else '' }}"
