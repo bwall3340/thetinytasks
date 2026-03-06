@@ -252,6 +252,7 @@
             {% if pending_analysis > 0 %}
             <button class="btn btn-secondary" onclick="analyzeAll()">Analyze all pending ({{ pending_analysis }})</button>
             {% endif %}
+            <button class="btn btn-secondary" onclick="runConsensusInsights()" title="Cross-validate flagged insights against the full consensus using Claude (runs weekly automatically)">&#128270; Run insight analysis</button>
         </div>
     </div>
 
@@ -582,6 +583,17 @@ async function analyzeAll() {
         showToast('Error: ' + d.error, 'error');
     }
     setTimeout(() => location.reload(), 1500);
+}
+
+async function runConsensusInsights() {
+    showToast('Running insight cross-validation (this may take ~30s)…');
+    const r = await fetch('/market-admin/run-consensus-insights', {method:'POST'});
+    const d = await safeJson(r);
+    if (d.success) {
+        showToast(`Done — ${d.divergent_count} genuinely divergent insight(s) identified.`, 'success');
+    } else {
+        showToast('Error: ' + d.error, 'error');
+    }
 }
 </script>
 </body>

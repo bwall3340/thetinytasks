@@ -4,7 +4,7 @@ Public Blueprint — market commentary dashboard.
 from flask import Blueprint, jsonify, render_template, request
 
 from .analyzer import compute_consensus
-from .models import Analysis, Article, Source
+from .models import Analysis, Article, ConsensusInsight, Source
 
 market_bp = Blueprint('market', __name__, url_prefix='/market')
 
@@ -22,11 +22,15 @@ def index():
                        .order_by(Article.scraped_at.desc())
                        .limit(12).all())
     active_sources = Source.query.filter_by(active=True).count()
+    latest_ci = (ConsensusInsight.query
+                 .order_by(ConsensusInsight.computed_at.desc())
+                 .first())
     return render_template(
         'market/index.html',
         consensus=consensus,
         recent_articles=recent_articles,
         active_sources=active_sources,
+        consensus_insights=latest_ci,
     )
 
 

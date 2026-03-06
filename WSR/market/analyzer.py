@@ -135,6 +135,19 @@ def _merge_themes(theme_counts: Counter) -> Counter:
     return Counter({canonical: total for canonical, total in buckets.values()})
 
 
+def _best_article_date(analysis):
+    """Return the best available date for an analysis object.
+
+    Preference order: article.published_at → article.scraped_at → analysis.processed_at
+    """
+    if analysis.article:
+        if analysis.article.published_at:
+            return analysis.article.published_at
+        if analysis.article.scraped_at:
+            return analysis.article.scraped_at
+    return analysis.processed_at
+
+
 def compute_consensus(analyses, lookback_days=90) -> dict | None:
     """
     Aggregate a list of Analysis objects into a consensus view.
@@ -143,7 +156,7 @@ def compute_consensus(analyses, lookback_days=90) -> dict | None:
         return None
 
     cutoff = datetime.utcnow() - timedelta(days=lookback_days)
-    recent = [a for a in analyses if a.processed_at and a.processed_at >= cutoff]
+    recent = [a for a in analyses if _best_article_date(a) and _best_article_date(a) >= cutoff]
     if not recent:
         recent = list(analyses)  # fall back to all data
 
@@ -223,3 +236,160 @@ def compute_consensus(analyses, lookback_days=90) -> dict | None:
         'top_risks': top_risks,
         'updated_at': datetime.utcnow().strftime('%b %d, %Y %H:%M UTC'),
     }
+
+
+_CONSENSUS_INSIGHTS_PROMPT = """\
+You are a senior financial analyst comparing views across multiple institutional sources.
+
+CONSENSUS VIEW ({n} sources, past 90 days):
+- Overall outlook: {outlook} ({outlook_pct}% agreement, avg sentiment {sentiment:+.2f})
+- Top themes: {themes}
+- Asset consensus: {asset_views}
+
+SOURCE SUMMARIES:
+{source_summaries}
+
+FLAGGED INSIGHTS (each source's self-identified contrarian views):
+{flagged_insights}
+
+TASK: Cross-reference each flagged insight against the consensus above. Return a JSON array \
+containing ONLY the insights that are genuinely divergent — meaning they contradict or \
+meaningfully differ from the consensus outlook, themes, or asset views listed above. \
+Discard any insight that actually aligns with the consensus.
+
+For each qualifying insight include:
+- "insight": the original insight text (unchanged)
+- "source": source institution name
+- "date": date string
+- "outlook": that source's market outlook
+- "why_divergent": 1-2 sentences explaining exactly how this contradicts the consensus
+
+Return ONLY a JSON array. Use [] if nothing is truly divergent. No markdown, no preamble."""
+
+
+def run_consensus_insights(analyses, lookback_days: int = 90) -> list | None:
+    """
+    Second-pass Claude call: cross-validates per-article flagged insights against
+    the actual aggregate consensus to surface only genuinely divergent views.
+
+    Returns a list of insight dicts with added 'why_divergent' field, or None on failure.
+    """
+    api_key = os.environ.get('ANTHROPIC_API_KEY')
+    if not api_key:
+        logger.error('ANTHROPIC_API_KEY not set — cannot run consensus insights')
+        return None
+
+    # Build the same recent subset used by compute_consensus
+    cutoff = datetime.utcnow() - timedelta(days=lookback_days)
+    recent = [a for a in analyses if _best_article_date(a) and _best_article_date(a) >= cutoff]
+    if not recent:
+        recent = list(analyses)
+    if not recent:
+        return None
+
+    # Compute lightweight consensus context for the prompt
+    outlooks = [a.market_outlook for a in recent if a.market_outlook]
+    outlook_counts = Counter(outlooks)
+    top_outlook = outlook_counts.most_common(1)[0][0] if outlook_counts else 'neutral'
+    outlook_pct = round(outlook_counts[top_outlook] / len(outlooks) * 100) if outlooks else 0
+    scores = [a.sentiment_score for a in recent if a.sentiment_score is not None]
+    avg_sentiment = sum(scores) / len(scores) if scores else 0.0
+
+    all_themes = []
+    for a in recent:
+        if a.key_themes:
+            all_themes.extend(a.key_themes)
+    top_theme_names = [t for t, _ in _merge_themes(Counter(all_themes)).most_common(6)]
+
+    asset_lines = []
+    asset_buckets: dict[str, list] = {}
+    for a in recent:
+        if not a.asset_views:
+            continue
+        for asset, vdata in a.asset_views.items():
+            view = vdata.get('view') if isinstance(vdata, dict) else str(vdata)
+            if view:
+                asset_buckets.setdefault(asset, []).append(view.lower())
+    for asset, views in asset_buckets.items():
+        top_view = Counter(views).most_common(1)[0][0]
+        asset_lines.append(f"{asset}: {top_view}")
+
+    # Build source summaries (one line each)
+    source_summary_lines = []
+    for a in recent:
+        if not a.article:
+            continue
+        source_name = a.article.source.name if a.article.source else 'Unknown'
+        date_str = _best_article_date(a).strftime('%b %d') if _best_article_date(a) else ''
+        summary = (a.summary or '')[:200]
+        source_summary_lines.append(f'• {source_name} ({a.market_outlook}, {date_str}): {summary}')
+
+    # Collect all flagged insights
+    flagged = []
+    for a in recent:
+        if not (a.unique_insights and a.article):
+            continue
+        source_name = a.article.source.name if a.article.source else 'Unknown'
+        date_str = _best_article_date(a).strftime('%b %d, %Y') if _best_article_date(a) else ''
+        for insight in (a.unique_insights or [])[:2]:
+            flagged.append({
+                'insight': insight,
+                'source': source_name,
+                'date': date_str,
+                'outlook': a.market_outlook,
+            })
+
+    if not flagged:
+        logger.info('No flagged insights to cross-validate')
+        return []
+
+    flagged_lines = '\n'.join(
+        f'• [{f["source"]}, {f["date"]}, {f["outlook"]}]: "{f["insight"]}"'
+        for f in flagged
+    )
+
+    prompt = (
+        _CONSENSUS_INSIGHTS_PROMPT
+        .replace('{n}', str(len(recent)))
+        .replace('{outlook}', top_outlook)
+        .replace('{outlook_pct}', str(outlook_pct))
+        .replace('{sentiment:+.2f}', f'{avg_sentiment:+.2f}')
+        .replace('{themes}', ', '.join(top_theme_names) or 'none identified')
+        .replace('{asset_views}', '; '.join(asset_lines) or 'none')
+        .replace('{source_summaries}', '\n'.join(source_summary_lines) or 'none')
+        .replace('{flagged_insights}', flagged_lines)
+    )
+
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        message = client.messages.create(
+            model='claude-sonnet-4-6',
+            max_tokens=2000,
+            messages=[{'role': 'user', 'content': prompt}],
+        )
+        data = _extract_json(message.content[0].text)
+        if not isinstance(data, list):
+            logger.error('consensus_insights: expected JSON array, got %r', type(data))
+            return None
+
+        # Merge original metadata back in for any items Claude returned
+        insight_map = {f['insight']: f for f in flagged}
+        results = []
+        for item in data:
+            if not isinstance(item, dict) or 'insight' not in item:
+                continue
+            base = insight_map.get(item['insight'], {})
+            results.append({
+                'insight': item.get('insight', ''),
+                'source': item.get('source') or base.get('source', ''),
+                'date': item.get('date') or base.get('date', ''),
+                'outlook': item.get('outlook') or base.get('outlook', ''),
+                'why_divergent': item.get('why_divergent', ''),
+            })
+
+        logger.info('consensus_insights: %d flagged → %d genuinely divergent', len(flagged), len(results))
+        return results
+
+    except Exception as e:
+        logger.error('consensus_insights Claude error: %s', e)
+        return None

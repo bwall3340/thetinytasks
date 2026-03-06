@@ -13,9 +13,9 @@ from authlib.integrations.flask_client import OAuth
 from flask import (Blueprint, flash, jsonify, redirect, render_template,
                    request, session, url_for)
 
-from .models import Analysis, Article, Source, db
+from .models import Analysis, Article, Source, ConsensusInsight, db
 from .scraper import scrape_source, validate_scrape, discover_links
-from .analyzer import analyze_article
+from .analyzer import analyze_article, run_consensus_insights, compute_consensus
 
 logger = logging.getLogger(__name__)
 
@@ -353,4 +353,36 @@ def analyze_all():
         return jsonify({'success': True, 'analyzed': len(results), 'results': results})
     except Exception as e:
         logger.error('analyze_all error: %s', e)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@admin_bp.route('/run-consensus-insights', methods=['POST'])
+@require_admin
+def run_consensus_insights_now():
+    """Manually trigger the second-pass consensus insight analysis."""
+    try:
+        analyses = (Analysis.query
+                    .join(Article)
+                    .join(Source)
+                    .filter(Source.active == True)
+                    .all())
+        if not analyses:
+            return jsonify({'success': False, 'error': 'No analyses available'}), 400
+
+        insights = run_consensus_insights(analyses)
+        if insights is None:
+            return jsonify({'success': False, 'error': 'Claude API call failed — check server logs'}), 500
+
+        consensus = compute_consensus(analyses) or {}
+        record = ConsensusInsight(
+            source_count=len({a.article.source_id for a in analyses if a.article}),
+            insights=insights,
+            consensus_outlook=consensus.get('market_outlook'),
+            consensus_sentiment=consensus.get('avg_sentiment'),
+        )
+        db.session.add(record)
+        db.session.commit()
+        return jsonify({'success': True, 'divergent_count': len(insights)})
+    except Exception as e:
+        logger.error('run_consensus_insights_now error: %s', e)
         return jsonify({'success': False, 'error': str(e)}), 500

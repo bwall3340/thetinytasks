@@ -91,3 +91,21 @@ class Analysis(db.Model):
     processed_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     article = db.relationship('Article', back_populates='analysis')
+
+
+class ConsensusInsight(db.Model):
+    """
+    Stores the result of the weekly second-pass Claude analysis that cross-validates
+    flagged per-article insights against the actual consensus across all sources.
+    One row per run; the latest row is the active result.
+    """
+    __tablename__ = 'consensus_insights'
+
+    id = db.Column(db.Integer, primary_key=True)
+    computed_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    lookback_days = db.Column(db.Integer, default=90)
+    source_count = db.Column(db.Integer)
+    # list of {insight, source, date, outlook, why_divergent}
+    insights = db.Column(db.JSON)
+    consensus_outlook = db.Column(db.String(20))
+    consensus_sentiment = db.Column(db.Float)

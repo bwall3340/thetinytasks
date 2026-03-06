@@ -180,6 +180,21 @@
         .insight-meta { font-size: 0.75rem; color: #94a3b8; }
         .insight-outlook { display: inline-block; padding: 0.1rem 0.4rem; border-radius: 4px;
             font-size: 0.65rem; font-weight: 600; text-transform: uppercase; margin-left: 0.35rem; }
+        .insight-why {
+            margin-top: 0.5rem; padding: 0.4rem 0.6rem;
+            background: rgba(99,102,241,0.07); border-radius: 6px;
+            font-size: 0.78rem; color: #4338ca; line-height: 1.45;
+        }
+        .insight-why-label { font-weight: 700; margin-right: 0.3rem; font-size: 0.7rem;
+            text-transform: uppercase; letter-spacing: 0.04em; }
+        .insights-meta-bar {
+            display: flex; align-items: center; gap: 0.5rem;
+            margin-bottom: 1rem; font-size: 0.75rem; color: #94a3b8;
+        }
+        .insights-meta-bar .ci-badge {
+            background: rgba(99,102,241,0.1); color: #4338ca; border-radius: 100px;
+            padding: 0.15rem 0.5rem; font-size: 0.7rem; font-weight: 600;
+        }
 
         /* ── Recent articles ── */
         .article-row {
@@ -386,23 +401,52 @@
 
         <!-- Unique insights -->
         <div class="card">
-            <div class="section-title">Unique &amp; Contrarian Insights</div>
-            {% if consensus.unique_insights %}
+            <div class="section-title">Contrarian &amp; Divergent Insights</div>
+
+            {% if consensus_insights and consensus_insights.insights %}
+            {# Second-pass verified insights — cross-validated against full consensus #}
+            <div class="insights-meta-bar">
+                <span class="ci-badge">AI cross-validated</span>
+                <span>Updated {{ consensus_insights.computed_at.strftime('%b %d, %Y') }} &middot; {{ consensus_insights.source_count }} sources</span>
+            </div>
+            {% for ins in consensus_insights.insights %}
+            <div class="insight-card">
+                <div class="insight-text">"{{ ins.insight }}"</div>
+                <div class="insight-meta">
+                    {{ ins.source }} &middot; {{ ins.date }}
+                    {% if ins.outlook %}
+                    <span class="insight-outlook" style="background:rgba(99,102,241,0.1);color:#6366f1;">{{ ins.outlook }}</span>
+                    {% endif %}
+                </div>
+                {% if ins.why_divergent %}
+                <div class="insight-why">
+                    <span class="insight-why-label">Why divergent:</span>{{ ins.why_divergent }}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            {% elif consensus.unique_insights %}
+            {# Fallback: per-article flagged insights (not yet cross-validated) #}
+            <div class="insights-meta-bar">
+                <span title="These are self-identified by each source's AI analysis — not yet cross-validated against consensus">Per-source flags · not yet cross-validated</span>
+            </div>
             {% for ins in consensus.unique_insights %}
             <div class="insight-card">
                 <div class="insight-text">"{{ ins.insight }}"</div>
                 <div class="insight-meta">
                     {{ ins.source }} &middot; {{ ins.date }}
                     {% if ins.outlook %}
-                    <span class="insight-outlook badge-{{ ins.outlook }}" style="background:rgba(99,102,241,0.1);color:#6366f1;">{{ ins.outlook }}</span>
+                    <span class="insight-outlook" style="background:rgba(99,102,241,0.1);color:#6366f1;">{{ ins.outlook }}</span>
                     {% endif %}
                 </div>
             </div>
             {% endfor %}
+
             {% else %}
             <div class="empty">
                 <h3>No contrarian views identified</h3>
-                <p>Unique or divergent opinions from individual sources will be highlighted here.</p>
+                <p>Divergent opinions that contradict the consensus will appear here after the weekly cross-validation runs.</p>
             </div>
             {% endif %}
         </div>
