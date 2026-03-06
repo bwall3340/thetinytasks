@@ -20,7 +20,7 @@ You are a senior financial analyst. Analyze the following market commentary and 
 Required fields:
 - "market_outlook": exactly one of "bullish", "bearish", or "neutral"
 - "sentiment_score": float from -1.0 (strongly bearish) to 1.0 (strongly bullish)
-- "key_themes": array of up to 8 short theme strings (e.g. "inflation", "rate cuts", "credit tightening")
+- "key_themes": array of up to 8 theme strings. IMPORTANT: use 2-3 words maximum per theme, lowercase, no filler words like "concerns", "risks", "fears", "uncertainty", "outlook". Good examples: "inflation", "rate cuts", "credit tightening", "AI disruption", "dollar strength"
 - "asset_views": object mapping asset classes to their view. Cover: equities, bonds, commodities, cash, alternatives, real_estate. Each entry: {"view": "overweight"|"underweight"|"neutral", "reasoning": "one sentence"}
 - "unique_insights": array of strings — opinions that are clearly contrarian or distinctive vs. mainstream consensus. Empty array if none.
 - "key_risks": array of up to 5 risk strings
@@ -100,6 +100,41 @@ def analyze_article(article) -> dict | None:
         return None
 
 
+_THEME_NOISE_SUFFIXES = (
+    ' concerns', ' concern', ' risks', ' risk', ' fears', ' fear',
+    ' uncertainty', ' uncertainties', ' outlook', ' sentiment',
+    ' worries', ' worry', ' pressures', ' pressure',
+)
+
+
+def _theme_group_key(theme: str) -> str:
+    """Normalize a theme to a grouping key: lowercase, strip noise suffixes, first 2 words."""
+    t = theme.lower().strip()
+    for suffix in _THEME_NOISE_SUFFIXES:
+        if t.endswith(suffix):
+            t = t[:-len(suffix)].strip()
+            break
+    return ' '.join(t.split()[:2])
+
+
+def _merge_themes(theme_counts: Counter) -> Counter:
+    """
+    Group near-duplicate themes (e.g. 'AI disruption concerns' and
+    'AI disruption and megacap') by their 2-word normalized key.
+    The canonical display name is whichever variant appeared most.
+    """
+    buckets: dict[str, tuple[str, int]] = {}  # group_key -> (canonical_name, total_count)
+    # Process in descending frequency so the most-common variant wins canonical name
+    for theme, count in theme_counts.most_common():
+        key = _theme_group_key(theme)
+        if key in buckets:
+            canonical, total = buckets[key]
+            buckets[key] = (canonical, total + count)
+        else:
+            buckets[key] = (theme, count)
+    return Counter({canonical: total for canonical, total in buckets.values()})
+
+
 def compute_consensus(analyses, lookback_days=90) -> dict | None:
     """
     Aggregate a list of Analysis objects into a consensus view.
@@ -130,7 +165,7 @@ def compute_consensus(analyses, lookback_days=90) -> dict | None:
     theme_counts = Counter(all_themes)
     top_themes = [
         {'theme': t, 'count': c, 'pct': round(c / len(recent) * 100)}
-        for t, c in theme_counts.most_common(10)
+        for t, c in _merge_themes(theme_counts).most_common(10)
     ]
 
     # --- Asset views ---
@@ -173,7 +208,7 @@ def compute_consensus(analyses, lookback_days=90) -> dict | None:
     for a in recent:
         if a.key_risks:
             all_risks.extend(a.key_risks)
-    top_risks = [{'risk': r, 'count': c} for r, c in Counter(all_risks).most_common(8)]
+    top_risks = [{'risk': r, 'count': c} for r, c in _merge_themes(Counter(all_risks)).most_common(8)]
 
     return {
         'total_sources': len(recent),

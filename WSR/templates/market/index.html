@@ -150,16 +150,23 @@
         .asset-conf { font-size: 0.7rem; color: #94a3b8; }
 
         /* ── Themes ── */
-        .theme-row {
-            display: flex; align-items: center; gap: 0.75rem;
-            margin-bottom: 0.65rem;
+        .theme-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .theme-tag {
+            display: inline-flex; align-items: center; gap: 0.35rem;
+            padding: 0.35rem 0.7rem; border-radius: 20px;
+            background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.18);
+            font-size: 0.8rem; color: #4338ca; font-weight: 500;
+            transition: background 0.15s;
         }
-        .theme-name { font-size: 0.85rem; color: #1e293b; width: 160px; flex-shrink: 0;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .theme-bar-track { flex: 1; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
-        .theme-bar-fill  { height: 100%; background: linear-gradient(90deg, #6366f1, #a855f7);
-            border-radius: 4px; transition: width 0.6s ease; }
-        .theme-pct { font-size: 0.75rem; color: #94a3b8; width: 36px; text-align: right; }
+        .theme-tag:hover { background: rgba(99,102,241,0.15); }
+        .theme-tag-badge {
+            background: #6366f1; color: #fff; font-size: 0.65rem; font-weight: 700;
+            border-radius: 10px; padding: 0.05rem 0.35rem; min-width: 1.4rem;
+            text-align: center;
+        }
+        /* larger badges for high-frequency themes */
+        .theme-tag.freq-high { background: rgba(99,102,241,0.14); border-color: rgba(99,102,241,0.35); font-size: 0.875rem; }
+        .theme-tag.freq-high .theme-tag-badge { background: #4f46e5; }
 
         /* ── Unique insights ── */
         .insight-card {
@@ -296,15 +303,14 @@
         <div class="card">
             <div class="section-title">Top Themes</div>
             {% if consensus.top_themes %}
+            <div class="theme-tags">
             {% for t in consensus.top_themes %}
-            <div class="theme-row">
-                <div class="theme-name">{{ t.theme | capitalize }}</div>
-                <div class="theme-bar-track">
-                    <div class="theme-bar-fill" style="width:{{ t.pct }}%"></div>
-                </div>
-                <div class="theme-pct">{{ t.pct }}%</div>
-            </div>
+            <span class="theme-tag{% if t.pct >= 40 %} freq-high{% endif %}">
+                {{ t.theme | capitalize }}
+                <span class="theme-tag-badge" title="{{ t.count }} source{% if t.count != 1 %}s{% endif %}">{{ t.pct }}%</span>
+            </span>
             {% endfor %}
+            </div>
             {% else %}
             <div class="empty"><p>Theme analysis will appear here.</p></div>
             {% endif %}
