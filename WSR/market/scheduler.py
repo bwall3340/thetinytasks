@@ -16,6 +16,7 @@ def _run_scheduled_scrape(app):
     from .models import db, Source, Article, Analysis
     from .scraper import scrape_source
     from .analyzer import analyze_article
+    from datetime import datetime
 
     with app.app_context():
         sources = Source.query.filter_by(active=True).all()
@@ -24,41 +25,48 @@ def _run_scheduled_scrape(app):
                 continue
 
             logger.info('Scheduled scrape: %s', source.name)
-            result = scrape_source(source)
+            results = scrape_source(source)
 
-            if not result['success']:
-                source.last_scrape_status = 'failed'
-                db.session.commit()
-                continue
+            new_count = 0
+            for result in results:
+                if not result['success']:
+                    logger.warning('Scrape result failed for %s: %s',
+                                   source.name, result.get('error'))
+                    continue
 
-            existing = Article.query.filter_by(content_hash=result['content_hash']).first()
-            if existing:
-                source.last_scrape_status = 'duplicate'
-                from datetime import datetime
-                source.last_scraped = datetime.utcnow()
-                db.session.commit()
-                continue
+                existing = Article.query.filter_by(content_hash=result['content_hash']).first()
+                if existing:
+                    logger.debug('Duplicate for %s: %s', source.name, result['url'])
+                    continue
 
-            from datetime import datetime
-            article = Article(
-                source_id=source.id,
-                url=result['url'],
-                title=result['title'],
-                raw_content=result['content'],
-                content_hash=result['content_hash'],
-                published_at=result['published_at'],
-            )
-            db.session.add(article)
+                article = Article(
+                    source_id=source.id,
+                    url=result['url'],
+                    title=result['title'],
+                    raw_content=result['content'],
+                    content_hash=result['content_hash'],
+                    published_at=result['published_at'],
+                )
+                db.session.add(article)
+                db.session.flush()  # assign article.id before analyzing
+                new_count += 1
+
+                if os.environ.get('ANTHROPIC_API_KEY'):
+                    analysis_data = analyze_article(article)
+                    if analysis_data:
+                        db.session.add(Analysis(article_id=article.id, **analysis_data))
+                        logger.info('Auto-analyzed: %s — %s',
+                                    source.name, analysis_data['market_outlook'])
+
             source.last_scraped = datetime.utcnow()
-            source.last_scrape_status = 'success'
+            if all(not r['success'] for r in results):
+                source.last_scrape_status = 'failed'
+            elif new_count > 0:
+                source.last_scrape_status = 'success'
+                logger.info('Saved %d new article(s) for %s', new_count, source.name)
+            else:
+                source.last_scrape_status = 'duplicate'
             db.session.commit()
-
-            if os.environ.get('ANTHROPIC_API_KEY'):
-                analysis_data = analyze_article(article)
-                if analysis_data:
-                    db.session.add(Analysis(article_id=article.id, **analysis_data))
-                    db.session.commit()
-                    logger.info('Auto-analyzed: %s — %s', source.name, analysis_data['market_outlook'])
 
 
 def _run_consensus_insights(app):

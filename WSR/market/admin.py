@@ -186,41 +186,60 @@ def scrape_now(source_id):
         if not source:
             return jsonify({'success': False, 'error': 'Source not found'}), 404
 
-        result = scrape_source(source)
+        results = scrape_source(source)
 
-        if not result['success']:
-            source.last_scrape_status = 'failed'
-            db.session.commit()
-            return jsonify({'success': False, 'error': result['error']})
+        new_articles = []
+        duplicates = 0
+        first_error = None
 
-        existing = Article.query.filter_by(content_hash=result['content_hash']).first()
-        if existing:
+        for result in results:
+            if not result['success']:
+                if first_error is None:
+                    first_error = result['error']
+                continue
+
+            existing = Article.query.filter_by(content_hash=result['content_hash']).first()
+            if existing:
+                duplicates += 1
+                continue
+
+            article = Article(
+                source_id=source.id,
+                url=result['url'],
+                title=result['title'],
+                raw_content=result['content'],
+                content_hash=result['content_hash'],
+                published_at=result['published_at'],
+            )
+            db.session.add(article)
+            new_articles.append((article, result))
+
+        if new_articles:
+            source.last_scraped = datetime.utcnow()
+            source.last_scrape_status = 'success'
+        elif duplicates:
             source.last_scraped = datetime.utcnow()
             source.last_scrape_status = 'duplicate'
-            db.session.commit()
-            return jsonify({'success': True, 'duplicate': True,
-                            'message': 'Content unchanged since last scrape.'})
+        else:
+            source.last_scrape_status = 'failed'
 
-        article = Article(
-            source_id=source.id,
-            url=result['url'],
-            title=result['title'],
-            raw_content=result['content'],
-            content_hash=result['content_hash'],
-            published_at=result['published_at'],
-        )
-        db.session.add(article)
-        source.last_scraped = datetime.utcnow()
-        source.last_scrape_status = 'success'
         db.session.commit()
 
-        return jsonify({
-            'success': True,
-            'article_id': article.id,
-            'title': article.title,
-            'word_count': result['word_count'],
-            'message': f'Scraped {result["word_count"]:,} words.',
-        })
+        if new_articles:
+            first_article, first_result = new_articles[0]
+            extra = f', {duplicates} duplicate(s)' if duplicates else ''
+            return jsonify({
+                'success': True,
+                'article_id': first_article.id,
+                'title': first_article.title,
+                'word_count': first_result['word_count'],
+                'message': f'Scraped {len(new_articles)} new article(s){extra}.',
+            })
+        elif first_error and not duplicates:
+            return jsonify({'success': False, 'error': first_error})
+        else:
+            return jsonify({'success': True, 'duplicate': True,
+                            'message': f'Content unchanged since last scrape ({duplicates} duplicate(s)).'})
     except Exception as e:
         logger.error('scrape_now error for source %s: %s', source_id, e)
         return jsonify({'success': False, 'error': str(e)}), 500

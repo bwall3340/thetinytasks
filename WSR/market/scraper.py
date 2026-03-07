@@ -78,7 +78,13 @@ def _is_pdf_response(response) -> bool:
 
 
 def _is_pdf_url(url: str) -> bool:
-    return urlparse(url).path.lower().endswith('.pdf')
+    parsed = urlparse(url)
+    if parsed.path.lower().endswith('.pdf'):
+        return True
+    # Document portal pattern: URL contains download=1 in query string
+    # (e.g. Viewer.aspx?uniqueId=GUID&download=1, or similar portals)
+    qs = parsed.query.lower()
+    return 'download=1' in qs
 
 
 # ── PDF extraction ────────────────────────────────────────────────────────────
@@ -161,13 +167,25 @@ def _find_article_link(soup: BeautifulSoup, base_url: str, selector: str,
     If the matched element is not an <a>, looks for the first <a> inside it.
     Returns None (with a warning) if the selector is invalid CSS.
     """
+    urls = _find_article_links(soup, base_url, selector, text_filter=text_filter, max_links=1)
+    return urls[0] if urls else None
+
+
+def _find_article_links(soup: BeautifulSoup, base_url: str, selector: str,
+                        text_filter: str = None, max_links: int = 13) -> list:
+    """
+    Return all absolute URLs of links matching `selector` on a listing page (up to max_links).
+    If `text_filter` is set, skips links whose text does not contain it.
+    """
     try:
         candidates = soup.select(selector)
     except Exception as e:
         logger.warning('Invalid article_link_selector %r: %s', selector, e)
-        return None
+        return []
 
     needle = _normalize_text(text_filter).lower().strip() if text_filter else None
+    urls = []
+    seen = set()
 
     for el in candidates:
         if el.name == 'a':
@@ -181,8 +199,14 @@ def _find_article_link(soup: BeautifulSoup, base_url: str, selector: str,
             continue
         if needle and needle not in _normalize_text(a.get_text(strip=True)).lower():
             continue
-        return urljoin(base_url, href)
-    return None
+        abs_url = urljoin(base_url, href)
+        if abs_url not in seen:
+            seen.add(abs_url)
+            urls.append(abs_url)
+        if len(urls) >= max_links:
+            break
+
+    return urls
 
 
 # ── HTML extraction ───────────────────────────────────────────────────────────
@@ -275,16 +299,119 @@ def _scrape_pdf_bytes(pdf_url: str) -> dict:
     return {'success': True, 'content': content, 'title': title, 'word_count': word_count}
 
 
+# ── Internal page processors ──────────────────────────────────────────────────
+
+def _process_html_page(soup: BeautifulSoup, page_url: str, source) -> dict:
+    """
+    Process an already-fetched and cleaned HTML page: try linked PDFs first,
+    fall back to HTML text extraction. Returns a result dict.
+    """
+    pdf_links = _find_pdf_links(soup, page_url)
+    logger.info('[scrape] found %d PDF link(s) on %s: %s',
+                len(pdf_links), page_url, pdf_links[:3])
+
+    pdf_result = None
+    used_pdf_url = None
+    for pdf_url in pdf_links[:3]:
+        try:
+            r = _scrape_pdf_bytes(pdf_url)
+            if r['success']:
+                logger.info('[scrape] PDF extracted %d words from %s', r['word_count'], pdf_url)
+                pdf_result = r
+                used_pdf_url = pdf_url
+                break
+            else:
+                logger.warning('[scrape] PDF failed (%s): %s', pdf_url, r.get('error'))
+        except Exception as e:
+            logger.warning('[scrape] PDF fetch error %s: %s', pdf_url, e)
+
+    html_content = _extract_content(soup, source.content_selector)
+    html_title = _extract_title(soup, source.title_selector)
+    published_at = _extract_date(soup, source.date_selector)
+
+    html_words = len(html_content.split()) if html_content else 0
+    pdf_words = pdf_result['word_count'] if pdf_result else 0
+    logger.info('[scrape] HTML words=%d, PDF words=%d, content_selector=%r',
+                html_words, pdf_words, source.content_selector)
+
+    if pdf_result and pdf_words >= html_words:
+        content = pdf_result['content']
+        title = pdf_result['title'] or html_title
+        source_type = 'pdf_linked'
+    else:
+        content = html_content
+        title = html_title
+        source_type = 'html'
+
+    word_count = len(content.split()) if content else 0
+    if word_count < 50:
+        detail = f'HTML: {html_words} words'
+        if pdf_links:
+            detail += f', {len(pdf_links)} PDF link(s) found'
+            if pdf_result is None:
+                detail += ' but none parsed successfully'
+        return {'success': False,
+                'error': f'Only {word_count} words extracted. {detail}. Try adjusting the content selector.'}
+
+    result = {
+        'success': True,
+        'title': title,
+        'content': content,
+        'content_hash': compute_hash(content),
+        'published_at': published_at,
+        'url': page_url,
+        'word_count': word_count,
+        'source_type': source_type,
+    }
+    if used_pdf_url:
+        result['pdf_url'] = used_pdf_url
+    return result
+
+
+def _process_article_url(article_url: str, source) -> dict:
+    """
+    Fetch and process a single article URL.
+    Handles direct PDFs and HTML pages (which may link to PDFs).
+    """
+    try:
+        resp = _fetch(article_url)
+        logger.info('[scrape] article page HTTP %s, %d bytes',
+                    resp.status_code, len(resp.content))
+        if _is_pdf_response(resp):
+            content = _extract_pdf_text(resp.content)
+            word_count = len(content.split()) if content else 0
+            logger.info('[scrape] article is direct PDF, %d words', word_count)
+            if word_count < 50:
+                return {'success': False,
+                        'error': f'PDF at article link extracted only {word_count} words'}
+            title = _title_from_pdf(resp.content)
+            return {
+                'success': True, 'title': title, 'content': content,
+                'content_hash': compute_hash(content), 'published_at': None,
+                'url': article_url, 'word_count': word_count,
+                'source_type': 'pdf_direct',
+            }
+        soup = _clean_soup(BeautifulSoup(resp.text, 'lxml'))
+        return _process_html_page(soup, article_url, source)
+    except Exception as e:
+        logger.warning('[scrape] failed to process article %s: %s', article_url, e)
+        return {'success': False, 'error': str(e)}
+
+
 # ── Public API ────────────────────────────────────────────────────────────────
 
-def scrape_source(source) -> dict:
+def scrape_source(source) -> list:
     """
-    Scrape a Source object. Automatically handles:
-      - Direct PDF URLs
-      - HTML pages that link to PDFs  (prefers PDF when it has more content)
-      - Plain HTML pages
+    Scrape a Source object. Always returns a list of result dicts.
 
-    Returns dict with keys: success, content, title, content_hash,
+    Archive mode (first scrape when article_link_selector is set):
+      Follows ALL matching article links (up to 13) and returns one result per link.
+      Triggered when source.last_scraped is None.
+
+    Normal mode:
+      Returns a list with a single result dict.
+
+    Each result dict has keys: success, content, title, content_hash,
     published_at, url, word_count, source_type, [pdf_url], [error]
     """
     try:
@@ -295,10 +422,10 @@ def scrape_source(source) -> dict:
             content = _extract_pdf_text(response.content)
             word_count = len(content.split()) if content else 0
             if word_count < 50:
-                return {'success': False,
-                        'error': f'PDF extracted only {word_count} words (may be image-based or encrypted)'}
+                return [{'success': False,
+                         'error': f'PDF extracted only {word_count} words (may be image-based or encrypted)'}]
             title = _title_from_pdf(response.content)
-            return {
+            return [{
                 'success': True,
                 'title': title,
                 'content': content,
@@ -307,117 +434,46 @@ def scrape_source(source) -> dict:
                 'url': source.url,
                 'word_count': word_count,
                 'source_type': 'pdf_direct',
-            }
+            }]
 
         # ── Cases 2 & 3: HTML page ────────────────────────────────────────────
         logger.info('[scrape] %s — HTTP %s, %d bytes',
                     source.url, response.status_code, len(response.content))
         soup = _clean_soup(BeautifulSoup(response.text, 'lxml'))
-        scraped_url = source.url
 
-        # If the source is a listing page, follow the first article link
         article_link_selector = getattr(source, 'article_link_selector', None)
         article_link_text_filter = getattr(source, 'article_link_text_filter', None)
+
         if article_link_selector:
             logger.info('[scrape] article_link_selector=%r text_filter=%r',
                         article_link_selector, article_link_text_filter)
-            article_url = _find_article_link(soup, source.url, article_link_selector,
-                                             text_filter=article_link_text_filter)
-            if article_url:
-                logger.info('[scrape] following article link: %s', article_url)
-                try:
-                    article_resp = _fetch(article_url)
-                    logger.info('[scrape] article page HTTP %s, %d bytes',
-                                article_resp.status_code, len(article_resp.content))
-                    if _is_pdf_response(article_resp):
-                        content = _extract_pdf_text(article_resp.content)
-                        word_count = len(content.split()) if content else 0
-                        logger.info('[scrape] article is direct PDF, %d words', word_count)
-                        if word_count < 50:
-                            return {'success': False,
-                                    'error': f'PDF at article link extracted only {word_count} words'}
-                        title = _title_from_pdf(article_resp.content)
-                        return {
-                            'success': True, 'title': title, 'content': content,
-                            'content_hash': compute_hash(content), 'published_at': None,
-                            'url': article_url, 'word_count': word_count,
-                            'source_type': 'pdf_direct',
-                        }
-                    soup = _clean_soup(BeautifulSoup(article_resp.text, 'lxml'))
-                    scraped_url = article_url
-                except Exception as e:
-                    logger.warning('[scrape] failed to follow article link %s: %s', article_url, e)
+            is_first_scrape = source.last_scraped is None
+            if is_first_scrape:
+                article_urls = _find_article_links(
+                    soup, source.url, article_link_selector,
+                    text_filter=article_link_text_filter, max_links=13,
+                )
+                logger.info('[scrape] archive mode: found %d article links', len(article_urls))
+            else:
+                single = _find_article_link(soup, source.url, article_link_selector,
+                                            text_filter=article_link_text_filter)
+                article_urls = [single] if single else []
+
+            if article_urls:
+                results = []
+                for article_url in article_urls:
+                    logger.info('[scrape] processing article link: %s', article_url)
+                    results.append(_process_article_url(article_url, source))
+                return results
             else:
                 logger.warning('[scrape] article_link_selector %r matched nothing on %s',
                                article_link_selector, source.url)
 
-        pdf_links = _find_pdf_links(soup, scraped_url)
-        logger.info('[scrape] found %d PDF link(s) on %s: %s',
-                    len(pdf_links), scraped_url, pdf_links[:3])
-
-        # Try linked PDFs (top 3 ranked candidates)
-        pdf_result = None
-        used_pdf_url = None
-        for pdf_url in pdf_links[:3]:
-            try:
-                r = _scrape_pdf_bytes(pdf_url)
-                if r['success']:
-                    logger.info('[scrape] PDF extracted %d words from %s', r['word_count'], pdf_url)
-                    pdf_result = r
-                    used_pdf_url = pdf_url
-                    break
-                else:
-                    logger.warning('[scrape] PDF failed (%s): %s', pdf_url, r.get('error'))
-            except Exception as e:
-                logger.warning('[scrape] PDF fetch error %s: %s', pdf_url, e)
-
-        html_content = _extract_content(soup, source.content_selector)
-        html_title = _extract_title(soup, source.title_selector)
-        published_at = _extract_date(soup, source.date_selector)
-
-        html_words = len(html_content.split()) if html_content else 0
-        pdf_words = pdf_result['word_count'] if pdf_result else 0
-        logger.info('[scrape] HTML words=%d, PDF words=%d, content_selector=%r',
-                    html_words, pdf_words, source.content_selector)
-
-        # Prefer PDF when it has more content
-        if pdf_result and pdf_words >= html_words:
-            content = pdf_result['content']
-            title = pdf_result['title'] or html_title
-            source_type = 'pdf_linked'
-        else:
-            content = html_content
-            title = html_title
-            source_type = 'html'
-
-        word_count = len(content.split()) if content else 0
-        if word_count < 50:
-            detail = f'HTML: {html_words} words'
-            if pdf_links:
-                detail += f', {len(pdf_links)} PDF link(s) found'
-                if pdf_result is None:
-                    detail += ' but none parsed successfully'
-            logger.warning('[scrape] failed for %s: %s', source.url, detail)
-            return {'success': False,
-                    'error': f'Only {word_count} words extracted. {detail}. Try adjusting the content selector.'}
-
-        result = {
-            'success': True,
-            'title': title,
-            'content': content,
-            'content_hash': compute_hash(content),
-            'published_at': published_at,
-            'url': scraped_url,
-            'word_count': word_count,
-            'source_type': source_type,
-        }
-        if used_pdf_url:
-            result['pdf_url'] = used_pdf_url
-        return result
+        return [_process_html_page(soup, source.url, source)]
 
     except Exception as e:
         logger.error('Error scraping %s: %s', source.url, e)
-        return {'success': False, 'error': str(e)}
+        return [{'success': False, 'error': str(e)}]
 
 
 def _suggest_selector(a_tag) -> str:
