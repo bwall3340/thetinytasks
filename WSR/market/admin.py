@@ -335,6 +335,22 @@ def validate_source(source_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@admin_bp.route('/articles/<int:article_id>/delete', methods=['POST'])
+@require_admin
+def delete_article(article_id):
+    try:
+        article = db.session.get(Article, article_id)
+        if not article:
+            return jsonify({'success': False, 'error': 'Article not found'}), 404
+        source_id = article.source_id
+        db.session.delete(article)
+        db.session.commit()
+        return jsonify({'success': True, 'source_id': source_id})
+    except Exception as e:
+        logger.error('delete_article error for article %s: %s', article_id, e)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @admin_bp.route('/sources/<int:source_id>/articles')
 @require_admin
 def source_articles(source_id):

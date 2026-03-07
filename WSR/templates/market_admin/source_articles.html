@@ -50,6 +50,15 @@
         .no-analysis { font-size: 0.8rem; color: #94a3b8; font-style: italic; margin-top: 0.5rem; }
 
         .empty { text-align: center; padding: 3rem; color: #94a3b8; }
+
+        .btn-delete {
+            background: none; border: 1px solid #fca5a5; color: #ef4444;
+            border-radius: 6px; padding: 0.3rem 0.65rem; font-size: 0.72rem;
+            font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+            transition: background 0.15s, color 0.15s;
+        }
+        .btn-delete:hover { background: #ef4444; color: #fff; }
+        .btn-delete:disabled { opacity: 0.5; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -68,7 +77,7 @@
 
     {% if articles %}
     {% for article in articles %}
-    <div class="article-card">
+    <div class="article-card" id="article-{{ article.id }}">
         <div class="article-header">
             <div>
                 <div class="article-title">{{ article.title or 'Untitled' }}</div>
@@ -80,13 +89,16 @@
                     &nbsp;&middot;&nbsp; {{ article.raw_content.split()|length if article.raw_content else 0 }} words
                 </div>
             </div>
-            {% if article.analysis %}
-            <span class="badge badge-{{ article.analysis.market_outlook or 'none' }}">
-                {{ article.analysis.market_outlook or 'unknown' }}
-            </span>
-            {% else %}
-            <span class="badge badge-none">not analyzed</span>
-            {% endif %}
+            <div style="display:flex;align-items:center;gap:0.6rem;flex-shrink:0;">
+                {% if article.analysis %}
+                <span class="badge badge-{{ article.analysis.market_outlook or 'none' }}">
+                    {{ article.analysis.market_outlook or 'unknown' }}
+                </span>
+                {% else %}
+                <span class="badge badge-none">not analyzed</span>
+                {% endif %}
+                <button class="btn-delete" onclick="deleteArticle({{ article.id }}, this)">Delete</button>
+            </div>
         </div>
 
         {% if article.analysis %}
@@ -137,5 +149,31 @@
     </div>
     {% endif %}
 </div>
+<script>
+function deleteArticle(articleId, btn) {
+    if (!confirm('Delete this article and its analysis? This cannot be undone.')) return;
+    btn.disabled = true;
+    btn.textContent = 'Deleting…';
+    fetch(`/market-admin/articles/${articleId}/delete`, { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const card = document.getElementById(`article-${articleId}`);
+                card.style.transition = 'opacity 0.2s';
+                card.style.opacity = '0';
+                setTimeout(() => card.remove(), 200);
+            } else {
+                alert('Delete failed: ' + (data.error || 'unknown error'));
+                btn.disabled = false;
+                btn.textContent = 'Delete';
+            }
+        })
+        .catch(() => {
+            alert('Network error — please try again.');
+            btn.disabled = false;
+            btn.textContent = 'Delete';
+        });
+}
+</script>
 </body>
 </html>
