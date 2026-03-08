@@ -344,6 +344,14 @@ def delete_article(article_id):
             return jsonify({'success': False, 'error': 'Article not found'}), 404
         source_id = article.source_id
         db.session.delete(article)
+        db.session.flush()
+        # If no articles remain, reset last_scraped so the next scrape triggers archive mode
+        remaining = Article.query.filter_by(source_id=source_id).count()
+        if remaining == 0:
+            source = db.session.get(Source, source_id)
+            if source:
+                source.last_scraped = None
+                source.last_scrape_status = None
         db.session.commit()
         return jsonify({'success': True, 'source_id': source_id})
     except Exception as e:
