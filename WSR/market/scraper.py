@@ -538,14 +538,15 @@ def discover_links(url: str) -> dict:
                 continue
             abs_href = urljoin(effective_url, href)
             link_domain = _strip_www(urlparse(abs_href).netloc)
-            if link_domain != base_domain:
+            # Accept same domain OR any subdomain of the base domain
+            if link_domain != base_domain and not link_domain.endswith('.' + base_domain):
+                continue
+            text = a.get_text(strip=True)
+            if len(text) < 5:
                 continue
             if abs_href in seen_hrefs:
                 continue
             seen_hrefs.add(abs_href)
-            text = a.get_text(strip=True)
-            if len(text) < 5:
-                continue
             suggested = _suggest_selector(a)
             links.append({
                 'text': text[:120],
