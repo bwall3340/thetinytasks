@@ -517,7 +517,21 @@ def discover_links(url: str) -> dict:
     Used by the admin "Discover Links" feature to help configure article_link_selector.
     """
     try:
-        response = _fetch(url, timeout=20, retries=1)
+        parsed_url = urlparse(url)
+        origin = f"{parsed_url.scheme}://{parsed_url.netloc}"
+        session_headers = {**_HEADERS, 'Referer': origin}
+        session = requests.Session()
+        session.headers.update(session_headers)
+        try:
+            response = session.get(url, timeout=15)
+            response.raise_for_status()
+        except requests.HTTPError as e:
+            code = e.response.status_code if e.response is not None else '?'
+            if code == 403:
+                return {'success': False,
+                        'error': f'The site returned 403 Forbidden — it may block automated requests. '
+                                 f'Inspect the page manually in your browser and enter the CSS selector directly.'}
+            raise
         if _is_pdf_response(response):
             return {'success': False, 'error': 'URL points to a PDF, not a listing page.'}
 
