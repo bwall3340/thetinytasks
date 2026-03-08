@@ -43,6 +43,11 @@ class Source(db.Model):
     def latest_article(self):
         return self.articles[0] if self.articles else None
 
+    # Full scrape intervals in hours
+    _FULL_HOURS = {'daily': 24, 'weekly': 168, 'monthly': 720, 'quarterly': 2160, 'annual': 8760}
+    # When content is unchanged, retry sooner than the full interval
+    _RETRY_HOURS = {'daily': 6, 'weekly': 24, 'monthly': 48, 'quarterly': 120, 'annual': 336}
+
     @property
     def due_for_scrape(self):
         from datetime import timedelta
@@ -50,9 +55,20 @@ class Source(db.Model):
             return False
         if self.last_scraped is None:
             return True
-        intervals = {'daily': 1, 'weekly': 7, 'monthly': 30, 'quarterly': 90, 'annual': 365}
-        delta = timedelta(days=intervals.get(self.frequency, 30))
-        return datetime.utcnow() - self.last_scraped > delta
+        full_h = self._FULL_HOURS.get(self.frequency, 720)
+        return datetime.utcnow() - self.last_scraped > timedelta(hours=full_h)
+
+    def duplicate_retry_last_scraped(self):
+        """
+        Return a last_scraped value that makes this source due for re-scrape
+        after the frequency-appropriate retry interval when content was unchanged.
+        Smaller firms are sometimes slow to update — this avoids hammering them
+        at the full cadence and instead checks back sooner.
+        """
+        from datetime import timedelta
+        full_h = self._FULL_HOURS.get(self.frequency, 720)
+        retry_h = self._RETRY_HOURS.get(self.frequency, 48)
+        return datetime.utcnow() - timedelta(hours=full_h - retry_h)
 
 
 class Article(db.Model):

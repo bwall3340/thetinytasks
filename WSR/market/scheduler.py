@@ -28,6 +28,7 @@ def _run_scheduled_scrape(app):
             results = scrape_source(source)
 
             new_count = 0
+            duplicate_count = 0
             for result in results:
                 if not result['success']:
                     logger.warning('Scrape result failed for %s: %s',
@@ -37,6 +38,8 @@ def _run_scheduled_scrape(app):
                 existing = Article.query.filter_by(content_hash=result['content_hash']).first()
                 if existing:
                     logger.debug('Duplicate for %s: %s', source.name, result['url'])
+                    existing.scraped_at = datetime.utcnow()  # mark as recently verified
+                    duplicate_count += 1
                     continue
 
                 article = Article(
@@ -58,14 +61,19 @@ def _run_scheduled_scrape(app):
                         logger.info('Auto-analyzed: %s — %s',
                                     source.name, analysis_data['market_outlook'])
 
-            source.last_scraped = datetime.utcnow()
             if all(not r['success'] for r in results):
+                source.last_scraped = datetime.utcnow()
                 source.last_scrape_status = 'failed'
             elif new_count > 0:
+                source.last_scraped = datetime.utcnow()
                 source.last_scrape_status = 'success'
                 logger.info('Saved %d new article(s) for %s', new_count, source.name)
             else:
+                # All duplicates — retry sooner than the full cadence
+                source.last_scraped = source.duplicate_retry_last_scraped()
                 source.last_scrape_status = 'duplicate'
+                logger.info('Duplicate for %s — retry scheduled in %s hours',
+                            source.name, source._RETRY_HOURS.get(source.frequency, 48))
             db.session.commit()
 
 

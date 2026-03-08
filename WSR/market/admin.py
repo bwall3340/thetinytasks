@@ -200,6 +200,7 @@ def scrape_now(source_id):
 
             existing = Article.query.filter_by(content_hash=result['content_hash']).first()
             if existing:
+                existing.scraped_at = datetime.utcnow()  # mark as recently verified
                 duplicates += 1
                 continue
 
@@ -218,7 +219,8 @@ def scrape_now(source_id):
             source.last_scraped = datetime.utcnow()
             source.last_scrape_status = 'success'
         elif duplicates:
-            source.last_scraped = datetime.utcnow()
+            # Retry sooner than the full cadence — source may just be slow to update
+            source.last_scraped = source.duplicate_retry_last_scraped()
             source.last_scrape_status = 'duplicate'
         else:
             source.last_scrape_status = 'failed'
@@ -238,8 +240,10 @@ def scrape_now(source_id):
         elif first_error and not duplicates:
             return jsonify({'success': False, 'error': first_error})
         else:
+            retry_h = source._RETRY_HOURS.get(source.frequency, 48)
             return jsonify({'success': True, 'duplicate': True,
-                            'message': f'Content unchanged since last scrape ({duplicates} duplicate(s)).'})
+                            'message': f'Content unchanged ({duplicates} duplicate(s)). '
+                                       f'Will check again in ~{retry_h}h.'})
     except Exception as e:
         logger.error('scrape_now error for source %s: %s', source_id, e)
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -332,6 +336,30 @@ def validate_source(source_id):
         return jsonify(result)
     except Exception as e:
         logger.error('validate_source error for source %s: %s', source_id, e)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@admin_bp.route('/articles/<int:article_id>/set-date', methods=['POST'])
+@require_admin
+def set_article_date(article_id):
+    try:
+        article = db.session.get(Article, article_id)
+        if not article:
+            return jsonify({'success': False, 'error': 'Article not found'}), 404
+        data = request.get_json() or {}
+        date_str = (data.get('published_at') or '').strip()
+        if date_str:
+            try:
+                article.published_at = datetime.strptime(date_str, '%Y-%m-%d')
+            except ValueError:
+                return jsonify({'success': False, 'error': 'Invalid date — use YYYY-MM-DD'})
+        else:
+            article.published_at = None
+        db.session.commit()
+        display = article.published_at.strftime('%b %d, %Y') if article.published_at else ''
+        return jsonify({'success': True, 'published_at_display': display})
+    except Exception as e:
+        logger.error('set_article_date error for article %s: %s', article_id, e)
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
