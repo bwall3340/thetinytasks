@@ -401,12 +401,65 @@ async function scrapeSource(id, name) {
     const d = await safeJson(r);
     if (d.success) {
         setRowStatus(id, d.duplicate ? 'duplicate' : 'success');
-        showToast(d.message, 'success');
-        const cell = document.querySelector(`#row-${id} td:nth-child(3)`);
-        if (cell && !d.duplicate) location.reload();
+        if (d.duplicate) {
+            // Show detail modal so admin can see what was matched and force-rescrape if needed
+            document.getElementById('modal-title').textContent = `Duplicate detected: ${name}`;
+            const urlMatch = d.scraped_url && d.matched_article_url && d.scraped_url !== d.matched_article_url
+                ? `<div style="margin-top:0.5rem;font-size:0.78rem;color:#d97706;">
+                     ⚠️ URLs differ — scraper may be picking the wrong article.<br>
+                     <strong>Scraped:</strong> <a href="${d.scraped_url}" target="_blank" style="color:#6366f1;word-break:break-all;">${d.scraped_url}</a><br>
+                     <strong>Matched:</strong> <a href="${d.matched_article_url}" target="_blank" style="color:#6366f1;word-break:break-all;">${d.matched_article_url}</a>
+                   </div>`
+                : `<div style="margin-top:0.5rem;font-size:0.78rem;color:#64748b;">
+                     Same URL: <a href="${d.matched_article_url || d.scraped_url}" target="_blank" style="color:#6366f1;word-break:break-all;">${d.matched_article_url || d.scraped_url}</a>
+                   </div>`;
+            document.getElementById('modal-body').innerHTML = `
+                <div style="font-size:0.85rem;color:#475569;line-height:1.7;">
+                    <p>The scraped content is <strong>identical</strong> to an existing article:</p>
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:0.75rem 1rem;margin:0.75rem 0;">
+                        <div style="font-weight:600;color:#1e293b;">${d.matched_article_title}</div>
+                        <div style="font-size:0.78rem;color:#94a3b8;margin-top:0.2rem;">Saved on ${d.matched_article_scraped}</div>
+                    </div>
+                    ${urlMatch}
+                    <p style="margin-top:0.75rem;font-size:0.78rem;color:#64748b;">${d.message}</p>
+                    <div style="margin-top:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+                        <button onclick="forceRescrape(${id}, '${name}', [${d.matched_article_id}])"
+                            style="background:#6366f1;color:#fff;border:none;border-radius:6px;padding:0.4rem 0.85rem;font-size:0.78rem;font-weight:600;cursor:pointer;">
+                            Force Rescrape (delete old &amp; re-fetch)
+                        </button>
+                        <a href="/market-admin/sources/${id}/articles"
+                            style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;border-radius:6px;padding:0.4rem 0.85rem;font-size:0.78rem;font-weight:600;text-decoration:none;">
+                            View Articles
+                        </a>
+                    </div>
+                </div>`;
+            document.getElementById('modal-overlay').classList.add('open');
+        } else {
+            showToast(d.message, 'success');
+            location.reload();
+        }
     } else {
         setRowStatus(id, 'failed');
         showToast('Error: ' + d.error, 'error');
+    }
+}
+
+async function forceRescrape(id, name, articleIds) {
+    document.getElementById('modal-overlay').classList.remove('open');
+    showToast(`Force-scraping ${name}…`);
+    const r = await fetch(`/market-admin/sources/${id}/force-scrape`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({article_ids: articleIds}),
+    });
+    const d = await safeJson(r);
+    if (d.success) {
+        setRowStatus(id, 'success');
+        showToast(d.message, 'success');
+        location.reload();
+    } else {
+        setRowStatus(id, 'duplicate');
+        showToast('Force-scrape: ' + d.error, 'error');
     }
 }
 

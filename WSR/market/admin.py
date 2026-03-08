@@ -189,7 +189,7 @@ def scrape_now(source_id):
         results = scrape_source(source)
 
         new_articles = []
-        duplicates = 0
+        duplicate_matches = []  # (existing_article, scraped_url) for reporting
         first_error = None
 
         for result in results:
@@ -201,7 +201,7 @@ def scrape_now(source_id):
             existing = Article.query.filter_by(content_hash=result['content_hash']).first()
             if existing:
                 existing.scraped_at = datetime.utcnow()  # mark as recently verified
-                duplicates += 1
+                duplicate_matches.append((existing, result['url']))
                 continue
 
             article = Article(
@@ -218,7 +218,7 @@ def scrape_now(source_id):
         if new_articles:
             source.last_scraped = datetime.utcnow()
             source.last_scrape_status = 'success'
-        elif duplicates:
+        elif duplicate_matches:
             # Retry sooner than the full cadence — source may just be slow to update
             source.last_scraped = source.duplicate_retry_last_scraped()
             source.last_scrape_status = 'duplicate'
@@ -229,7 +229,7 @@ def scrape_now(source_id):
 
         if new_articles:
             first_article, first_result = new_articles[0]
-            extra = f', {duplicates} duplicate(s)' if duplicates else ''
+            extra = f', {len(duplicate_matches)} duplicate(s)' if duplicate_matches else ''
             return jsonify({
                 'success': True,
                 'article_id': first_article.id,
@@ -237,15 +237,91 @@ def scrape_now(source_id):
                 'word_count': first_result['word_count'],
                 'message': f'Scraped {len(new_articles)} new article(s){extra}.',
             })
-        elif first_error and not duplicates:
+        elif first_error and not duplicate_matches:
             return jsonify({'success': False, 'error': first_error})
         else:
             retry_h = source._RETRY_HOURS.get(source.frequency, 48)
-            return jsonify({'success': True, 'duplicate': True,
-                            'message': f'Content unchanged ({duplicates} duplicate(s)). '
-                                       f'Will check again in ~{retry_h}h.'})
+            existing_art, scraped_url = duplicate_matches[0]
+            return jsonify({
+                'success': True,
+                'duplicate': True,
+                'matched_article_id': existing_art.id,
+                'matched_article_title': existing_art.title or 'Untitled',
+                'matched_article_scraped': existing_art.scraped_at.strftime('%b %d, %Y') if existing_art.scraped_at else '?',
+                'matched_article_url': existing_art.url or '',
+                'scraped_url': scraped_url,
+                'duplicate_count': len(duplicate_matches),
+                'message': f'Matched existing article from {existing_art.scraped_at.strftime("%b %d, %Y") if existing_art.scraped_at else "?"} — will recheck in ~{retry_h}h.',
+            })
     except Exception as e:
         logger.error('scrape_now error for source %s: %s', source_id, e)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@admin_bp.route('/sources/<int:source_id>/force-scrape', methods=['POST'])
+@require_admin
+def force_scrape(source_id):
+    """Delete the matched duplicate article(s) and re-scrape, saving the fresh content."""
+    try:
+        source = db.session.get(Source, source_id)
+        if not source:
+            return jsonify({'success': False, 'error': 'Source not found'}), 404
+
+        data = request.get_json() or {}
+        article_ids = data.get('article_ids', [])
+        if article_ids:
+            for aid in article_ids:
+                art = db.session.get(Article, aid)
+                if art and art.source_id == source_id:
+                    db.session.delete(art)
+            db.session.flush()
+
+        # Reset last_scraped so archive mode triggers if no articles remain
+        remaining = Article.query.filter_by(source_id=source_id).count()
+        if remaining == 0:
+            source.last_scraped = None
+            source.last_scrape_status = None
+        db.session.commit()
+
+        # Now re-run the scrape
+        from .scraper import scrape_source
+        results = scrape_source(source)
+        new_articles = []
+        for result in results:
+            if not result['success']:
+                continue
+            existing = Article.query.filter_by(content_hash=result['content_hash']).first()
+            if existing:
+                continue
+            article = Article(
+                source_id=source.id,
+                url=result['url'],
+                title=result['title'],
+                raw_content=result['content'],
+                content_hash=result['content_hash'],
+                published_at=result['published_at'],
+            )
+            db.session.add(article)
+            new_articles.append((article, result))
+
+        source.last_scraped = datetime.utcnow()
+        source.last_scrape_status = 'success' if new_articles else 'duplicate'
+        db.session.commit()
+
+        if new_articles:
+            first_article, first_result = new_articles[0]
+            return jsonify({
+                'success': True,
+                'article_id': first_article.id,
+                'title': first_article.title,
+                'word_count': first_result['word_count'],
+                'message': f'Force-scraped {len(new_articles)} article(s).',
+            })
+        else:
+            return jsonify({'success': False,
+                            'error': 'Content is still identical after deleting old article — the source truly has not updated.'})
+    except Exception as e:
+        logger.error('force_scrape error for source %s: %s', source_id, e)
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
