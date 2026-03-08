@@ -55,7 +55,18 @@ app.register_blueprint(admin_bp)
 app.register_blueprint(market_bp)
 
 with app.app_context():
-    db.create_all()
+    # Railway's private network DNS (postgres.railway.internal) can take a few
+    # seconds to become resolvable after the container starts.  Retry with
+    # back-off so a transient DNS failure doesn't crash gunicorn on boot.
+    for _attempt in range(5):
+        try:
+            db.create_all()
+            break
+        except Exception as _db_err:
+            if _attempt == 4:
+                raise
+            time.sleep(2 ** _attempt)
+
     # Add columns introduced after initial schema (safe to re-run — silently ignored if present)
     _migrations = [
         'ALTER TABLE sources ADD COLUMN article_link_selector VARCHAR(300)',
