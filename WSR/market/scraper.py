@@ -213,7 +213,7 @@ def _find_article_links(soup: BeautifulSoup, base_url: str, selector: str,
 
 def _clean_soup(soup):
     for tag in soup.find_all(['nav', 'footer', 'header', 'script', 'style',
-                               'aside', 'form', 'iframe', 'noscript']):
+                               'aside', 'iframe', 'noscript']):
         tag.decompose()
     return soup
 
