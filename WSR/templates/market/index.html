@@ -222,6 +222,17 @@
         }
         @media (max-width: 800px) { .main-grid { grid-template-columns: 1fr; } }
 
+        /* ── Scrollable card body ── */
+        .scroll-body {
+            max-height: 380px;
+            overflow-y: auto;
+            padding-right: 0.25rem;
+        }
+        .scroll-body::-webkit-scrollbar { width: 4px; }
+        .scroll-body::-webkit-scrollbar-track { background: transparent; }
+        .scroll-body::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.2); border-radius: 2px; }
+        .scroll-body::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.4); }
+
         /* ── Empty state ── */
         .empty { text-align: center; padding: 3rem 1rem; color: #94a3b8; }
         .empty h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; color: #64748b; }
@@ -409,6 +420,7 @@
                 <span class="ci-badge">AI cross-validated</span>
                 <span>Updated {{ consensus_insights.computed_at.strftime('%b %d, %Y') }} &middot; {{ consensus_insights.source_count }} sources</span>
             </div>
+            <div class="scroll-body">
             {% for ins in consensus_insights.insights %}
             <div class="insight-card">
                 <div class="insight-text">"{{ ins.insight }}"</div>
@@ -425,12 +437,14 @@
                 {% endif %}
             </div>
             {% endfor %}
+            </div>
 
             {% elif consensus.unique_insights %}
             {# Fallback: per-article flagged insights (not yet cross-validated) #}
             <div class="insights-meta-bar">
                 <span title="These are self-identified by each source's AI analysis — not yet cross-validated against consensus">Per-source flags · not yet cross-validated</span>
             </div>
+            <div class="scroll-body">
             {% for ins in consensus.unique_insights %}
             <div class="insight-card">
                 <div class="insight-text">"{{ ins.insight }}"</div>
@@ -442,6 +456,7 @@
                 </div>
             </div>
             {% endfor %}
+            </div>
 
             {% else %}
             <div class="empty">
@@ -455,6 +470,7 @@
         <div class="card">
             <div class="section-title">Recent Commentary</div>
             {% if recent_articles %}
+            <div class="scroll-body">
             {% for article in recent_articles %}
             {% set outlook = article.analysis.market_outlook if article.analysis else 'none' %}
             {% set display_date = article.published_at or article.scraped_at %}
@@ -478,6 +494,7 @@
                 </div>
             </div>
             {% endfor %}
+            </div>
             {% else %}
             <div class="empty"><p>No analyzed articles yet.</p></div>
             {% endif %}
