@@ -89,6 +89,9 @@
         .status-failed    { background: rgba(239,68,68,0.1);  color: #dc2626; }
         .status-duplicate { background: rgba(245,158,11,0.1); color: #d97706; }
         .status-pending   { background: #f1f5f9; color: #94a3b8; }
+        .status-blocked   { background: rgba(239,68,68,0.15); color: #b91c1c;
+                            border: 1px solid rgba(239,68,68,0.3); font-weight: 700; }
+        .blocked-row td   { background: rgba(254,242,242,0.6); }
 
         .actions { display: flex; gap: 0.35rem; flex-wrap: wrap; }
 
@@ -272,7 +275,7 @@
             </thead>
             <tbody>
             {% for s in sources %}
-            <tr id="row-{{ s.id }}">
+            <tr id="row-{{ s.id }}"{% if s.scrape_blocked %} class="blocked-row"{% endif %}>
                 <td>
                     <div class="source-name">{{ s.name }}</div>
                     <div class="source-url" title="{{ s.url }}">
@@ -297,8 +300,15 @@
                     {% endif %}
                 </td>
                 <td>
-                    {% if s.last_scrape_status %}
+                    {% if s.scrape_blocked %}
+                    <span class="status-badge status-blocked" title="No new content after {{ s.consecutive_duplicates }} attempts — run a manual scrape to resume automation">&#9888; blocked</span>
+                    {% elif s.last_scrape_status %}
                     <span class="status-badge status-{{ s.last_scrape_status }}">{{ s.last_scrape_status }}</span>
+                    {% if s.consecutive_duplicates and s.consecutive_duplicates > 0 %}
+                    <span style="font-size:0.65rem;color:#94a3b8;display:block;margin-top:0.15rem;">
+                        retry {{ s.consecutive_duplicates }}/{{ s._MAX_RETRIES.get(s.frequency, 4) }}
+                    </span>
+                    {% endif %}
                     {% else %}
                     <span class="status-badge status-pending">pending</span>
                     {% endif %}

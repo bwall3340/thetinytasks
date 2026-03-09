@@ -24,6 +24,9 @@ class Source(db.Model):
     last_scrape_status = db.Column(db.String(20))  # success / failed / duplicate
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # Retry / block tracking
+    consecutive_duplicates = db.Column(db.Integer, default=0)
+    scrape_blocked = db.Column(db.Boolean, default=False)
 
     articles = db.relationship(
         'Article', back_populates='source',
@@ -43,32 +46,34 @@ class Source(db.Model):
     def latest_article(self):
         return self.articles[0] if self.articles else None
 
-    # Full scrape intervals in hours
-    _FULL_HOURS = {'daily': 24, 'weekly': 168, 'monthly': 720, 'quarterly': 2160, 'annual': 8760}
-    # When content is unchanged, retry sooner than the full interval
-    _RETRY_HOURS = {'daily': 6, 'weekly': 24, 'monthly': 48, 'quarterly': 120, 'annual': 336}
+    # Full scrape intervals in hours (primary cadence)
+    _FULL_HOURS  = {'daily': 24, 'weekly': 168, 'monthly': 720, 'quarterly': 2160, 'annual': 8760}
+    # Retry interval in hours when no new article was found
+    _RETRY_HOURS = {'daily': 12, 'weekly': 24, 'monthly': 168, 'quarterly': 168, 'annual': 720}
+    # Max consecutive no-new-article attempts before blocking and requiring manual scrape
+    #   daily:     4 retries × 12 h = 2 days
+    #   weekly:    8 retries × 24 h ≈ remainder of week + Mon next week
+    #   monthly:   4 retries × 7 d  ≈ 1 month
+    #   quarterly: 12 retries × 7 d ≈ 1 quarter
+    #   annual:    6 retries × 30 d ≈ 6 months
+    _MAX_RETRIES = {'daily': 4, 'weekly': 8, 'monthly': 4, 'quarterly': 12, 'annual': 6}
 
     @property
     def due_for_scrape(self):
         from datetime import timedelta
         if not self.active:
             return False
+        if self.scrape_blocked:
+            return False
         if self.last_scraped is None:
             return True
+        # Retry mode: use shorter frequency-specific retry interval
+        if self.consecutive_duplicates and self.consecutive_duplicates > 0:
+            retry_h = self._RETRY_HOURS.get(self.frequency, 24)
+            return datetime.utcnow() - self.last_scraped > timedelta(hours=retry_h)
+        # Normal cadence
         full_h = self._FULL_HOURS.get(self.frequency, 720)
         return datetime.utcnow() - self.last_scraped > timedelta(hours=full_h)
-
-    def duplicate_retry_last_scraped(self):
-        """
-        Return a last_scraped value that makes this source due for re-scrape
-        after the frequency-appropriate retry interval when content was unchanged.
-        Smaller firms are sometimes slow to update — this avoids hammering them
-        at the full cadence and instead checks back sooner.
-        """
-        from datetime import timedelta
-        full_h = self._FULL_HOURS.get(self.frequency, 720)
-        retry_h = self._RETRY_HOURS.get(self.frequency, 48)
-        return datetime.utcnow() - timedelta(hours=full_h - retry_h)
 
 
 class Article(db.Model):

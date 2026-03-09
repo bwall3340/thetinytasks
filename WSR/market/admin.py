@@ -215,14 +215,18 @@ def scrape_now(source_id):
             db.session.add(article)
             new_articles.append((article, result))
 
+        # Any manual scrape resets the block / retry counter regardless of outcome.
+        source.scrape_blocked = False
+        source.consecutive_duplicates = 0
+
         if new_articles:
             source.last_scraped = datetime.utcnow()
             source.last_scrape_status = 'success'
         elif duplicate_matches:
-            # Retry sooner than the full cadence — source may just be slow to update
-            source.last_scraped = source.duplicate_retry_last_scraped()
+            source.last_scraped = datetime.utcnow()
             source.last_scrape_status = 'duplicate'
         else:
+            source.last_scraped = datetime.utcnow()
             source.last_scrape_status = 'failed'
 
         db.session.commit()
@@ -304,6 +308,9 @@ def force_scrape(source_id):
             db.session.add(article)
             new_articles.append((article, result))
 
+        # Force scrape always resets block / retry state
+        source.scrape_blocked = False
+        source.consecutive_duplicates = 0
         source.last_scraped = datetime.utcnow()
         source.last_scrape_status = 'success' if new_articles else 'duplicate'
         db.session.commit()

@@ -1,6 +1,20 @@
 """
 Background scheduler for automated scraping and consensus analysis.
-Hourly: scrape sources that are due.
+
+Scrape jobs run at 07:00 UTC (2 AM EST) and 19:00 UTC (2 PM EST), Mon–Fri only.
+  - 19:00 UTC is the primary scrape window.
+  - 07:00 UTC handles daily-frequency 12 h retries.
+  Sources not yet due (based on frequency + retry state) are skipped each run.
+
+Retry / block policy (no new article found):
+  daily     → retry every 12 h, block after 4 misses  (≈ 2 days)
+  weekly    → retry every 24 h, block after 8 misses  (≈ rest of week + Mon next week)
+  monthly   → retry every 7 d,  block after 4 misses  (≈ 1 month)
+  quarterly → retry every 7 d,  block after 12 misses (≈ 1 quarter)
+  annual    → retry every 30 d, block after 6 misses  (≈ 6 months)
+
+A blocked source is skipped by the scheduler until a manual scrape resets it.
+
 Weekly (Sunday 02:00 UTC): run second-pass consensus insight analysis.
 """
 import logging
@@ -28,18 +42,20 @@ def _run_scheduled_scrape(app):
             results = scrape_source(source)
 
             new_count = 0
-            duplicate_count = 0
+            no_new_count = 0  # duplicates + failures
+
             for result in results:
                 if not result['success']:
                     logger.warning('Scrape result failed for %s: %s',
                                    source.name, result.get('error'))
+                    no_new_count += 1
                     continue
 
                 existing = Article.query.filter_by(content_hash=result['content_hash']).first()
                 if existing:
                     logger.debug('Duplicate for %s: %s', source.name, result['url'])
                     existing.scraped_at = datetime.utcnow()  # mark as recently verified
-                    duplicate_count += 1
+                    no_new_count += 1
                     continue
 
                 article = Article(
@@ -61,19 +77,35 @@ def _run_scheduled_scrape(app):
                         logger.info('Auto-analyzed: %s — %s',
                                     source.name, analysis_data['market_outlook'])
 
-            if all(not r['success'] for r in results):
-                source.last_scraped = datetime.utcnow()
-                source.last_scrape_status = 'failed'
-            elif new_count > 0:
-                source.last_scraped = datetime.utcnow()
+            source.last_scraped = datetime.utcnow()
+
+            if new_count > 0:
                 source.last_scrape_status = 'success'
+                source.consecutive_duplicates = 0
+                source.scrape_blocked = False
                 logger.info('Saved %d new article(s) for %s', new_count, source.name)
             else:
-                # All duplicates — retry sooner than the full cadence
-                source.last_scraped = source.duplicate_retry_last_scraped()
-                source.last_scrape_status = 'duplicate'
-                logger.info('Duplicate for %s — retry scheduled in %s hours',
-                            source.name, source._RETRY_HOURS.get(source.frequency, 48))
+                # No new content — increment retry counter and check limit
+                source.consecutive_duplicates = (source.consecutive_duplicates or 0) + 1
+                max_retries = source._MAX_RETRIES.get(source.frequency, 4)
+                retry_h = source._RETRY_HOURS.get(source.frequency, 24)
+
+                if source.consecutive_duplicates >= max_retries:
+                    source.scrape_blocked = True
+                    source.last_scrape_status = 'blocked'
+                    logger.error(
+                        'SOURCE BLOCKED: %s — no new content after %d attempts. '
+                        'Manual scrape required to resume automation.',
+                        source.name, source.consecutive_duplicates,
+                    )
+                else:
+                    source.last_scrape_status = 'duplicate' if no_new_count else 'failed'
+                    logger.info(
+                        'No new content for %s — retry in %dh (attempt %d/%d)',
+                        source.name, retry_h,
+                        source.consecutive_duplicates, max_retries,
+                    )
+
             db.session.commit()
 
 
@@ -121,12 +153,27 @@ def start_scheduler(app):
     if _scheduler and _scheduler.running:
         return
     _scheduler = BackgroundScheduler(daemon=True)
+
+    # Primary scrape: 2 PM EST = 19:00 UTC, Mon–Fri
     _scheduler.add_job(
         func=_run_scheduled_scrape,
         args=[app],
-        trigger='interval',
-        hours=1,
-        id='market_scrape',
+        trigger='cron',
+        day_of_week='mon-fri',
+        hour=19,
+        minute=0,
+        id='market_scrape_pm',
+        replace_existing=True,
+    )
+    # Early check: 2 AM EST = 07:00 UTC, Mon–Fri (handles daily 12 h retries)
+    _scheduler.add_job(
+        func=_run_scheduled_scrape,
+        args=[app],
+        trigger='cron',
+        day_of_week='mon-fri',
+        hour=7,
+        minute=0,
+        id='market_scrape_am',
         replace_existing=True,
     )
     _scheduler.add_job(
@@ -140,7 +187,10 @@ def start_scheduler(app):
         replace_existing=True,
     )
     _scheduler.start()
-    logger.info('Scheduler started: scrape (hourly), consensus insights (weekly Sun 02:00 UTC)')
+    logger.info(
+        'Scheduler started: scrape (Mon–Fri 07:00 + 19:00 UTC), '
+        'consensus insights (weekly Sun 02:00 UTC)'
+    )
 
 
 def stop_scheduler():

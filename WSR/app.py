@@ -73,6 +73,8 @@ def _lazy_db_setup():
     _migrations = [
         'ALTER TABLE sources ADD COLUMN article_link_selector VARCHAR(300)',
         'ALTER TABLE sources ADD COLUMN article_link_text_filter VARCHAR(200)',
+        'ALTER TABLE sources ADD COLUMN consecutive_duplicates INTEGER DEFAULT 0',
+        'ALTER TABLE sources ADD COLUMN scrape_blocked BOOLEAN DEFAULT FALSE',
     ]
     for _sql in _migrations:
         try:
