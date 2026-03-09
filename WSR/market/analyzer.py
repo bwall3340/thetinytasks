@@ -215,7 +215,8 @@ def compute_consensus(analyses, lookback_days=90) -> dict | None:
     for a in recent:
         if a.unique_insights and a.article:
             source_name = a.article.source.name if a.article.source else 'Unknown'
-            date_str = a.processed_at.strftime('%b %d, %Y') if a.processed_at else ''
+            best_d = _best_article_date(a)
+            date_str = best_d.strftime('%b %d, %Y') if best_d else ''
             for insight in (a.unique_insights or [])[:2]:
                 unique_insights.append({
                     'insight': insight,

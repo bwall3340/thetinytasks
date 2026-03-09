@@ -457,6 +457,7 @@
             {% if recent_articles %}
             {% for article in recent_articles %}
             {% set outlook = article.analysis.market_outlook if article.analysis else 'none' %}
+            {% set display_date = article.published_at or article.scraped_at %}
             <div class="article-row">
                 <div class="article-dot dot-{{ outlook }}"></div>
                 <div>
@@ -464,7 +465,7 @@
                     <div class="article-meta">
                         {{ article.source.name if article.source else '?' }}
                         &nbsp;&middot;&nbsp;
-                        {{ article.scraped_at.strftime('%b %d, %Y') if article.scraped_at else '' }}
+                        {{ display_date.strftime('%b %d, %Y') if display_date else '' }}
                         {% if article.analysis %}
                         &nbsp;&middot;&nbsp; {{ article.analysis.market_outlook | capitalize }}
                         {% endif %}
