@@ -1250,13 +1250,34 @@ function interpolate(xs, ys, targetX) {
     return ys[lo] + t * (ys[hi] - ys[lo]);
 }
 
-function generateDates(startStr, endStr, freq) {
-    const start = new Date(startStr);
-    const end   = new Date(endStr);
-    const out = [new Date(start)];
-    const cur = new Date(start);
+function endOfMonth(d) {
+    // Last day of d's month
+    return new Date(d.getFullYear(), d.getMonth() + 1, 0);
+}
+function endOfQuarter(d) {
+    // Last day of the quarter containing d
+    const lastMonthOfQuarter = Math.floor(d.getMonth() / 3) * 3 + 2;
+    return new Date(d.getFullYear(), lastMonthOfQuarter + 1, 0);
+}
+function endOfYear(d) {
+    return new Date(d.getFullYear(), 11, 31);
+}
+function snapToEndOfPeriod(d, freq) {
+    if (freq === 'monthly')   return endOfMonth(d);
+    if (freq === 'quarterly') return endOfQuarter(d);
+    if (freq === 'annual')    return endOfYear(d);
+    return d; // weekly: keep exact date
+}
 
-    const freqMap = { monthly: [0,1], quarterly: [0,3], annual: [1,0], weekly: [0,0,7] };
+function generateDates(startStr, endStr, freq) {
+    const end = new Date(endStr);
+
+    // First date: end-of-period containing startStr
+    const startRaw = new Date(startStr);
+    const out = [snapToEndOfPeriod(new Date(startRaw), freq)];
+
+    // Anchor for stepping: always step from raw start so months don't drift
+    const cur = new Date(startRaw);
 
     while (true) {
         if (freq === 'monthly') {
@@ -1268,8 +1289,9 @@ function generateDates(startStr, endStr, freq) {
         } else if (freq === 'weekly') {
             cur.setDate(cur.getDate() + 7);
         }
-        if (cur > end) break;
-        out.push(new Date(cur));
+        const snapped = snapToEndOfPeriod(new Date(cur), freq);
+        if (snapped > end) break;
+        out.push(snapped);
     }
     return out;
 }
