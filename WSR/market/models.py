@@ -78,13 +78,18 @@ class Source(db.Model):
 
 class Article(db.Model):
     __tablename__ = 'articles'
+    # Duplicate detection is per-source: the same report from two different sources
+    # should both be stored. Within a single source, the same content is a duplicate.
+    __table_args__ = (
+        db.UniqueConstraint('source_id', 'content_hash', name='uq_article_source_hash'),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     source_id = db.Column(db.Integer, db.ForeignKey('sources.id'), nullable=False)
     url = db.Column(db.String(500))
     title = db.Column(db.String(500))
     raw_content = db.Column(db.Text)
-    content_hash = db.Column(db.String(64), unique=True, index=True)
+    content_hash = db.Column(db.String(64), index=True)  # uniqueness enforced per-source via __table_args__
     published_at = db.Column(db.DateTime)
     scraped_at = db.Column(db.DateTime, default=datetime.utcnow)
 

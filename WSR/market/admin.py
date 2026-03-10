@@ -198,7 +198,7 @@ def scrape_now(source_id):
                     first_error = result['error']
                 continue
 
-            existing = Article.query.filter_by(content_hash=result['content_hash']).first()
+            existing = Article.query.filter_by(source_id=source.id, content_hash=result['content_hash']).first()
             if existing:
                 existing.scraped_at = datetime.utcnow()  # mark as recently verified
                 duplicate_matches.append((existing, result['url']))
@@ -294,7 +294,7 @@ def force_scrape(source_id):
         for result in results:
             if not result['success']:
                 continue
-            existing = Article.query.filter_by(content_hash=result['content_hash']).first()
+            existing = Article.query.filter_by(source_id=source.id, content_hash=result['content_hash']).first()
             if existing:
                 continue
             article = Article(

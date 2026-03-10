@@ -75,6 +75,11 @@ def _lazy_db_setup():
         'ALTER TABLE sources ADD COLUMN article_link_text_filter VARCHAR(200)',
         'ALTER TABLE sources ADD COLUMN consecutive_duplicates INTEGER DEFAULT 0',
         'ALTER TABLE sources ADD COLUMN scrape_blocked BOOLEAN DEFAULT FALSE',
+        # Switch dedup from global content_hash to per-source (source_id, content_hash).
+        # Drop the old global unique constraint so articles from different sources with
+        # identical content are no longer incorrectly blocked as duplicates.
+        'ALTER TABLE articles DROP CONSTRAINT IF EXISTS articles_content_hash_key',
+        'CREATE UNIQUE INDEX IF NOT EXISTS uq_article_source_hash ON articles (source_id, content_hash)',
     ]
     for _sql in _migrations:
         try:

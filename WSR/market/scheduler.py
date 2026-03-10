@@ -51,7 +51,7 @@ def _run_scheduled_scrape(app):
                     no_new_count += 1
                     continue
 
-                existing = Article.query.filter_by(content_hash=result['content_hash']).first()
+                existing = Article.query.filter_by(source_id=source.id, content_hash=result['content_hash']).first()
                 if existing:
                     logger.debug('Duplicate for %s: %s', source.name, result['url'])
                     existing.scraped_at = datetime.utcnow()  # mark as recently verified
