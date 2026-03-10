@@ -536,13 +536,6 @@
                             <span class="range-val" id="hue-tolerance-val">25°</span>
                         </div>
                     </div>
-                    <div class="form-row">
-                        <label>Smoothing</label>
-                        <div class="range-row">
-                            <input type="range" id="smooth-window" min="1" max="20" value="5">
-                            <span class="range-val" id="smooth-window-val">5px</span>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Results -->
@@ -584,6 +577,23 @@
     </section>
 
 </main>
+
+<!-- Floating color picker cursor -->
+<div id="picker-cursor" style="
+    display:none; position:fixed; pointer-events:none; z-index:9999;
+    transform:translate(-50%,-50%);
+">
+    <svg width="40" height="40" viewBox="-20 -20 40 40">
+        <!-- crosshair lines -->
+        <line x1="-10" y1="0" x2="-3" y2="0" stroke="white" stroke-width="1.5"/>
+        <line x1="3"   y1="0" x2="10"  y2="0" stroke="white" stroke-width="1.5"/>
+        <line x1="0" y1="-10" x2="0" y2="-3" stroke="white" stroke-width="1.5"/>
+        <line x1="0"  y1="3"  x2="0" y2="10" stroke="white" stroke-width="1.5"/>
+        <!-- color ring -->
+        <circle id="picker-ring" cx="0" cy="0" r="8" fill="none" stroke="white" stroke-width="3"/>
+        <circle id="picker-ring-inner" cx="0" cy="0" r="8" fill="none" stroke="black" stroke-width="1"/>
+    </svg>
+</div>
 
 <script>
 // ─── PDF.js worker ───
@@ -644,11 +654,16 @@ function showStatus(el, msg, type) {
 }
 function hideStatus(el) { el.className = 'status-msg'; }
 
+const pickerCursor = document.getElementById('picker-cursor');
+const pickerRing   = document.getElementById('picker-ring');
+const pickerRingInner = document.getElementById('picker-ring-inner');
+
 function setMode(m) {
     state.mode = m;
     cropHint.classList.toggle('visible', m === 'crop');
     pickHint.classList.toggle('visible', m === 'pick');
-    interCanvas.style.cursor = m === 'crop' ? 'crosshair' : m === 'pick' ? 'eyedropper' : 'default';
+    interCanvas.style.cursor = m === 'crop' ? 'crosshair' : m === 'pick' ? 'none' : 'default';
+    if (m !== 'pick') pickerCursor.style.display = 'none';
     setCropBtn.classList.toggle('btn-primary', m === 'crop');
     setCropBtn.classList.toggle('btn-secondary', m !== 'crop');
     pickColorBtn.classList.toggle('btn-primary', m === 'pick');
@@ -909,6 +924,28 @@ interCanvas.addEventListener('mousemove', e => {
         cropDrag.currentY = (e.clientY - rect.top) * scale;
         drawInteraction();
     }
+    if (state.mode === 'pick') {
+        // Show floating color preview at cursor
+        pickerCursor.style.display = 'block';
+        pickerCursor.style.left = e.clientX + 'px';
+        pickerCursor.style.top  = e.clientY + 'px';
+        // Sample color under cursor in image space
+        const rect = interCanvas.getBoundingClientRect();
+        const scale = state.imgWidth / interCanvas.offsetWidth;
+        const px = Math.round((e.clientX - rect.left) * scale);
+        const py = Math.round((e.clientY - rect.top) * scale);
+        if (px >= 0 && py >= 0 && px < state.imgWidth && py < state.imgHeight) {
+            const pixel = chartCanvas.getContext('2d').getImageData(px, py, 1, 1).data;
+            const col = `rgb(${pixel[0]},${pixel[1]},${pixel[2]})`;
+            pickerRing.style.stroke = col;
+            pickerRingInner.style.stroke = col;
+            pickerRing.setAttribute('fill', col);
+        }
+    }
+});
+
+interCanvas.addEventListener('mouseleave', () => {
+    if (state.mode === 'pick') pickerCursor.style.display = 'none';
 });
 
 interCanvas.addEventListener('mouseup', e => {
@@ -1012,9 +1049,6 @@ pdfLoadBtn.addEventListener('click', async () => {
 document.getElementById('hue-tolerance').addEventListener('input', e => {
     document.getElementById('hue-tolerance-val').textContent = e.target.value + '°';
 });
-document.getElementById('smooth-window').addEventListener('input', e => {
-    document.getElementById('smooth-window-val').textContent = e.target.value + 'px';
-});
 
 // Reported stats validation
 ['reported-cagr','reported-vol'].forEach(id => {
@@ -1057,7 +1091,6 @@ function digitize() {
     const chartType = document.getElementById('chart-type').value;
     const lineStyle = document.getElementById('line-style').value;
     const hueTol = parseInt(document.getElementById('hue-tolerance').value);
-    const smoothW = parseInt(document.getElementById('smooth-window').value);
     const yMin = parseFloat(document.getElementById('y-min').value);
     const yMax = parseFloat(document.getElementById('y-max').value);
     const yScale = document.getElementById('y-scale').value;
@@ -1103,9 +1136,6 @@ function digitize() {
         return { error: 'Not enough line pixels found. Try adjusting the chart area, line color, or tolerance.' };
     }
 
-    // Smooth Y values
-    const smoothedY = gaussianSmooth(rawY, smoothW);
-
     // Generate date series
     const dates = generateDates(startDateStr, endDateStr, freq);
     if (dates.length < 2) return { error: 'Date range is too short or frequency produces fewer than 2 periods.' };
@@ -1113,16 +1143,22 @@ function digitize() {
     const startTs = new Date(startDateStr).getTime();
     const endTs   = new Date(endDateStr).getTime();
 
+    // Key fix: map dates to the DETECTED line's x-extent, not the full crop width.
+    // rawX[0] = first pixel where the line was detected → startDate
+    // rawX[last] = last detected pixel → endDate
+    const xLineStart = rawX[0];
+    const xLineEnd   = rawX[rawX.length - 1];
+
     // For each date, interpolate value
     const values = [];
     const overlayPoints = [];
 
     for (const d of dates) {
         const t = (d.getTime() - startTs) / (endTs - startTs);
-        const targetX = t * (W - 1);
+        const targetX = xLineStart + t * (xLineEnd - xLineStart);
 
-        // Interpolate y from rawX/smoothedY
-        let yPx = interpolate(rawX, smoothedY, targetX);
+        // Interpolate y from rawX/rawY (no smoothing — raw pixel accuracy)
+        let yPx = interpolate(rawX, rawY, targetX);
 
         // Map to value
         let value;
