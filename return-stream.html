@@ -905,42 +905,45 @@ function switchToUpload() {
     clearOverlayColor();
 }
 
+// ─── Coordinate helper: e.offsetX/Y → image pixel coords ───
+// Uses the bounding rect's actual rendered w/h for separate X and Y scales.
+// offsetX/offsetY are relative to the element itself (scroll-invariant),
+// avoiding the stale-rect issue when the canvas is inside a scrolled container.
+function eventToImageCoords(e) {
+    const rect = interCanvas.getBoundingClientRect();
+    const sx = state.imgWidth  / rect.width;
+    const sy = state.imgHeight / rect.height;
+    return {
+        x: Math.max(0, Math.min(state.imgWidth  - 1, Math.round(e.offsetX * sx))),
+        y: Math.max(0, Math.min(state.imgHeight - 1, Math.round(e.offsetY * sy))),
+    };
+}
+
 // ─── Mouse interaction on interCanvas ───
 interCanvas.addEventListener('mousedown', e => {
     if (state.mode === 'crop') {
-        const rect = interCanvas.getBoundingClientRect();
-        const scale = state.imgWidth / interCanvas.offsetWidth;
-        const x = (e.clientX - rect.left) * scale;
-        const y = (e.clientY - rect.top) * scale;
+        const { x, y } = eventToImageCoords(e);
         cropDrag = { active: true, startX: x, startY: y, currentX: x, currentY: y };
     }
 });
 
 interCanvas.addEventListener('mousemove', e => {
     if (state.mode === 'crop' && cropDrag.active) {
-        const rect = interCanvas.getBoundingClientRect();
-        const scale = state.imgWidth / interCanvas.offsetWidth;
-        cropDrag.currentX = (e.clientX - rect.left) * scale;
-        cropDrag.currentY = (e.clientY - rect.top) * scale;
+        const { x, y } = eventToImageCoords(e);
+        cropDrag.currentX = x;
+        cropDrag.currentY = y;
         drawInteraction();
     }
     if (state.mode === 'pick') {
-        // Show floating color preview at cursor
         pickerCursor.style.display = 'block';
         pickerCursor.style.left = e.clientX + 'px';
         pickerCursor.style.top  = e.clientY + 'px';
-        // Sample color under cursor in image space
-        const rect = interCanvas.getBoundingClientRect();
-        const scale = state.imgWidth / interCanvas.offsetWidth;
-        const px = Math.round((e.clientX - rect.left) * scale);
-        const py = Math.round((e.clientY - rect.top) * scale);
-        if (px >= 0 && py >= 0 && px < state.imgWidth && py < state.imgHeight) {
-            const pixel = chartCanvas.getContext('2d').getImageData(px, py, 1, 1).data;
-            const col = `rgb(${pixel[0]},${pixel[1]},${pixel[2]})`;
-            pickerRing.style.stroke = col;
-            pickerRingInner.style.stroke = col;
-            pickerRing.setAttribute('fill', col);
-        }
+        const { x: px, y: py } = eventToImageCoords(e);
+        const pixel = chartCanvas.getContext('2d').getImageData(px, py, 1, 1).data;
+        const col = `rgb(${pixel[0]},${pixel[1]},${pixel[2]})`;
+        pickerRing.style.stroke = col;
+        pickerRingInner.style.stroke = col;
+        pickerRing.setAttribute('fill', col);
     }
 });
 
@@ -950,20 +953,19 @@ interCanvas.addEventListener('mouseleave', () => {
 
 interCanvas.addEventListener('mouseup', e => {
     if (state.mode === 'crop' && cropDrag.active) {
-        const rect = interCanvas.getBoundingClientRect();
-        const scale = state.imgWidth / interCanvas.offsetWidth;
-        cropDrag.currentX = (e.clientX - rect.left) * scale;
-        cropDrag.currentY = (e.clientY - rect.top) * scale;
+        const { x, y } = eventToImageCoords(e);
+        cropDrag.currentX = x;
+        cropDrag.currentY = y;
         cropDrag.active = false;
 
         // Commit crop
-        const x = Math.max(0, Math.min(cropDrag.startX, cropDrag.currentX));
-        const y = Math.max(0, Math.min(cropDrag.startY, cropDrag.currentY));
+        const cx = Math.max(0, Math.min(cropDrag.startX, cropDrag.currentX));
+        const cy = Math.max(0, Math.min(cropDrag.startY, cropDrag.currentY));
         const w = Math.abs(cropDrag.currentX - cropDrag.startX);
         const h = Math.abs(cropDrag.currentY - cropDrag.startY);
         if (w > 10 && h > 10) {
             state.crop = {
-                x: Math.round(x), y: Math.round(y),
+                x: Math.round(cx), y: Math.round(cy),
                 w: Math.round(w), h: Math.round(h)
             };
             syncCropInputs();
@@ -977,10 +979,7 @@ interCanvas.addEventListener('mouseup', e => {
 
 interCanvas.addEventListener('click', e => {
     if (state.mode !== 'pick') return;
-    const rect = interCanvas.getBoundingClientRect();
-    const scale = state.imgWidth / interCanvas.offsetWidth;
-    const px = Math.round((e.clientX - rect.left) * scale);
-    const py = Math.round((e.clientY - rect.top) * scale);
+    const { x: px, y: py } = eventToImageCoords(e);
 
     const ctx = chartCanvas.getContext('2d');
     const pixel = ctx.getImageData(px, py, 1, 1).data;
