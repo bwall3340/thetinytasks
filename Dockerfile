@@ -18,6 +18,7 @@ COPY index.html /app/site/index.html
 COPY styles.css /app/site/styles.css
 COPY script.js /app/site/script.js
 COPY background-remover.html /app/site/background-remover.html
+COPY return-stream.html /app/site/return-stream.html
 COPY Sankey/ /app/site/Sankey/
 COPY WhiteBackgroundRemover/ /app/site/WhiteBackgroundRemover/
 

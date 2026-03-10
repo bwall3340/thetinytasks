@@ -305,6 +305,12 @@ class TinyTasksApp {
                 }, 500);
                 break;
 
+            case 'return-stream':
+                setTimeout(() => {
+                    window.location.href = './return-stream.html';
+                }, 500);
+                break;
+
             case 'market-outlook':
                 setTimeout(() => {
                     window.location.href = '/market';

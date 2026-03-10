@@ -260,6 +260,11 @@ def background_remover():
     return send_from_directory(SITE_DIR, 'background-remover.html')
 
 
+@app.route('/return-stream.html')
+def return_stream():
+    return send_from_directory(SITE_DIR, 'return-stream.html')
+
+
 @app.route('/Sankey/<path:filename>')
 def sankey_files(filename):
     return send_from_directory(os.path.join(SITE_DIR, 'Sankey'), filename)
