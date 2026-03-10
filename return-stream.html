@@ -1108,27 +1108,38 @@ function digitize() {
 
     const target = state.pickedColor;
 
-    // For each x column, find y position of the line
+    if (!target) {
+        showStatus(canvasStatus,
+            'Tip: for best accuracy, click "Pick Line Color" and click directly on the line before tracing.',
+            'status-info');
+    }
+
+    // For each x column find the y position of the line.
+    // Strategy: find the pixel with the HIGHEST color score (saturation × hue closeness).
+    // This selects the purest/core pixel of the line, ignoring anti-aliased fringe pixels
+    // below the line and avoiding the downward median bias when multiple lines are present.
     const rawX = [], rawY = [];
     for (let col = 0; col < W; col++) {
-        const rowsHit = [];
+        let bestScore = 0, bestRow = -1, topHit = -1;
         for (let row = 0; row < H; row++) {
             const i = (row * W + col) * 4;
             const r = data[i], g = data[i+1], b = data[i+2];
-            if (isLinePixel(r, g, b, target, hueTol)) {
-                rowsHit.push(row);
-            }
-        }
-        if (rowsHit.length > 0) {
-            let yVal;
-            if (lineStyle === 'area') {
-                yVal = rowsHit[0]; // top edge
+            if (!isLinePixel(r, g, b, target, hueTol)) continue;
+            if (topHit < 0) topHit = row; // track topmost hit for filled-area mode
+            const [h, s] = rgbToHsv(r, g, b);
+            let score;
+            if (target) {
+                // Score = saturation × closeness to picked hue
+                let diff = Math.abs(h - target.h);
+                if (diff > 180) diff = 360 - diff;
+                score = s * Math.max(0, 1 - diff / hueTol);
             } else {
-                yVal = rowsHit[Math.floor(rowsHit.length / 2)]; // center
+                score = s; // auto: prefer most saturated pixel
             }
-            rawX.push(col);
-            rawY.push(yVal);
+            if (score > bestScore) { bestScore = score; bestRow = row; }
         }
+        const yVal = lineStyle === 'area' ? topHit : bestRow;
+        if (yVal >= 0) { rawX.push(col); rawY.push(yVal); }
     }
 
     if (rawX.length < 4) {
