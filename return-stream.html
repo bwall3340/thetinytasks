@@ -133,26 +133,28 @@
             background: var(--surface); flex-shrink: 0;
         }
         .chart-canvas-wrap {
-            flex: 1; overflow: auto; padding: 16px;
+            flex: 1 1 0; overflow-x: hidden; overflow-y: auto; padding: 16px;
             display: flex; align-items: flex-start; justify-content: center;
+            min-width: 0;
         }
         .canvas-stack {
             position: relative; display: inline-block;
             max-width: 100%; cursor: crosshair;
+            /* shrink-wrap to chart-canvas, but never exceed wrap width */
         }
         #chart-canvas {
-            display: block; max-width: 100%;
+            display: block; max-width: 100%; height: auto;
             border: 1px solid var(--border); border-radius: 6px;
         }
         #overlay-canvas {
             position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
             pointer-events: none; border-radius: 6px;
-            max-width: 100%; height: auto;
         }
         #interaction-canvas {
             position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
             border-radius: 6px;
-            max-width: 100%; height: auto;
         }
 
         /* ── Config Panel ── */
@@ -723,14 +725,14 @@ function drawImageToCanvas(img) {
     interCanvas.width  = state.imgWidth;
     interCanvas.height = state.imgHeight;
 
-    // Style width capped to container
-    const maxW = Math.min(state.imgWidth, 1400);
-    chartCanvas.style.width  = maxW + 'px';
+    // CSS handles display sizing via max-width:100%; only set intrinsic hint for chart-canvas
+    chartCanvas.style.width  = state.imgWidth + 'px';
     chartCanvas.style.height = 'auto';
-    overlayCanvas.style.width  = maxW + 'px';
-    overlayCanvas.style.height = 'auto';
-    interCanvas.style.width  = maxW + 'px';
-    interCanvas.style.height = 'auto';
+    // overlay and interaction canvases fill the stack via CSS width/height:100%
+    overlayCanvas.style.width  = '';
+    overlayCanvas.style.height = '';
+    interCanvas.style.width  = '';
+    interCanvas.style.height = '';
 
     const ctx = chartCanvas.getContext('2d');
     ctx.drawImage(img, 0, 0);
