@@ -1195,7 +1195,7 @@ function digitize() {
     const returns = computeReturns(values, chartType);
 
     // Format dates as strings
-    const dateStrs = dates.map(d => d.toISOString().slice(0, 10));
+    const dateStrs = dates.map(d => fmtDate(d));
 
     return { dates: dateStrs, values, returns, overlayPoints };
 }
@@ -1250,6 +1250,14 @@ function interpolate(xs, ys, targetX) {
     return ys[lo] + t * (ys[hi] - ys[lo]);
 }
 
+function fmtDate(d) {
+    // Format as YYYY-MM-DD using local time (toISOString() shifts UTC and can change the day)
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
 function endOfMonth(d) {
     // Last day of d's month
     return new Date(d.getFullYear(), d.getMonth() + 1, 0);
@@ -1270,28 +1278,36 @@ function snapToEndOfPeriod(d, freq) {
 }
 
 function generateDates(startStr, endStr, freq) {
-    const end = new Date(endStr);
+    // Parse as local date (avoid UTC-offset day shift)
+    const [sy, sm, sd] = startStr.split('-').map(Number);
+    const [ey, em, ed] = endStr.split('-').map(Number);
+    const end = new Date(ey, em - 1, ed);
 
-    // First date: end-of-period containing startStr
-    const startRaw = new Date(startStr);
-    const out = [snapToEndOfPeriod(new Date(startRaw), freq)];
+    // Anchor cursor to the 1st of the period so month addition never overflows
+    // (e.g. Jan 30 + 1 month = Feb 30 → March 2, breaking February entirely)
+    let curY = sy, curM = sm - 1; // 0-indexed month
 
-    // Anchor for stepping: always step from raw start so months don't drift
-    const cur = new Date(startRaw);
-
+    const out = [];
     while (true) {
-        if (freq === 'monthly') {
-            cur.setMonth(cur.getMonth() + 1);
-        } else if (freq === 'quarterly') {
-            cur.setMonth(cur.getMonth() + 3);
-        } else if (freq === 'annual') {
-            cur.setFullYear(cur.getFullYear() + 1);
-        } else if (freq === 'weekly') {
-            cur.setDate(cur.getDate() + 7);
-        }
-        const snapped = snapToEndOfPeriod(new Date(cur), freq);
+        const snapped = snapToEndOfPeriod(new Date(curY, curM, 1), freq);
         if (snapped > end) break;
         out.push(snapped);
+        if (freq === 'monthly') {
+            curM += 1;
+        } else if (freq === 'quarterly') {
+            curM += 3;
+        } else if (freq === 'annual') {
+            curY += 1;
+        } else if (freq === 'weekly') {
+            // weekly: step from last snapped date, no overflow risk
+            const next = new Date(out[out.length - 1]);
+            next.setDate(next.getDate() + 7);
+            if (next > end) break;
+            out.push(next);
+            continue;
+        }
+        // Normalize month overflow (e.g. month 13 → Jan next year)
+        if (curM > 11) { curY += Math.floor(curM / 12); curM = curM % 12; }
     }
     return out;
 }
@@ -1511,8 +1527,8 @@ downloadBtn.addEventListener('click', () => {
     const today = new Date();
     const fiveYearsAgo = new Date(today);
     fiveYearsAgo.setFullYear(today.getFullYear() - 5);
-    document.getElementById('end-date').value = today.toISOString().slice(0,10);
-    document.getElementById('start-date').value = fiveYearsAgo.toISOString().slice(0,10);
+    document.getElementById('end-date').value = fmtDate(today);
+    document.getElementById('start-date').value = fmtDate(fiveYearsAgo);
 })();
 </script>
 </body>
