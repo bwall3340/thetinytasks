@@ -1118,17 +1118,34 @@ function renderKnownStats() {
     const list = document.getElementById('known-stat-list');
     list.innerHTML = '';
     state.knownStats.forEach(s => {
-        const computed = state.result ? computeStatValue(s.type, s.year) : null;
         let resultHtml = '<span style="color:var(--text-muted);font-size:11px;">— run trace to compare</span>';
-        if (computed !== null) {
-            const diff = Math.abs(computed * 100 - s.reported);
-            const isAnn = ['3yr','5yr','10yr','inception'].includes(s.type);
-            const tightTol = isAnn ? 0.5 : 1.0;
-            const looseTol = isAnn ? 1.5 : 2.5;
-            const cls = diff <= tightTol ? 'known-stat-match' : diff <= looseTol ? 'known-stat-close' : 'known-stat-miss';
-            const icon = diff <= tightTol ? '✓' : diff <= looseTol ? '~' : '✗';
-            resultHtml = `<span class="${cls}">${icon} ${(computed*100).toFixed(2)}% (Δ${diff.toFixed(2)}%)</span>`;
+
+        if (state.result) {
+            const wasCalibrated = s.type === 'cal_year';
+            const rawDiff = state.result.rawDeviations?.[s.id]; // how far raw trace was off
+
+            if (wasCalibrated && rawDiff != null) {
+                // Cal year: calibrated to match exactly — indicator shows raw trace quality
+                const isAnn = false;
+                const tightTol = 1.0, looseTol = 2.5;
+                const cls  = rawDiff <= tightTol ? 'known-stat-match' : rawDiff <= looseTol ? 'known-stat-close' : 'known-stat-miss';
+                const icon = rawDiff <= tightTol ? '✓' : rawDiff <= looseTol ? '~' : '✗';
+                resultHtml = `<span class="${cls}">${icon} calibrated (trace Δ${rawDiff.toFixed(2)}%)</span>`;
+            } else {
+                // Non-calibrated stat: show computed vs reported from current (calibrated) output
+                const computed = computeStatValue(s.type, s.year);
+                if (computed !== null) {
+                    const diff = Math.abs(computed * 100 - s.reported);
+                    const isAnn = ['3yr','5yr','10yr','inception'].includes(s.type);
+                    const tightTol = isAnn ? 0.5 : 1.0;
+                    const looseTol = isAnn ? 1.5 : 2.5;
+                    const cls  = diff <= tightTol ? 'known-stat-match' : diff <= looseTol ? 'known-stat-close' : 'known-stat-miss';
+                    const icon = diff <= tightTol ? '✓' : diff <= looseTol ? '~' : '✗';
+                    resultHtml = `<span class="${cls}">${icon} ${(computed*100).toFixed(2)}% (Δ${diff.toFixed(2)}%)</span>`;
+                }
+            }
         }
+
         list.insertAdjacentHTML('beforeend', `
             <div class="known-stat-item" data-id="${s.id}">
                 <span class="known-stat-label">${statLabel(s.type, s.year)}</span>
@@ -1301,13 +1318,148 @@ function digitize() {
         }
     }
 
+    // Convert dates to strings now (needed for calibration helpers)
+    const dateStrs = dates.map(d => fmtDate(d));
+
+    // Store the raw pixel-mapped values before any calibration
+    const rawValues = values.slice();
+
+    // Apply calendar-year calibration if any cal_year stats are entered
+    const calStatsForCal = (state.knownStats || []).filter(s => s.type === 'cal_year');
+    if (calStatsForCal.length > 0) {
+        const calibrated = calibrateToCalYears(rawValues, dateStrs, freq,
+            knownStart !== null ? knownStart : rawValues[0]);
+        for (let i = 0; i < values.length; i++) values[i] = calibrated[i];
+    }
+
+    // Record how far the raw trace was from each reported stat (for indicator display)
+    const rawDeviations = {};
+    for (const stat of (state.knownStats || [])) {
+        const rawComp = computeStatFromValues(stat.type, stat.year, rawValues, dateStrs, freq, chartType);
+        if (rawComp !== null) rawDeviations[stat.id] = Math.abs(rawComp * 100 - stat.reported);
+    }
+
     // Compute returns
     const returns = computeReturns(values, chartType);
 
-    // Format dates as strings
-    const dateStrs = dates.map(d => fmtDate(d));
+    return { dates: dateStrs, values, returns, overlayPoints, rawDeviations };
+}
 
-    return { dates: dateStrs, values, returns, overlayPoints };
+// ─── Calendar-year piecewise calibration ───
+// Scales the value series so each known calendar year return matches exactly.
+// Within each year segment, log-linear interpolation preserves the shape of the curve.
+function calibrateToCalYears(rawValues, dateStrs, freq, initialAnchorVal) {
+    const calStats = (state.knownStats || [])
+        .filter(s => s.type === 'cal_year')
+        .sort((a, b) => a.year - b.year);
+    if (calStats.length === 0) return rawValues.slice();
+
+    const n = rawValues.length;
+    const calibrated = rawValues.slice();
+    let anchorIdx = 0;
+    let anchorVal = initialAnchorVal != null ? initialAnchorVal : rawValues[0];
+
+    for (const stat of calStats) {
+        let yearStartIdx = -1, yearEndIdx = -1;
+        for (let i = 0; i < n; i++) {
+            const y = parseDateStr(dateStrs[i]).getFullYear();
+            if (y === stat.year) {
+                if (yearStartIdx < 0) yearStartIdx = i;
+                yearEndIdx = i;
+            }
+        }
+        if (yearEndIdx < 0) continue;
+
+        // Base = last period before this year
+        const baseIdx = yearStartIdx > 0 ? yearStartIdx - 1 : 0;
+
+        // Scale any gap between current anchor and the base proportionally (raw shape preserved)
+        if (baseIdx > anchorIdx && rawValues[anchorIdx] > 0) {
+            const gapScale = anchorVal / rawValues[anchorIdx];
+            for (let i = anchorIdx + 1; i <= baseIdx; i++) {
+                calibrated[i] = rawValues[i] * gapScale;
+            }
+            anchorVal = calibrated[baseIdx];
+            anchorIdx = baseIdx;
+        }
+
+        const baseVal = anchorVal;
+        const targetEndVal = baseVal * (1 + stat.reported / 100);
+        const rawBase = rawValues[anchorIdx];
+        const rawEnd  = rawValues[yearEndIdx];
+
+        // Scale [anchorIdx, yearEndIdx] log-linearly so endpoint hits targetEndVal
+        for (let i = anchorIdx; i <= yearEndIdx; i++) {
+            if (rawBase > 0 && rawEnd > 0 && Math.abs(Math.log(rawEnd / rawBase)) > 1e-10) {
+                const t = Math.log(rawValues[i] / rawBase) / Math.log(rawEnd / rawBase);
+                calibrated[i] = baseVal * Math.pow(targetEndVal / baseVal, t);
+            } else {
+                // Flat raw segment — linear index interpolation
+                const t = (i - anchorIdx) / Math.max(1, yearEndIdx - anchorIdx);
+                calibrated[i] = baseVal + t * (targetEndVal - baseVal);
+            }
+        }
+
+        anchorIdx = yearEndIdx;
+        anchorVal = targetEndVal;
+    }
+
+    // Proportionally scale any tail after the last calibrated year
+    if (anchorIdx < n - 1 && rawValues[anchorIdx] > 0) {
+        const tailScale = anchorVal / rawValues[anchorIdx];
+        for (let i = anchorIdx + 1; i < n; i++) calibrated[i] = rawValues[i] * tailScale;
+    }
+
+    return calibrated;
+}
+
+// ─── Compute a stat directly from a value series (for raw-deviation measurement) ───
+function computeStatFromValues(type, year, values, dateStrs, freq, chartType) {
+    const n = values.length;
+    if (n < 2) return null;
+    const ppy = { monthly: 12, quarterly: 4, annual: 1, weekly: 52 }[freq] || 12;
+
+    // Derive period returns from the value series
+    const rets = [null];
+    for (let k = 1; k < n; k++) {
+        let r;
+        if (chartType === 'growth_of_dollar')  r = values[k] / values[k-1] - 1;
+        else if (chartType === 'cumulative_pct') r = (1 + values[k]/100) / (1 + values[k-1]/100) - 1;
+        else r = values[k] / 100;
+        rets.push(r);
+    }
+
+    function compound(s, e) {
+        let nav = 1;
+        for (let k = s + 1; k <= e; k++) if (rets[k] !== null) nav *= (1 + rets[k]);
+        return nav - 1;
+    }
+    function ann(r, yrs) { return yrs > 0 ? Math.pow(1 + r, 1 / yrs) - 1 : null; }
+
+    const lastIdx = n - 1;
+    const lastDate = parseDateStr(dateStrs[lastIdx]);
+
+    if (type === 'ytd') {
+        const curYear = lastDate.getFullYear();
+        let baseIdx = -1;
+        for (let i = 0; i < n; i++) if (parseDateStr(dateStrs[i]).getFullYear() < curYear) baseIdx = i;
+        return baseIdx < 0 ? null : compound(baseIdx, lastIdx);
+    }
+    if (type === 'cal_year') {
+        let si = -1, ei = -1;
+        for (let i = 0; i < n; i++) {
+            if (parseDateStr(dateStrs[i]).getFullYear() === year) { if (si < 0) si = i; ei = i; }
+        }
+        if (si < 0) return null;
+        return si > 0 ? compound(si - 1, ei) : compound(si, ei);
+    }
+    if (type === 'inception') return ann(compound(0, lastIdx), (n - 1) / ppy);
+    const trYears = { '1yr': 1, '3yr': 3, '5yr': 5, '10yr': 10 };
+    if (trYears[type]) {
+        const si = lastIdx - Math.round(trYears[type] * ppy);
+        return si < 0 ? null : ann(compound(si, lastIdx), (lastIdx - si) / ppy);
+    }
+    return null;
 }
 
 function isLinePixel(r, g, b, target, hueTol) {
