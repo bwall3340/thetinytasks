@@ -513,6 +513,17 @@
                             <option value="period_pct">Period Return % (bar chart)</option>
                         </select>
                     </div>
+                    <div class="form-row-inline">
+                        <div class="form-row">
+                            <label>Known Start Value <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>
+                            <input type="number" id="known-start-value" placeholder="e.g. 1000000" step="any">
+                        </div>
+                        <div class="form-row">
+                            <label>Known End Value <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>
+                            <input type="number" id="known-end-value" placeholder="e.g. 2470000" step="any">
+                        </div>
+                    </div>
+                    <p style="font-size:11px;color:var(--text-muted);margin:4px 0 0;">If provided, the detected value series is anchored to these endpoints, correcting Y-axis drift.</p>
                 </div>
 
                 <!-- Line Detection -->
@@ -1189,6 +1200,31 @@ function digitize() {
             x: crop.x + targetX,
             y: crop.y + yPx
         });
+    }
+
+    // Optional anchoring: rescale value series to match known start/end values
+    const knownStartRaw = document.getElementById('known-start-value').value;
+    const knownEndRaw   = document.getElementById('known-end-value').value;
+    const knownStart = knownStartRaw !== '' ? parseFloat(knownStartRaw) : null;
+    const knownEnd   = knownEndRaw   !== '' ? parseFloat(knownEndRaw)   : null;
+
+    if (knownStart !== null || knownEnd !== null) {
+        const detectedStart = values[0];
+        const detectedEnd   = values[values.length - 1];
+        const anchorStart   = knownStart !== null ? knownStart : detectedStart;
+        const anchorEnd     = knownEnd   !== null ? knownEnd   : detectedEnd;
+
+        if (detectedEnd !== detectedStart) {
+            // Linear rescale: map [detectedStart, detectedEnd] → [anchorStart, anchorEnd]
+            const scale = (anchorEnd - anchorStart) / (detectedEnd - detectedStart);
+            for (let i = 0; i < values.length; i++) {
+                values[i] = anchorStart + (values[i] - detectedStart) * scale;
+            }
+        } else if (knownStart !== null) {
+            // All values identical — just shift to anchor start
+            const shift = anchorStart - detectedStart;
+            for (let i = 0; i < values.length; i++) values[i] += shift;
+        }
     }
 
     // Compute returns
