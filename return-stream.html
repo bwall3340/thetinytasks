@@ -298,14 +298,29 @@
         .validation-section {
             padding: 14px 16px;
         }
-        .validation-row {
-            display: grid; grid-template-columns: 1fr auto 1fr; gap: 6px;
-            align-items: center; margin-bottom: 6px; font-size: 12px;
+        .add-stat-row {
+            display: flex; gap: 6px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;
         }
-        .validation-label { color: var(--text-muted); }
-        .validation-sep { color: var(--border-strong); }
-        .validation-match { color: var(--green-light); font-weight: 600; }
-        .validation-miss { color: var(--amber); font-weight: 600; }
+        .add-stat-row select { flex: 2; min-width: 120px; }
+        .add-stat-row .stat-year-input { flex: 0 0 68px; }
+        .add-stat-row .stat-val-input  { flex: 1; min-width: 80px; }
+        .known-stat-list { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+        .known-stat-item {
+            display: flex; align-items: center; gap: 6px; font-size: 12px;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--radius-sm); padding: 6px 10px;
+        }
+        .known-stat-label { flex: 1; color: var(--text-muted); font-weight: 500; }
+        .known-stat-reported { color: var(--text); min-width: 52px; text-align: right; }
+        .known-stat-result { min-width: 130px; text-align: right; }
+        .known-stat-match { color: var(--green-light); font-weight: 600; }
+        .known-stat-close  { color: var(--amber); font-weight: 600; }
+        .known-stat-miss   { color: var(--red-light); font-weight: 600; }
+        .known-stat-remove {
+            background: none; border: none; color: var(--text-muted);
+            cursor: pointer; font-size: 14px; padding: 0 2px; line-height: 1;
+        }
+        .known-stat-remove:hover { color: var(--red-light); }
 
         /* ── Tooltip ── */
         .tooltip-wrap { position: relative; display: inline-flex; }
@@ -572,18 +587,24 @@
                 </div>
 
                 <!-- Validation -->
-                <div class="validation-section" id="validation-section" style="display:none;">
+                <div class="validation-section" id="validation-section">
                     <div class="config-section-title" style="margin-bottom:10px;">Validate Against Reported Stats</div>
-                    <div class="form-row-inline">
-                        <div class="form-row">
-                            <label>Reported CAGR (%)</label>
-                            <input type="number" id="reported-cagr" placeholder="e.g. 12.5" step="0.01">
-                        </div>
-                        <div class="form-row">
-                            <label>Reported Vol (%)</label>
-                            <input type="number" id="reported-vol" placeholder="e.g. 15.2" step="0.01">
-                        </div>
+                    <p style="font-size:11px;color:var(--text-muted);margin:0 0 10px;">Add known stats from the fact sheet (YTD, trailing periods, calendar years). After tracing, each entry shows reported vs computed.</p>
+                    <div class="add-stat-row">
+                        <select id="stat-type-select">
+                            <option value="ytd">YTD</option>
+                            <option value="1yr">1 Year</option>
+                            <option value="3yr">3 Year (Ann.)</option>
+                            <option value="5yr">5 Year (Ann.)</option>
+                            <option value="10yr">10 Year (Ann.)</option>
+                            <option value="inception">Since Inception</option>
+                            <option value="cal_year">Calendar Year</option>
+                        </select>
+                        <input type="number" id="stat-year-input" class="stat-year-input" placeholder="Year" min="1990" max="2099" step="1" style="display:none;">
+                        <input type="number" id="stat-val-input" class="stat-val-input" placeholder="Return %" step="0.01">
+                        <button class="btn btn-secondary btn-sm" id="add-stat-btn">+ Add</button>
                     </div>
+                    <div class="known-stat-list" id="known-stat-list"></div>
                     <div id="validation-output"></div>
                 </div>
 
@@ -656,7 +677,6 @@ const colorLabel      = document.getElementById('color-label');
 const cropHint        = document.getElementById('crop-hint');
 const pickHint        = document.getElementById('pick-hint');
 const resultsSection  = document.getElementById('results-section');
-const validationSec   = document.getElementById('validation-section');
 const pdfPageBar      = document.getElementById('pdf-page-bar');
 const pdfPageInput    = document.getElementById('pdf-page-input');
 const pdfPageCount    = document.getElementById('pdf-page-count');
@@ -1064,12 +1084,66 @@ document.getElementById('hue-tolerance').addEventListener('input', e => {
     document.getElementById('hue-tolerance-val').textContent = e.target.value + '°';
 });
 
-// Reported stats validation
-['reported-cagr','reported-vol'].forEach(id => {
-    document.getElementById(id).addEventListener('input', () => {
-        if (state.result) computeValidation();
-    });
+// ─── Known stats list ───
+state.knownStats = [];
+
+document.getElementById('stat-type-select').addEventListener('change', e => {
+    document.getElementById('stat-year-input').style.display =
+        e.target.value === 'cal_year' ? 'block' : 'none';
 });
+
+document.getElementById('add-stat-btn').addEventListener('click', () => {
+    const type     = document.getElementById('stat-type-select').value;
+    const yearRaw  = document.getElementById('stat-year-input').value;
+    const valRaw   = document.getElementById('stat-val-input').value;
+    if (valRaw === '') return;
+    const year     = type === 'cal_year' ? parseInt(yearRaw) : null;
+    if (type === 'cal_year' && (!year || isNaN(year))) return;
+    const reported = parseFloat(valRaw);
+    if (isNaN(reported)) return;
+    state.knownStats.push({ id: Date.now(), type, year, reported });
+    document.getElementById('stat-val-input').value = '';
+    renderKnownStats();
+    if (state.result) computeValidation();
+});
+
+function statLabel(type, year) {
+    const map = { ytd: 'YTD', '1yr': '1 Year', '3yr': '3 Year (Ann.)',
+                  '5yr': '5 Year (Ann.)', '10yr': '10 Year (Ann.)',
+                  inception: 'Since Inception', cal_year: `${year}` };
+    return map[type] || type;
+}
+
+function renderKnownStats() {
+    const list = document.getElementById('known-stat-list');
+    list.innerHTML = '';
+    state.knownStats.forEach(s => {
+        const computed = state.result ? computeStatValue(s.type, s.year) : null;
+        let resultHtml = '<span style="color:var(--text-muted);font-size:11px;">— run trace to compare</span>';
+        if (computed !== null) {
+            const diff = Math.abs(computed * 100 - s.reported);
+            const isAnn = ['3yr','5yr','10yr','inception'].includes(s.type);
+            const tightTol = isAnn ? 0.5 : 1.0;
+            const looseTol = isAnn ? 1.5 : 2.5;
+            const cls = diff <= tightTol ? 'known-stat-match' : diff <= looseTol ? 'known-stat-close' : 'known-stat-miss';
+            const icon = diff <= tightTol ? '✓' : diff <= looseTol ? '~' : '✗';
+            resultHtml = `<span class="${cls}">${icon} ${(computed*100).toFixed(2)}% (Δ${diff.toFixed(2)}%)</span>`;
+        }
+        list.insertAdjacentHTML('beforeend', `
+            <div class="known-stat-item" data-id="${s.id}">
+                <span class="known-stat-label">${statLabel(s.type, s.year)}</span>
+                <span class="known-stat-reported">${s.reported.toFixed(2)}%</span>
+                <span class="known-stat-result">${resultHtml}</span>
+                <button class="known-stat-remove" data-id="${s.id}" title="Remove">×</button>
+            </div>`);
+    });
+    list.querySelectorAll('.known-stat-remove').forEach(btn => {
+        btn.addEventListener('click', () => {
+            state.knownStats = state.knownStats.filter(s => s.id !== parseInt(btn.dataset.id));
+            renderKnownStats();
+        });
+    });
+}
 
 // ─── Core digitization ───
 traceBtn.addEventListener('click', () => {
@@ -1370,7 +1444,6 @@ function computeReturns(values, chartType) {
 function showResults(result) {
     const { dates, values, returns } = result;
     resultsSection.classList.add('visible');
-    validationSec.style.display = 'block';
 
     // Stats
     const rets = returns.filter(r => r !== null);
@@ -1486,53 +1559,93 @@ function computeMaxDrawdown(values, chartType) {
     return mdd;
 }
 
+function parseDateStr(s) {
+    const [y, m, d] = s.split('-').map(Number);
+    return new Date(y, m - 1, d);
+}
+
+function computeStatValue(type, year) {
+    if (!state.result) return null;
+    const { dates, returns } = state.result;
+    const freq = document.getElementById('frequency').value;
+    const freqPerYear = { monthly: 12, quarterly: 4, annual: 1, weekly: 52 };
+    const ppy = freqPerYear[freq] || 12;
+    const n = dates.length;
+    if (n < 2) return null;
+
+    // Compound returns[startIdx+1 .. endIdx] (return[i] = return FOR period ending at dates[i])
+    function compound(startIdx, endIdx) {
+        let nav = 1;
+        for (let k = startIdx + 1; k <= endIdx; k++) {
+            if (returns[k] !== null) nav *= (1 + returns[k]);
+        }
+        return nav - 1;
+    }
+    function annualize(r, years) {
+        return years > 0 ? Math.pow(1 + r, 1 / years) - 1 : null;
+    }
+
+    const lastIdx = n - 1;
+    const lastDate = parseDateStr(dates[lastIdx]);
+
+    if (type === 'ytd') {
+        // Base = last period ending before current year
+        const curYear = lastDate.getFullYear();
+        let baseIdx = -1;
+        for (let i = 0; i < n; i++) {
+            if (parseDateStr(dates[i]).getFullYear() < curYear) baseIdx = i;
+        }
+        if (baseIdx < 0) return null;
+        return compound(baseIdx, lastIdx);
+    }
+
+    if (type === 'cal_year') {
+        // Find periods whose date falls in the given year
+        let startIdx = -1, endIdx = -1;
+        for (let i = 0; i < n; i++) {
+            if (parseDateStr(dates[i]).getFullYear() === year) {
+                if (startIdx < 0) startIdx = i;
+                endIdx = i;
+            }
+        }
+        if (startIdx < 0) return null;
+        // Base = last period before the year
+        const baseIdx = startIdx - 1;
+        return baseIdx >= 0 ? compound(baseIdx, endIdx) : compound(startIdx, endIdx);
+    }
+
+    if (type === 'inception') {
+        const total = compound(0, lastIdx);
+        return annualize(total, (n - 1) / ppy);
+    }
+
+    const trailingYears = { '1yr': 1, '3yr': 3, '5yr': 5, '10yr': 10 };
+    if (trailingYears[type]) {
+        const yrs = trailingYears[type];
+        const periodsBack = Math.round(yrs * ppy);
+        const startIdx = lastIdx - periodsBack;
+        if (startIdx < 0) return null;
+        const actualYears = (lastIdx - startIdx) / ppy;
+        return annualize(compound(startIdx, lastIdx), actualYears);
+    }
+
+    return null;
+}
+
 function computeValidation() {
     if (!state.result) return;
-    const cagr = computeCAGR(state.result.values, document.getElementById('frequency').value);
-    const rets = state.result.returns.filter(r => r !== null);
-    const vol  = computeVol(rets, document.getElementById('frequency').value);
-
-    const reportedCagr = parseFloat(document.getElementById('reported-cagr').value);
-    const reportedVol  = parseFloat(document.getElementById('reported-vol').value);
-    const out = document.getElementById('validation-output');
-    out.innerHTML = '';
-
-    if (!isNaN(reportedCagr)) {
-        const computed = (cagr * 100).toFixed(2);
-        const diff = Math.abs(cagr * 100 - reportedCagr);
-        const cls = diff < 1.5 ? 'validation-match' : 'validation-miss';
-        out.insertAdjacentHTML('beforeend', `
-            <div class="validation-row">
-                <span class="validation-label">Reported CAGR</span>
-                <span class="validation-sep">→</span>
-                <span class="${cls}">${reportedCagr.toFixed(2)}% vs ${computed}% (Δ${diff.toFixed(2)}%)</span>
-            </div>`);
-    }
-    if (!isNaN(reportedVol)) {
-        const computed = (vol * 100).toFixed(2);
-        const diff = Math.abs(vol * 100 - reportedVol);
-        const cls = diff < 2.0 ? 'validation-match' : 'validation-miss';
-        out.insertAdjacentHTML('beforeend', `
-            <div class="validation-row">
-                <span class="validation-label">Reported Vol</span>
-                <span class="validation-sep">→</span>
-                <span class="${cls}">${reportedVol.toFixed(2)}% vs ${computed}% (Δ${diff.toFixed(2)}%)</span>
-            </div>`);
-    }
-    if (out.innerHTML === '') {
-        out.innerHTML = '<div style="font-size:11px;color:var(--text-muted);">Enter reported statistics above to compare with digitized output.</div>';
-    }
+    renderKnownStats(); // re-render with computed values
 }
 
 function resetResults() {
     resultsSection.classList.remove('visible');
-    validationSec.style.display = 'none';
     if (state.returnChart) { state.returnChart.destroy(); state.returnChart = null; }
     document.getElementById('stats-grid').innerHTML = '';
     document.getElementById('data-tbody').innerHTML = '';
     document.getElementById('validation-output').innerHTML = '';
     state.result = null;
     downloadBtn.disabled = true;
+    renderKnownStats(); // re-render without computed values (state.result is now null)
 }
 
 // ─── CSV download ───
