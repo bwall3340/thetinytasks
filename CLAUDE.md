@@ -12,6 +12,7 @@ thetinytasks/
 ├── styles.css              # Home page styles (Apple Liquid Glass aesthetic)
 ├── script.js               # Home page navigation logic
 ├── background-remover.html # Background Remover Pro tool (links to WSR backend)
+├── return-stream.html      # Return Stream Digitizer tool (pure client-side HTML)
 ├── Sankey/                 # Sankey Chart tool (pure client-side HTML)
 │   └── sankey_chart_tool (15).html
 ├── WhiteBackgroundRemover/ # Simple client-side white bg remover
@@ -70,6 +71,23 @@ pytest tests/ -v
 | `/process_interactive` | POST | Vectorize an already-edited image |
 | `/process_test` | POST | Vectorize with advanced smoothing (test mode) |
 | `/process_upscale` | POST | Upscale image with edge preservation |
+| `/return-stream.html` | GET | Serve the Return Stream Digitizer static page |
+
+## Return Stream Digitizer (return-stream.html)
+
+Pure client-side tool — no new backend processing. Served as a static file via the Flask route above and copied into the Docker image.
+
+**What it does**: User uploads a PDF or image of a fund fact sheet, crops to the performance chart area, picks the line color, sets axis ranges and date range, and the tool digitizes the performance line into a period-by-period return stream exported as CSV.
+
+**Key implementation details**:
+- PDF rendering: PDF.js (CDN) renders pages to a temp canvas at 2× scale
+- Three stacked `<canvas>` elements: `chart-canvas` (image), `overlay-canvas` (detected points, pointer-events:none), `interaction-canvas` (mouse events)
+- Canvas sizing: all three canvases use CSS `max-width: 100%` / `width: 100% height: 100%` so they scale identically; `eventToImageCoords()` uses `getBoundingClientRect()` for correct pixel mapping at any display size
+- Line detection: HSV color space, max-saturation pixel per column (ignores anti-aliased fringe, picks dominant line)
+- Chart types supported: Growth of $ (`V_t/V_{t-1} - 1`), Cumulative % (`(1+C_t)/(1+C_{t-1}) - 1`), Period % (direct value/100)
+- Date generation: anchors stepping cursor to the 1st of each period (not day-of-month) to prevent month overflow; snaps to end-of-period (last day of month/quarter/Dec 31 for annual); uses local-time `fmtDate()` helper instead of `toISOString()` to avoid UTC day-shift
+- Stats output: CAGR, annualized vol, Sharpe, max drawdown
+- No smoothing — accuracy is the priority
 
 ## Deployment
 
