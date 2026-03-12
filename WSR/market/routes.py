@@ -32,7 +32,7 @@ def index():
                        .join(Analysis)
                        .filter(_best_date_col() >= cutoff)
                        .order_by(_best_date_col().desc())
-                       .limit(12).all())
+                       .limit(50).all())
     active_sources = Source.query.filter_by(active=True).count()
     latest_ci = (ConsensusInsight.query
                  .order_by(ConsensusInsight.computed_at.desc())
