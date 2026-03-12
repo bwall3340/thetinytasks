@@ -300,6 +300,34 @@
         .disc-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(99,102,241,0.45); }
         .disc-btn-secondary { background: #f1f5f9; color: #475569; }
         .disc-btn-secondary:hover { background: #e2e8f0; }
+
+        /* ── Weighting toggle ── */
+        .weight-toggle {
+            display: inline-flex;
+            background: rgba(241,245,249,0.9);
+            border: 1px solid rgba(226,232,240,0.8);
+            border-radius: 10px;
+            padding: 3px;
+            gap: 2px;
+        }
+        .weight-toggle button {
+            padding: 0.3rem 0.75rem;
+            border: none; border-radius: 7px;
+            font-size: 0.75rem; font-weight: 600;
+            cursor: pointer; transition: all 0.18s;
+            background: transparent; color: #64748b;
+            white-space: nowrap;
+        }
+        .weight-toggle button.active {
+            background: #fff;
+            color: #4338ca;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+        }
+        .weight-toggle button:hover:not(.active) { color: #1e293b; }
+        .toggle-label {
+            font-size: 0.7rem; color: #94a3b8; margin-right: 0.5rem;
+            white-space: nowrap; align-self: center;
+        }
     </style>
 </head>
 <body>
@@ -308,6 +336,13 @@
     <a href="/" class="home-link">&#8592; the tiny tasks</a>
     <span class="sep">|</span>
     <h1>Market Outlook</h1>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:0.5rem;">
+        <span class="toggle-label">Weighting</span>
+        <div class="weight-toggle">
+            <button id="btn-article" class="active" onclick="setMode('article')">By Article</button>
+            <button id="btn-source" onclick="setMode('source')">By Source</button>
+        </div>
+    </div>
 </header>
 
 <div class="page">
@@ -319,21 +354,21 @@
         <div class="section-title">Market Consensus</div>
         <div class="hero-grid">
             <div>
-                <span class="outlook-badge badge-{{ consensus.market_outlook }}">
+                <span id="consensus-outlook-badge" class="outlook-badge badge-{{ consensus.market_outlook }}">
                     {{ consensus.market_outlook }}
                 </span>
-                <div class="outlook-label ol-{{ consensus.market_outlook }}">
+                <div id="consensus-outlook-label" class="outlook-label ol-{{ consensus.market_outlook }}">
                     {{ consensus.market_outlook | capitalize }}
                 </div>
-                <div class="confidence-row">
+                <div id="consensus-confidence-row" class="confidence-row">
                     <strong>{{ consensus.outlook_confidence }}%</strong> of analysts agree
                     &nbsp;&middot;&nbsp;
-                    {{ consensus.total_sources }} source{{ 's' if consensus.total_sources != 1 else '' }}
+                    {{ consensus.total_sources }} article{{ 's' if consensus.total_sources != 1 else '' }}
                     &nbsp;&middot;&nbsp; last {{ consensus.lookback_days }} days
                 </div>
 
                 <!-- Breakdown chips -->
-                <div class="breakdown-row">
+                <div id="consensus-breakdown" class="breakdown-row">
                     {% for outlook, count in consensus.outlook_breakdown.items() %}
                     <span class="breakdown-chip chip-{{ outlook }}">
                         {{ outlook | capitalize }}: {{ count }}
@@ -345,14 +380,14 @@
             <div class="meta-stats">
                 <div class="stat-row">
                     <span class="stat-label">Avg sentiment</span>
-                    <span class="stat-value" style="color:{{ '#059669' if consensus.avg_sentiment > 0.1 else ('#dc2626' if consensus.avg_sentiment < -0.1 else '#d97706') }}">
+                    <span id="consensus-avg-sentiment" class="stat-value" style="color:{{ '#059669' if consensus.avg_sentiment > 0.1 else ('#dc2626' if consensus.avg_sentiment < -0.1 else '#d97706') }}">
                         {{ '%+.2f'|format(consensus.avg_sentiment) }}
                     </span>
                 </div>
                 <div class="sentiment-bar-wrap">
                     <div class="sentiment-label"><span>Bearish &minus;1</span><span>Neutral 0</span><span>Bullish +1</span></div>
                     <div class="sentiment-track">
-                        <div class="sentiment-thumb" style="left: {{ ((consensus.avg_sentiment + 1) / 2 * 100) | round }}%"></div>
+                        <div id="consensus-sentiment-thumb" class="sentiment-thumb" style="left: {{ ((consensus.avg_sentiment + 1) / 2 * 100) | round }}%"></div>
                     </div>
                 </div>
                 <div class="stat-row" style="margin-top:0.5rem;">
@@ -361,7 +396,7 @@
                 </div>
                 <div class="stat-row">
                     <span class="stat-label">Last updated</span>
-                    <span class="stat-value" style="font-size:0.8rem;font-weight:500;">{{ consensus.updated_at }}</span>
+                    <span id="consensus-updated-at" class="stat-value" style="font-size:0.8rem;font-weight:500;">{{ consensus.updated_at }}</span>
                 </div>
             </div>
         </div>
@@ -373,36 +408,40 @@
         <!-- Asset views -->
         <div class="card">
             <div class="section-title">Asset Class Consensus</div>
+            <div id="consensus-asset-grid">
             {% if consensus.asset_consensus %}
             <div class="asset-grid">
                 {% for asset, data in consensus.asset_consensus.items() %}
                 <div class="asset-card">
                     <div class="asset-name">{{ asset | replace('_', ' ') }}</div>
                     <div class="asset-view av-{{ data.view }}">{{ data.view | capitalize }}</div>
-                    <div class="asset-conf">{{ data.confidence }}% agree ({{ data.count }} sources)</div>
+                    <div class="asset-conf">{{ data.confidence }}% agree ({{ data.count }} articles)</div>
                 </div>
                 {% endfor %}
             </div>
             {% else %}
             <div class="empty"><p>Asset view data will appear here once analyses are complete.</p></div>
             {% endif %}
+            </div>
         </div>
 
         <!-- Themes -->
         <div class="card">
             <div class="section-title">Top Themes</div>
+            <div id="consensus-themes">
             {% if consensus.top_themes %}
             <div class="theme-tags">
             {% for t in consensus.top_themes %}
             <span class="theme-tag{% if t.pct >= 40 %} freq-high{% endif %}">
                 {{ t.theme | capitalize }}
-                <span class="theme-tag-badge" title="{{ t.count }} source{% if t.count != 1 %}s{% endif %}">{{ t.pct }}%</span>
+                <span class="theme-tag-badge" title="{{ t.count }} article{% if t.count != 1 %}s{% endif %}">{{ t.pct }}%</span>
             </span>
             {% endfor %}
             </div>
             {% else %}
             <div class="empty"><p>Theme analysis will appear here.</p></div>
             {% endif %}
+            </div>
         </div>
 
     </div>
@@ -506,7 +545,7 @@
     {% if consensus.top_risks %}
     <div class="card">
         <div class="section-title">Key Risks Identified</div>
-        <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+        <div id="consensus-risks" style="display:flex;flex-wrap:wrap;gap:0.5rem;">
             {% for r in consensus.top_risks %}
             <span style="background:rgba(239,68,68,0.08);color:#dc2626;padding:0.3rem 0.75rem;border-radius:100px;font-size:0.8rem;font-weight:500;">
                 {{ r.risk }}
@@ -567,20 +606,130 @@
 </div>
 
 <script>
-    // Bump the version string whenever disclaimer language changes to force a re-prompt.
+    // ── Disclaimer ──
     var DISCLAIMER_KEY = 'market_disclaimer_v1';
-
     (function () {
         if (localStorage.getItem(DISCLAIMER_KEY) === 'accepted') {
             document.getElementById('disclaimer-overlay').classList.add('hidden');
         }
-        // Otherwise overlay stays visible (default)
     })();
-
     function acceptDisclaimer() {
         localStorage.setItem(DISCLAIMER_KEY, 'accepted');
         document.getElementById('disclaimer-overlay').classList.add('hidden');
     }
+
+    // ── Weighting toggle ──
+    var consensusData = {
+        article: {{ consensus | tojson if consensus else 'null' }},
+        source:  {{ consensus_source | tojson if consensus_source else 'null' }}
+    };
+
+    var activeMode = localStorage.getItem('consensus_weight_mode') || 'article';
+
+    function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+
+    function renderConsensus(data, mode) {
+        if (!data) return;
+        var ol = data.market_outlook || 'neutral';
+        var unit = mode === 'source' ? 'source' : 'article';
+
+        // Badge + label
+        var badge = document.getElementById('consensus-outlook-badge');
+        if (badge) { badge.className = 'outlook-badge badge-' + ol; badge.textContent = ol; }
+
+        var label = document.getElementById('consensus-outlook-label');
+        if (label) { label.className = 'outlook-label ol-' + ol; label.textContent = cap(ol); }
+
+        // Confidence row
+        var confRow = document.getElementById('consensus-confidence-row');
+        if (confRow) {
+            var n = data.total_sources || 0;
+            confRow.innerHTML = '<strong>' + data.outlook_confidence + '%</strong> of ' + unit + 's agree'
+                + ' &nbsp;&middot;&nbsp; ' + n + ' ' + unit + (n !== 1 ? 's' : '')
+                + ' &nbsp;&middot;&nbsp; last ' + data.lookback_days + ' days';
+        }
+
+        // Breakdown chips
+        var breakdown = document.getElementById('consensus-breakdown');
+        if (breakdown && data.outlook_breakdown) {
+            breakdown.innerHTML = Object.entries(data.outlook_breakdown).map(function(e) {
+                return '<span class="breakdown-chip chip-' + e[0] + '">' + cap(e[0]) + ': ' + e[1] + '</span>';
+            }).join('');
+        }
+
+        // Sentiment
+        var sent = data.avg_sentiment || 0;
+        var sentEl = document.getElementById('consensus-avg-sentiment');
+        if (sentEl) {
+            sentEl.style.color = sent > 0.1 ? '#059669' : (sent < -0.1 ? '#dc2626' : '#d97706');
+            sentEl.textContent = (sent >= 0 ? '+' : '') + sent.toFixed(2);
+        }
+        var thumb = document.getElementById('consensus-sentiment-thumb');
+        if (thumb) { thumb.style.left = (((sent + 1) / 2) * 100).toFixed(1) + '%'; }
+
+        // Updated at
+        var upd = document.getElementById('consensus-updated-at');
+        if (upd && data.updated_at) { upd.textContent = data.updated_at; }
+
+        // Asset grid
+        var assetGrid = document.getElementById('consensus-asset-grid');
+        if (assetGrid) {
+            if (data.asset_consensus && Object.keys(data.asset_consensus).length > 0) {
+                assetGrid.innerHTML = '<div class="asset-grid">' +
+                    Object.entries(data.asset_consensus).map(function(e) {
+                        var asset = e[0], d = e[1];
+                        return '<div class="asset-card">'
+                            + '<div class="asset-name">' + asset.replace(/_/g, ' ') + '</div>'
+                            + '<div class="asset-view av-' + d.view + '">' + cap(d.view) + '</div>'
+                            + '<div class="asset-conf">' + d.confidence + '% agree (' + d.count + ' ' + unit + (d.count !== 1 ? 's' : '') + ')</div>'
+                            + '</div>';
+                    }).join('') + '</div>';
+            } else {
+                assetGrid.innerHTML = '<div class="empty"><p>Asset view data will appear here once analyses are complete.</p></div>';
+            }
+        }
+
+        // Themes
+        var themesEl = document.getElementById('consensus-themes');
+        if (themesEl) {
+            if (data.top_themes && data.top_themes.length > 0) {
+                themesEl.innerHTML = '<div class="theme-tags">' +
+                    data.top_themes.map(function(t) {
+                        var cls = 'theme-tag' + (t.pct >= 40 ? ' freq-high' : '');
+                        return '<span class="' + cls + '">' + cap(t.theme)
+                            + '<span class="theme-tag-badge" title="' + t.count + ' ' + unit + (t.count !== 1 ? 's' : '') + '">' + t.pct + '%</span></span>';
+                    }).join('') + '</div>';
+            } else {
+                themesEl.innerHTML = '<div class="empty"><p>Theme analysis will appear here.</p></div>';
+            }
+        }
+
+        // Risks
+        var risksEl = document.getElementById('consensus-risks');
+        if (risksEl && data.top_risks && data.top_risks.length > 0) {
+            risksEl.innerHTML = data.top_risks.map(function(r) {
+                return '<span style="background:rgba(239,68,68,0.08);color:#dc2626;padding:0.3rem 0.75rem;border-radius:100px;font-size:0.8rem;font-weight:500;">'
+                    + r.risk
+                    + (r.count > 1 ? '<span style="opacity:0.6;font-size:0.7rem;"> \xd7' + r.count + '</span>' : '')
+                    + '</span>';
+            }).join('');
+        }
+    }
+
+    function setMode(mode) {
+        activeMode = mode;
+        localStorage.setItem('consensus_weight_mode', mode);
+        document.getElementById('btn-article').classList.toggle('active', mode === 'article');
+        document.getElementById('btn-source').classList.toggle('active', mode === 'source');
+        renderConsensus(consensusData[mode], mode);
+    }
+
+    // Apply saved mode on load (skip if article — server already rendered it)
+    (function() {
+        if (activeMode === 'source' && consensusData.source) {
+            setMode('source');
+        }
+    })();
 </script>
 </body>
 </html>

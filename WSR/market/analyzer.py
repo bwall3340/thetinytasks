@@ -247,6 +247,129 @@ def compute_consensus(analyses, lookback_days=90) -> dict | None:
     }
 
 
+def compute_consensus_by_source(analyses, lookback_days=90) -> dict | None:
+    """
+    Source-weighted consensus: average each source's articles first, then
+    aggregate equally across sources. Prevents high-frequency publishers
+    from dominating over monthly/quarterly reporters.
+    """
+    if not analyses:
+        return None
+
+    cutoff = datetime.utcnow() - timedelta(days=lookback_days)
+    recent = [a for a in analyses if _best_article_date(a) and _best_article_date(a) >= cutoff]
+    if not recent:
+        recent = list(analyses)
+
+    from collections import defaultdict
+    by_source: dict = defaultdict(list)
+    for a in recent:
+        source_id = a.article.source_id if a.article else None
+        by_source[source_id].append(a)
+
+    n_sources = len(by_source)
+    source_outlooks = []
+    source_sentiments = []
+    source_theme_counters = []
+    source_asset_views = []
+    source_risks = []
+
+    for source_analyses in by_source.values():
+        outlooks = [a.market_outlook for a in source_analyses if a.market_outlook]
+        if outlooks:
+            source_outlooks.append(Counter(outlooks).most_common(1)[0][0])
+
+        scores = [a.sentiment_score for a in source_analyses if a.sentiment_score is not None]
+        if scores:
+            source_sentiments.append(sum(scores) / len(scores))
+
+        themes = []
+        for a in source_analyses:
+            if a.key_themes:
+                themes.extend(a.key_themes)
+        source_theme_counters.append(Counter(themes))
+
+        asset_buckets: dict = {}
+        for a in source_analyses:
+            if not a.asset_views:
+                continue
+            for asset, vdata in a.asset_views.items():
+                view = vdata.get('view') if isinstance(vdata, dict) else str(vdata)
+                if view:
+                    asset_buckets.setdefault(asset, []).append(view.lower())
+        source_asset_views.append({
+            asset: Counter(views).most_common(1)[0][0]
+            for asset, views in asset_buckets.items()
+        })
+
+        for a in source_analyses:
+            if a.key_risks:
+                source_risks.extend(a.key_risks)
+
+    outlook_counts = Counter(source_outlooks)
+    top_outlook = outlook_counts.most_common(1)[0][0] if outlook_counts else 'neutral'
+    outlook_confidence = round(outlook_counts[top_outlook] / len(source_outlooks) * 100, 1) if source_outlooks else 0
+    avg_sentiment = round(sum(source_sentiments) / len(source_sentiments), 2) if source_sentiments else 0.0
+
+    combined_themes: Counter = Counter()
+    for theme_counter in source_theme_counters:
+        seen_keys: set = set()
+        for theme in theme_counter:
+            key = _theme_group_key(theme)
+            if key not in seen_keys:
+                seen_keys.add(key)
+                combined_themes[theme] += 1
+    top_themes = [
+        {'theme': t, 'count': c, 'pct': round(c / n_sources * 100)}
+        for t, c in _merge_themes(combined_themes).most_common(10)
+    ] if n_sources else []
+
+    asset_buckets2: dict = {}
+    for av in source_asset_views:
+        for asset, view in av.items():
+            asset_buckets2.setdefault(asset, []).append(view)
+    asset_consensus = {}
+    for asset, views in asset_buckets2.items():
+        cnts = Counter(views)
+        top_view, top_cnt = cnts.most_common(1)[0]
+        asset_consensus[asset] = {
+            'view': top_view,
+            'confidence': round(top_cnt / len(views) * 100, 1),
+            'count': len(views),
+            'breakdown': dict(cnts),
+        }
+
+    unique_insights = []
+    for a in recent:
+        if a.unique_insights and a.article:
+            source_name = a.article.source.name if a.article.source else 'Unknown'
+            best_d = _best_article_date(a)
+            date_str = best_d.strftime('%b %d, %Y') if best_d else ''
+            for insight in (a.unique_insights or [])[:2]:
+                unique_insights.append({
+                    'insight': insight,
+                    'source': source_name,
+                    'date': date_str,
+                    'outlook': a.market_outlook,
+                })
+
+    top_risks = [{'risk': r, 'count': c} for r, c in _merge_themes(Counter(source_risks)).most_common(8)]
+
+    return {
+        'total_sources': n_sources,
+        'lookback_days': lookback_days,
+        'market_outlook': top_outlook,
+        'outlook_confidence': outlook_confidence,
+        'avg_sentiment': avg_sentiment,
+        'outlook_breakdown': dict(outlook_counts),
+        'top_themes': top_themes,
+        'asset_consensus': asset_consensus,
+        'unique_insights': unique_insights[:12],
+        'top_risks': top_risks,
+        'updated_at': datetime.utcnow().strftime('%b %d, %Y %H:%M UTC'),
+    }
+
+
 _CONSENSUS_INSIGHTS_PROMPT = """\
 You are a senior financial analyst comparing views across multiple institutional sources.
 

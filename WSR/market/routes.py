@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from flask import Blueprint, jsonify, render_template, request
 from sqlalchemy import func
 
-from .analyzer import compute_consensus
+from .analyzer import compute_consensus, compute_consensus_by_source
 from .models import Analysis, Article, ConsensusInsight, Source
 
 market_bp = Blueprint('market', __name__, url_prefix='/market')
@@ -27,6 +27,7 @@ def index():
                 .order_by(Analysis.processed_at.desc())
                 .all())
     consensus = compute_consensus(analyses)
+    consensus_source = compute_consensus_by_source(analyses)
     cutoff = datetime.utcnow() - timedelta(days=_LOOKBACK_DAYS)
     recent_articles = (Article.query
                        .join(Analysis)
@@ -40,6 +41,7 @@ def index():
     return render_template(
         'market/index.html',
         consensus=consensus,
+        consensus_source=consensus_source,
         recent_articles=recent_articles,
         active_sources=active_sources,
         consensus_insights=latest_ci,
