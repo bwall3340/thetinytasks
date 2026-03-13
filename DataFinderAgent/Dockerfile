@@ -29,4 +29,6 @@ RUN playwright install chromium --with-deps
 
 COPY . .
 
-ENTRYPOINT ["python", "-m", "cli.main"]
+EXPOSE 8000
+
+CMD ["sh", "-c", "uvicorn api:app --host 0.0.0.0 --port ${PORT:-8000}"]
