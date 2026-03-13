@@ -398,17 +398,6 @@
         </p>
     </div>
 
-    <!-- API config notice — update API_URL below when deployed -->
-    <div class="config-notice" id="config-notice">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:2px">
-            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
-        <span>
-            This tool requires the DataFinder API to be running.
-            Update the <code>API_URL</code> at the top of this page's script to point to your deployed service.
-            Run locally with <code>uvicorn DataFinderAgent.api:app --port 8000</code>.
-        </span>
-    </div>
 
     <!-- Goal input card -->
     <div class="card">
@@ -467,7 +456,7 @@
 <script>
     // ── Config ─────────────────────────────────────────────────────────────────
     // Replace with your deployed DataFinder API URL (e.g. https://datafinder.up.railway.app)
-    const API_URL = 'http://localhost:8000';
+    const API_URL = 'https://romantic-upliftment-production.up.railway.app';
 
     // ── State ──────────────────────────────────────────────────────────────────
     let selectedFormat = 'json';
