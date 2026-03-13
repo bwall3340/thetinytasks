@@ -270,6 +270,11 @@ def return_stream():
     return send_from_directory(SITE_DIR, 'return-stream.html')
 
 
+@app.route('/data-finder.html')
+def data_finder():
+    return send_from_directory(SITE_DIR, 'data-finder.html')
+
+
 @app.route('/Sankey/<path:filename>')
 def sankey_files(filename):
     return send_from_directory(os.path.join(SITE_DIR, 'Sankey'), filename)
