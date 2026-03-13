@@ -311,6 +311,12 @@ class TinyTasksApp {
                 }, 500);
                 break;
 
+            case 'data-finder':
+                setTimeout(() => {
+                    window.location.href = './data-finder.html';
+                }, 500);
+                break;
+
             case 'market-outlook':
                 setTimeout(() => {
                     window.location.href = '/market';

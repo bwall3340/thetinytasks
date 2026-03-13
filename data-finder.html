@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DataFinder Agent — The Tiny Tasks</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* ── Base ── */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            min-height: 100vh;
+            color: #1e293b;
+        }
+
+        /* ── Header ── */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            height: 72px;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+        }
+
+        .header-logo {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            text-transform: lowercase;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            text-decoration: none;
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            background: rgba(255,255,255,0.8);
+            color: #64748b;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .back-btn:hover {
+            color: #1e293b;
+            border-color: rgba(99, 102, 241, 0.3);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .back-arrow {
+            width: 16px;
+            height: 16px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* ── Main layout ── */
+        main {
+            max-width: 740px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem 4rem;
+        }
+
+        .page-header {
+            margin-bottom: 2.5rem;
+        }
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-subtitle {
+            color: #64748b;
+            font-size: 0.9375rem;
+            line-height: 1.6;
+        }
+
+        /* ── Card ── */
+        .card {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            border-radius: 16px;
+            padding: 2rem;
+            backdrop-filter: blur(20px);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-label {
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 0.75rem;
+        }
+
+        /* ── Goal textarea ── */
+        .goal-textarea {
+            width: 100%;
+            min-height: 110px;
+            padding: 1rem;
+            border: 1.5px solid rgba(226, 232, 240, 0.9);
+            border-radius: 10px;
+            background: rgba(248, 250, 252, 0.8);
+            font-family: inherit;
+            font-size: 0.9375rem;
+            color: #1e293b;
+            line-height: 1.6;
+            resize: vertical;
+            outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .goal-textarea:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+        }
+
+        .goal-textarea::placeholder {
+            color: #94a3b8;
+        }
+
+        /* ── Format selector ── */
+        .format-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 1.25rem;
+        }
+
+        .format-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #64748b;
+            white-space: nowrap;
+        }
+
+        .format-pills {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .format-pill {
+            padding: 6px 16px;
+            border-radius: 20px;
+            border: 1.5px solid rgba(226, 232, 240, 0.8);
+            background: transparent;
+            font-family: inherit;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .format-pill.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: transparent;
+            color: #ffffff;
+        }
+
+        .format-pill:not(.active):hover {
+            border-color: rgba(99, 102, 241, 0.4);
+            color: #6366f1;
+        }
+
+        /* ── Run button ── */
+        .run-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 1.5rem;
+            padding: 12px 28px;
+            border-radius: 10px;
+            border: none;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            font-family: inherit;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s ease, transform 0.15s ease;
+        }
+
+        .run-btn:hover:not(:disabled) {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .run-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .run-btn .spinner {
+            display: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.4);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        .run-btn.loading .spinner { display: block; }
+        .run-btn.loading .btn-text::after { content: 'ing…'; }
+        .run-btn.loading .btn-icon { display: none; }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Log panel ── */
+        .log-card { display: none; }
+        .log-card.visible { display: block; }
+
+        .log-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .log-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #64748b;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #94a3b8;
+        }
+
+        .status-dot.running {
+            background: #6366f1;
+            animation: pulse-dot 1.2s ease-in-out infinite;
+        }
+
+        .status-dot.done { background: #10b981; }
+        .status-dot.error { background: #ef4444; }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        .log-output {
+            background: #0f172a;
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            max-height: 280px;
+            overflow-y: auto;
+            font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+            font-size: 0.8125rem;
+            line-height: 1.7;
+            color: #94a3b8;
+            scroll-behavior: smooth;
+        }
+
+        .log-line { margin: 0; }
+        .log-line.info { color: #94a3b8; }
+        .log-line.tool { color: #818cf8; }
+        .log-line.success { color: #34d399; }
+        .log-line.warn { color: #fbbf24; }
+        .log-line.error { color: #f87171; }
+
+        /* ── Result panel ── */
+        .result-card { display: none; }
+        .result-card.visible { display: block; }
+
+        .result-summary {
+            font-size: 0.9375rem;
+            line-height: 1.6;
+            color: #334155;
+            margin-bottom: 1.25rem;
+            padding: 1rem;
+            background: rgba(16, 185, 129, 0.06);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 8px;
+        }
+
+        .result-data {
+            background: #0f172a;
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            max-height: 320px;
+            overflow: auto;
+            font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+            font-size: 0.8125rem;
+            line-height: 1.6;
+            color: #e2e8f0;
+            margin-bottom: 1.25rem;
+            white-space: pre;
+        }
+
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 22px;
+            border-radius: 8px;
+            border: 1.5px solid rgba(99, 102, 241, 0.4);
+            background: transparent;
+            color: #6366f1;
+            font-family: inherit;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .download-btn:hover {
+            background: rgba(99, 102, 241, 0.08);
+            border-color: #6366f1;
+        }
+
+        /* ── API config notice ── */
+        .config-notice {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 1rem;
+            background: rgba(251, 191, 36, 0.08);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            border-radius: 10px;
+            font-size: 0.8125rem;
+            color: #92400e;
+            line-height: 1.5;
+            margin-bottom: 1.5rem;
+        }
+
+        .config-notice code {
+            font-family: monospace;
+            background: rgba(0,0,0,0.08);
+            padding: 1px 5px;
+            border-radius: 4px;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 600px) {
+            main { padding: 2rem 1rem 3rem; }
+            .page-title { font-size: 1.5rem; }
+            .card { padding: 1.5rem; }
+            .format-row { flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <a href="./index.html" class="header-logo">the tiny tasks</a>
+    <a href="./index.html" class="back-btn">
+        <svg class="back-arrow" viewBox="0 0 24 24">
+            <polyline points="15 18 9 12 15 6"/>
+        </svg>
+        Back
+    </a>
+</header>
+
+<main>
+    <div class="page-header">
+        <h1 class="page-title">DataFinder Agent</h1>
+        <p class="page-subtitle">
+            Describe the data you want in plain English. The agent will search the web,
+            evaluate sources, and extract the data — looping until it gets what you asked for.
+        </p>
+    </div>
+
+    <!-- API config notice — update API_URL below when deployed -->
+    <div class="config-notice" id="config-notice">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:2px">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span>
+            This tool requires the DataFinder API to be running.
+            Update the <code>API_URL</code> at the top of this page's script to point to your deployed service.
+            Run locally with <code>uvicorn DataFinderAgent.api:app --port 8000</code>.
+        </span>
+    </div>
+
+    <!-- Goal input card -->
+    <div class="card">
+        <div class="card-label">Data Goal</div>
+        <textarea
+            id="goal-input"
+            class="goal-textarea"
+            placeholder="e.g. MSFT monthly closing prices for the last 5 years, or S&P 500 sector weights from a recent source"
+        ></textarea>
+
+        <div class="format-row">
+            <span class="format-label">Output format:</span>
+            <div class="format-pills">
+                <button class="format-pill active" data-format="json">JSON</button>
+                <button class="format-pill" data-format="csv">CSV</button>
+            </div>
+        </div>
+
+        <button class="run-btn" id="run-btn">
+            <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3"/>
+            </svg>
+            <div class="spinner"></div>
+            <span class="btn-text">Run</span>
+        </button>
+    </div>
+
+    <!-- Log panel -->
+    <div class="card log-card" id="log-card">
+        <div class="log-header">
+            <div class="log-status">
+                <div class="status-dot running" id="status-dot"></div>
+                <span id="status-text">Agent running…</span>
+            </div>
+            <span id="loop-counter" style="font-size:0.8125rem;color:#94a3b8;font-weight:500;"></span>
+        </div>
+        <div class="log-output" id="log-output"></div>
+    </div>
+
+    <!-- Result panel -->
+    <div class="card result-card" id="result-card">
+        <div class="card-label">Result</div>
+        <div class="result-summary" id="result-summary"></div>
+        <div class="result-data" id="result-data"></div>
+        <a class="download-btn" id="download-btn" href="#" download="datafinder-result">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Download
+        </a>
+    </div>
+</main>
+
+<script>
+    // ── Config ─────────────────────────────────────────────────────────────────
+    // Replace with your deployed DataFinder API URL (e.g. https://datafinder.up.railway.app)
+    const API_URL = 'http://localhost:8000';
+
+    // ── State ──────────────────────────────────────────────────────────────────
+    let selectedFormat = 'json';
+    let resultData = null;
+    let resultFormat = 'json';
+
+    // ── Format pills ───────────────────────────────────────────────────────────
+    document.querySelectorAll('.format-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+            document.querySelectorAll('.format-pill').forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+            selectedFormat = pill.dataset.format;
+        });
+    });
+
+    // ── Log helpers ────────────────────────────────────────────────────────────
+    const logOutput = document.getElementById('log-output');
+
+    function appendLog(message, type = 'info') {
+        const line = document.createElement('p');
+        line.className = `log-line ${type}`;
+        const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+        line.textContent = `[${time}] ${message}`;
+        logOutput.appendChild(line);
+        logOutput.scrollTop = logOutput.scrollHeight;
+    }
+
+    function clearLog() {
+        logOutput.innerHTML = '';
+    }
+
+    // ── Status helpers ─────────────────────────────────────────────────────────
+    function setStatus(state, text) {
+        const dot = document.getElementById('status-dot');
+        dot.className = `status-dot ${state}`;
+        document.getElementById('status-text').textContent = text;
+    }
+
+    // ── Run ────────────────────────────────────────────────────────────────────
+    document.getElementById('run-btn').addEventListener('click', runAgent);
+
+    async function runAgent() {
+        const goal = document.getElementById('goal-input').value.trim();
+        if (!goal) {
+            document.getElementById('goal-input').focus();
+            return;
+        }
+
+        const runBtn = document.getElementById('run-btn');
+        const logCard = document.getElementById('log-card');
+        const resultCard = document.getElementById('result-card');
+
+        // Reset UI
+        runBtn.disabled = true;
+        runBtn.classList.add('loading');
+        logCard.classList.add('visible');
+        resultCard.classList.remove('visible');
+        clearLog();
+        setStatus('running', 'Agent running…');
+        document.getElementById('loop-counter').textContent = '';
+        resultData = null;
+
+        appendLog(`Goal: ${goal}`, 'info');
+        appendLog(`Format: ${selectedFormat.toUpperCase()}`, 'info');
+        appendLog('Connecting to DataFinder API…', 'info');
+
+        try {
+            const response = await fetch(`${API_URL}/scrape`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ goal, format: selectedFormat }),
+            });
+
+            if (!response.ok) {
+                const err = await response.text();
+                throw new Error(`API error ${response.status}: ${err}`);
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            appendLog('Connected — agent started.', 'success');
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop(); // keep incomplete line
+
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    const payload = line.slice(6).trim();
+                    if (payload === '[DONE]') continue;
+
+                    let event;
+                    try { event = JSON.parse(payload); } catch { continue; }
+
+                    handleEvent(event);
+                }
+            }
+        } catch (err) {
+            appendLog(`Error: ${err.message}`, 'error');
+            setStatus('error', 'Failed');
+        } finally {
+            runBtn.disabled = false;
+            runBtn.classList.remove('loading');
+        }
+    }
+
+    function handleEvent(event) {
+        if (event.type === 'progress') {
+            const loopLabel = event.loop ? `Loop ${event.loop}` : '';
+            if (loopLabel) document.getElementById('loop-counter').textContent = loopLabel;
+            const msgType = event.tool ? 'tool' : 'info';
+            const prefix = event.tool ? `[${event.tool}] ` : '';
+            appendLog(`${prefix}${event.message}`, msgType);
+
+        } else if (event.type === 'result') {
+            if (event.success) {
+                setStatus('done', `Done — ${event.loops} loop${event.loops !== 1 ? 's' : ''}`);
+                appendLog('Agent completed successfully.', 'success');
+                showResult(event);
+            } else {
+                setStatus('error', 'No data found');
+                appendLog('Agent finished but could not extract matching data.', 'warn');
+            }
+
+        } else if (event.type === 'error') {
+            appendLog(`Agent error: ${event.message}`, 'error');
+            setStatus('error', 'Error');
+        }
+    }
+
+    // ── Show result ────────────────────────────────────────────────────────────
+    function showResult(event) {
+        resultData = event.data;
+        resultFormat = event.format || selectedFormat;
+
+        const resultCard = document.getElementById('result-card');
+        const summaryEl = document.getElementById('result-summary');
+        const dataEl = document.getElementById('result-data');
+        const downloadBtn = document.getElementById('download-btn');
+
+        summaryEl.textContent = event.summary || 'Data extracted successfully.';
+
+        let displayText = '';
+        if (resultFormat === 'csv' && typeof resultData === 'string') {
+            displayText = resultData;
+        } else {
+            displayText = JSON.stringify(resultData, null, 2);
+        }
+        dataEl.textContent = displayText;
+
+        // Build download blob
+        const mimeType = resultFormat === 'csv' ? 'text/csv' : 'application/json';
+        const blob = new Blob([displayText], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        downloadBtn.href = url;
+        downloadBtn.download = `datafinder-result.${resultFormat}`;
+
+        resultCard.classList.add('visible');
+    }
+</script>
+
+</body>
+</html>

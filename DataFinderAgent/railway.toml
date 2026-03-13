@@ -1,0 +1,15 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "python -m cli.main"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+
+[environments.production.variables]
+LOG_LEVEL = "INFO"
+MAX_LOOPS = "10"
+CHECKPOINT_LOOP = "5"
+REQUEST_DELAY_MIN = "2"
+REQUEST_DELAY_MAX = "5"

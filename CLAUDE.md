@@ -11,6 +11,7 @@ thetinytasks/
 ├── index.html              # Home page with tool cards
 ├── styles.css              # Home page styles (Apple Liquid Glass aesthetic)
 ├── script.js               # Home page navigation logic
+├── data-finder.html        # DataFinder Agent tool UI (SSE streaming, calls DataFinderAgent API)
 ├── background-remover.html # Background Remover Pro tool (links to WSR backend)
 ├── return-stream.html      # Return Stream Digitizer tool (pure client-side HTML)
 ├── Sankey/                 # Sankey Chart tool (pure client-side HTML)
@@ -27,6 +28,12 @@ thetinytasks/
 │   └── tests/              # Pytest test suite
 │       ├── conftest.py
 │       └── test_app.py
+├── DataFinderAgent/        # AI web scraping agent (separate Railway service)
+│   ├── CLAUDE.md           # Full architecture spec for the agent
+│   ├── api.py              # FastAPI SSE wrapper — exposes POST /scrape
+│   ├── agent/              # Orchestrator, tools, strategy engine, output formatter
+│   ├── cli/                # Typer CLI entry point
+│   └── pyproject.toml      # Dependencies (anthropic, fastapi, playwright, etc.)
 ├── Dockerfile              # Builds WSR/ Flask app
 └── railway.toml            # Railway deployment config
 ```
@@ -95,6 +102,18 @@ Pure client-side tool — no new backend processing. Served as a static file via
 - Docker builds from `Dockerfile` at repo root
 - Health check: `GET /` with 300s timeout
 - Restart policy: on_failure, max 10 retries
+
+## DataFinder Agent
+
+AI-powered autonomous web scraping agent. Deployed as a **separate Railway service** from the WSR Flask app.
+
+- **UI**: `data-finder.html` — goal input, format picker (JSON/CSV), SSE streaming log, download button
+- **API**: `DataFinderAgent/api.py` — FastAPI app, `POST /scrape` streams per-loop progress events then a final result
+- **Run locally**: `cd DataFinderAgent && pip install -e . && uvicorn api:app --port 8000`
+- **Config**: Update `API_URL` constant at the top of `data-finder.html` to point to the deployed service URL
+- **Env vars needed**: `ANTHROPIC_API_KEY`, `SEARCH_API_KEY`, `SEARCH_PROVIDER` (brave/serpapi/tavily)
+
+See `DataFinderAgent/CLAUDE.md` for full architecture details.
 
 ## Adding New Tools
 
