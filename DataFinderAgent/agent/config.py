@@ -15,27 +15,22 @@ class Settings(BaseSettings):
 
     # Claude API
     anthropic_api_key: str = ""
-    claude_model: str = "claude-sonnet-4-6"
+    claude_model: str = "claude-haiku-4-5-20251001"
 
     # Search provider
     search_api_key: str = ""
     search_provider: str = "brave"  # brave | serpapi | tavily
 
-    # Loop limits
-    max_loops: int = 10
-    checkpoint_loop: int = 5
-    hard_stop_loop: int = 15
+    # Fan-out settings
+    max_sources: int = 4             # max parallel sub-agents
+    max_content_chars: int = 6000    # scrape content truncation before extraction call
 
     # Request behavior
-    request_delay_min: float = 2.0
-    request_delay_max: float = 5.0
     request_timeout: float = 30.0
     max_retries: int = 3
-    max_attempts_per_domain: int = 3
 
     # Scrape settings
     playwright_timeout: int = 30_000  # ms
-    max_content_tokens: int = 2000    # truncate scrape results before feeding to LLM
 
     # Logging
     log_level: str = "INFO"

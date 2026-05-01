@@ -1,204 +1,223 @@
-"""Main agent loop — orchestrates Claude API tool use."""
+"""Fan-out agent: search → plan → parallel extract → synthesize."""
 
+import asyncio
 import json
 import logging
-from typing import Any
+import re
+from typing import Any, Awaitable, Callable
 
 import anthropic
 
 from agent.config import settings
-from agent.prompts import SYSTEM_PROMPT, TOOL_DEFINITIONS
-from agent.state import AgentState, ScrapeAttempt
+from agent.prompts import EXTRACTOR_SYSTEM, PLANNER_SYSTEM, SYNTHESIZER_SYSTEM
 from agent.tools.base import ToolResult
-from agent.tools.web_search import WebSearchTool
-from agent.tools.general_scrape import GeneralScrapeTool
 from agent.tools.dynamic_scrape import DynamicScrapeTool
+from agent.tools.general_scrape import GeneralScrapeTool
 from agent.tools.pdf_extract import PdfExtractTool
+from agent.tools.web_search import WebSearchTool
 
 logger = logging.getLogger(__name__)
 
+ProgressCallback = Callable[[str, str], Awaitable[None]]
+
+
+def _parse_json(text: str) -> Any:
+    """Extract JSON from text, tolerating markdown code fences."""
+    text = re.sub(r"^```(?:json)?\s*", "", text.strip())
+    text = re.sub(r"\s*```$", "", text).strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        match = re.search(r"(\[[\s\S]*\]|\{[\s\S]*\})", text)
+        if match:
+            return json.loads(match.group(1))
+        raise
+
 
 class ScraperAgent:
-    """Orchestrates the search → scrape → evaluate → iterate loop.
+    """Three-phase fan-out agent.
 
-    Uses Claude's tool-use API to autonomously find and extract data.
+    Phase 1 — Plan:   web search + one Haiku call to select best URLs.
+    Phase 2 — Scrape: N parallel sub-agents, each scraping one URL then
+                      calling Haiku to extract relevant data.
+    Phase 3 — Synth:  one Haiku call to compile summaries into a final report.
     """
 
     def __init__(self) -> None:
-        self.client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-        self.tools: dict[str, Any] = {
-            "web_search": WebSearchTool(),
-            "general_scrape": GeneralScrapeTool(),
-            "dynamic_scrape": DynamicScrapeTool(),
-            "pdf_extract": PdfExtractTool(),
-        }
-        self.state: AgentState = AgentState(goal="")
-        self._messages: list[dict] = []
+        self.client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+        self.search_tool = WebSearchTool()
+        self.scraper = GeneralScrapeTool()
+        self.dynamic_scraper = DynamicScrapeTool()
+        self.pdf_extractor = PdfExtractTool()
 
     # ------------------------------------------------------------------
     # Public entry point
     # ------------------------------------------------------------------
 
-    async def run(self, goal: str) -> dict:
-        """Run the agent to completion for the given data goal.
+    async def run(
+        self,
+        goal: str,
+        progress_callback: ProgressCallback | None = None,
+    ) -> dict:
+        async def emit(phase: str, message: str) -> None:
+            logger.info("[%s] %s", phase, message)
+            if progress_callback:
+                await progress_callback(phase, message)
 
-        Args:
-            goal: Natural language description of the data to extract.
+        # Phase 1 — search
+        await emit("planning", "Searching the web for data sources…")
+        search_result = await self.search_tool.execute(query=goal)
+        if not search_result.success or not search_result.data:
+            return {
+                "success": False,
+                "data": None,
+                "summary": f"Search failed: {search_result.error}",
+                "sources": [],
+            }
 
-        Returns:
-            dict with keys: success (bool), data (Any), summary (str), loops (int).
-        """
-        self.state = AgentState(goal=goal)
-        self._messages = [{"role": "user", "content": goal}]
+        # Phase 1b — plan
+        await emit("planning", "Selecting best sources to scrape…")
+        candidates = await self._plan(goal, search_result.data)
+        await emit("planning", f"Selected {len(candidates)} source(s) to investigate")
 
-        while True:
-            self.state.current_loop += 1
-            logger.info("Loop %d", self.state.current_loop)
+        # Phase 2 — parallel scrape + extract
+        await emit("scraping", f"Scraping {len(candidates)} source(s) in parallel…")
+        tasks = [
+            self._scrape_and_extract(goal, c["url"], c.get("intent", ""), emit)
+            for c in candidates
+        ]
+        raw_results = await asyncio.gather(*tasks, return_exceptions=True)
+        summaries = [r for r in raw_results if isinstance(r, dict)]
 
-            if self._is_hard_stop():
-                logger.warning("Hard stop reached at loop %d", self.state.current_loop)
-                return {
-                    "success": self.state.best_data_so_far is not None,
-                    "data": self.state.best_data_so_far,
-                    "summary": f"Hard stop at loop {self.state.current_loop}. Returning best data collected.",
-                    "loops": self.state.current_loop,
-                }
+        if not summaries:
+            return {
+                "success": False,
+                "data": None,
+                "summary": "All sources failed to scrape.",
+                "sources": [],
+            }
 
-            if self._should_checkpoint():
-                logger.info("Checkpoint at loop %d", self.state.current_loop)
-                # In CLI mode the caller handles user prompting; here we log and continue.
-
-            # Call Claude
-            response = self.client.messages.create(
-                model=settings.claude_model,
-                max_tokens=4096,
-                system=SYSTEM_PROMPT,
-                tools=TOOL_DEFINITIONS,
-                messages=self._messages,
-            )
-
-            # Append assistant message
-            self._messages.append({"role": "assistant", "content": response.content})
-
-            if response.stop_reason == "end_turn":
-                # Claude is done — extract final text
-                text = next(
-                    (b.text for b in response.content if b.type == "text"),
-                    "Done.",
-                )
-                return {
-                    "success": True,
-                    "data": self.state.best_data_so_far,
-                    "summary": text,
-                    "loops": self.state.current_loop,
-                }
-
-            if response.stop_reason == "tool_use":
-                tool_results = []
-                for block in response.content:
-                    if block.type != "tool_use":
-                        continue
-                    tool_result = await self._execute_tool(block.name, block.input)
-                    self._update_state(block.name, block.input, tool_result)
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": block.id,
-                        "content": self._summarize_for_context(tool_result),
-                    })
-                self._messages.append({"role": "user", "content": tool_results})
-
-    # ------------------------------------------------------------------
-    # Tool execution
-    # ------------------------------------------------------------------
-
-    async def _execute_tool(self, name: str, args: dict) -> ToolResult:
-        """Route a tool call to its implementation.
-
-        Args:
-            name: Tool name from Claude's tool_use block.
-            args: Tool arguments dict.
-
-        Returns:
-            ToolResult from the tool.
-        """
-        tool = self.tools.get(name)
-        if tool is None:
-            return ToolResult(success=False, data=None, error=f"Unknown tool: {name}")
-        try:
-            return await tool.execute(**args)
-        except Exception as exc:
-            logger.exception("Tool %s raised an exception", name)
-            return ToolResult(success=False, data=None, error=str(exc))
-
-    # ------------------------------------------------------------------
-    # State updates
-    # ------------------------------------------------------------------
-
-    def _update_state(self, tool_name: str, args: dict, result: ToolResult) -> None:
-        """Record a tool invocation in agent state."""
-        url = args.get("url", args.get("query", ""))
-        blocking_issues: list[str] = []
-        if result.metadata.get("has_captcha"):
-            blocking_issues.append("captcha")
-        if result.metadata.get("has_cloudflare"):
-            blocking_issues.append("cloudflare")
-        if result.metadata.get("is_js_required"):
-            blocking_issues.append("is_js_required")
-
-        # Rough quality score based on data presence
-        quality = 0.0
-        if result.success and result.data:
-            data = result.data
-            if isinstance(data, list) and data:
-                quality = min(1.0, len(data) / 10)
-            elif isinstance(data, dict):
-                tables = data.get("tables", [])
-                json_data = data.get("json_data")
-                quality = 0.5 if (tables or json_data) else 0.1
-
-        attempt = ScrapeAttempt(
-            loop=self.state.current_loop,
-            url=url,
-            tool_used=tool_name,
-            result_quality=quality,
-            blocking_issues=blocking_issues,
+        found_count = sum(1 for s in summaries if s.get("found"))
+        await emit(
+            "synthesizing",
+            f"Found relevant data in {found_count}/{len(summaries)} source(s). Compiling report…",
         )
-        self.state.record_attempt(attempt)
 
-        if quality > self.state.best_quality_score and result.data:
-            self.state.best_data_so_far = result.data
-            self.state.best_quality_score = quality
-
-    # ------------------------------------------------------------------
-    # Loop control
-    # ------------------------------------------------------------------
-
-    def _should_checkpoint(self) -> bool:
-        """Return True if we've hit the checkpoint loop count."""
-        return self.state.current_loop == settings.checkpoint_loop
-
-    def _is_hard_stop(self) -> bool:
-        """Return True if we've reached the hard stop loop count."""
-        return self.state.current_loop >= settings.hard_stop_loop
+        # Phase 3 — synthesize
+        result = await self._synthesize(goal, summaries)
+        return result
 
     # ------------------------------------------------------------------
-    # Context management
+    # Phase 1b — planner
     # ------------------------------------------------------------------
 
-    def _summarize_for_context(self, result: ToolResult) -> str:
-        """Truncate large tool results to avoid filling the context window.
+    async def _plan(self, goal: str, search_results: list[dict]) -> list[dict]:
+        results_text = json.dumps(search_results[:10], indent=2)
+        response = await self.client.messages.create(
+            model=settings.claude_model,
+            max_tokens=512,
+            system=[{"type": "text", "text": PLANNER_SYSTEM, "cache_control": {"type": "ephemeral"}}],
+            messages=[{"role": "user", "content": f"Goal: {goal}\n\nSearch results:\n{results_text}"}],
+        )
+        try:
+            candidates = _parse_json(response.content[0].text)
+            return candidates[: settings.max_sources]
+        except Exception:
+            logger.warning("Planner returned non-JSON; falling back to top search results")
+            return [
+                {"url": r["url"], "intent": r.get("snippet", "")}
+                for r in search_results[: settings.max_sources]
+            ]
 
-        Args:
-            result: ToolResult from a tool call.
+    # ------------------------------------------------------------------
+    # Phase 2 — per-URL sub-agent
+    # ------------------------------------------------------------------
 
-        Returns:
-            String representation, capped at ~2000 chars.
-        """
+    async def _scrape_and_extract(
+        self,
+        goal: str,
+        url: str,
+        intent: str,
+        emit: Callable[[str, str], Awaitable[None]],
+    ) -> dict:
+        await emit("scraping", f"Scraping {url[:70]}…")
+
+        result = await self._fetch(url)
+
         if not result.success:
-            return f"Tool failed: {result.error}"
+            return {
+                "url": url,
+                "found": False,
+                "data": None,
+                "summary": f"Scrape failed: {result.error}",
+                "confidence": 0.0,
+            }
 
-        raw = json.dumps(result.data, default=str)
-        cap = settings.max_content_tokens * 4  # rough char estimate
-        if len(raw) > cap:
-            return raw[:cap] + f"\n... [truncated, total {len(raw)} chars]"
-        return raw
+        content = json.dumps(result.data, default=str)
+        if len(content) > settings.max_content_chars:
+            content = content[: settings.max_content_chars] + "\n… [truncated]"
+
+        try:
+            response = await self.client.messages.create(
+                model=settings.claude_model,
+                max_tokens=1024,
+                system=[{"type": "text", "text": EXTRACTOR_SYSTEM, "cache_control": {"type": "ephemeral"}}],
+                messages=[{
+                    "role": "user",
+                    "content": (
+                        f"Goal: {goal}\n"
+                        f"Intent for this URL: {intent}\n"
+                        f"URL: {url}\n\n"
+                        f"Scraped content:\n{content}"
+                    ),
+                }],
+            )
+            extraction = _parse_json(response.content[0].text)
+            extraction["url"] = url
+            return extraction
+        except Exception as exc:
+            logger.warning("Extraction failed for %s: %s", url, exc)
+            return {"url": url, "found": False, "data": None, "summary": str(exc), "confidence": 0.0}
+
+    async def _fetch(self, url: str) -> ToolResult:
+        """Try general scrape; escalate to dynamic or PDF as needed."""
+        if url.lower().endswith(".pdf"):
+            return await self.pdf_extractor.execute(url=url)
+
+        result = await self.scraper.execute(url=url)
+        if (
+            not result.success
+            or result.metadata.get("is_js_required")
+            or result.metadata.get("has_cloudflare")
+        ):
+            result = await self.dynamic_scraper.execute(url=url)
+        return result
+
+    # ------------------------------------------------------------------
+    # Phase 3 — synthesizer
+    # ------------------------------------------------------------------
+
+    async def _synthesize(self, goal: str, summaries: list[dict]) -> dict:
+        summaries_text = json.dumps(summaries, indent=2, default=str)
+        if len(summaries_text) > 8000:
+            summaries_text = summaries_text[:8000] + "\n… [truncated]"
+
+        response = await self.client.messages.create(
+            model=settings.claude_model,
+            max_tokens=2048,
+            system=[{"type": "text", "text": SYNTHESIZER_SYSTEM, "cache_control": {"type": "ephemeral"}}],
+            messages=[{
+                "role": "user",
+                "content": f"Goal: {goal}\n\nFindings from {len(summaries)} source(s):\n{summaries_text}",
+            }],
+        )
+        try:
+            return _parse_json(response.content[0].text)
+        except Exception:
+            text = response.content[0].text
+            return {
+                "success": any(s.get("found") for s in summaries),
+                "data": [s.get("data") for s in summaries if s.get("found")],
+                "summary": text,
+                "sources": [s.get("url") for s in summaries],
+            }

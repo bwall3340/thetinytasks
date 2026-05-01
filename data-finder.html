@@ -393,8 +393,8 @@
     <div class="page-header">
         <h1 class="page-title">DataFinder Agent</h1>
         <p class="page-subtitle">
-            Describe the data you want in plain English. The agent will search the web,
-            evaluate sources, and extract the data — looping until it gets what you asked for.
+            Describe the data you want in plain English. The agent searches the web,
+            scrapes the best sources in parallel, and compiles a final report.
         </p>
     </div>
 
@@ -432,7 +432,7 @@
                 <div class="status-dot running" id="status-dot"></div>
                 <span id="status-text">Agent running…</span>
             </div>
-            <span id="loop-counter" style="font-size:0.8125rem;color:#94a3b8;font-weight:500;"></span>
+            <span id="phase-label" style="font-size:0.8125rem;color:#94a3b8;font-weight:500;text-transform:capitalize;"></span>
         </div>
         <div class="log-output" id="log-output"></div>
     </div>
@@ -516,7 +516,7 @@
         resultCard.classList.remove('visible');
         clearLog();
         setStatus('running', 'Agent running…');
-        document.getElementById('loop-counter').textContent = '';
+        document.getElementById('phase-label').textContent = '';
         resultData = null;
 
         appendLog(`Goal: ${goal}`, 'info');
@@ -571,15 +571,14 @@
 
     function handleEvent(event) {
         if (event.type === 'progress') {
-            const loopLabel = event.loop ? `Loop ${event.loop}` : '';
-            if (loopLabel) document.getElementById('loop-counter').textContent = loopLabel;
-            const msgType = event.tool ? 'tool' : 'info';
-            const prefix = event.tool ? `[${event.tool}] ` : '';
-            appendLog(`${prefix}${event.message}`, msgType);
+            if (event.phase) document.getElementById('phase-label').textContent = event.phase;
+            const msgType = event.phase === 'scraping' ? 'tool' : 'info';
+            appendLog(event.message, msgType);
 
         } else if (event.type === 'result') {
             if (event.success) {
-                setStatus('done', `Done — ${event.loops} loop${event.loops !== 1 ? 's' : ''}`);
+                const srcCount = (event.sources || []).length;
+                setStatus('done', `Done — ${srcCount} source${srcCount !== 1 ? 's' : ''} checked`);
                 appendLog('Agent completed successfully.', 'success');
                 showResult(event);
             } else {
