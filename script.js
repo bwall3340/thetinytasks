@@ -323,6 +323,18 @@ class TinyTasksApp {
                 }, 500);
                 break;
 
+            case 'about':
+                setTimeout(() => {
+                    window.location.href = './about.html';
+                }, 500);
+                break;
+
+            case 'bigger-projects':
+                setTimeout(() => {
+                    window.location.href = './bigger-projects.html';
+                }, 500);
+                break;
+
             default:
                 // Placeholder for other tools
                 setTimeout(() => {

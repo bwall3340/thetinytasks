@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bigger Projects — The Tiny Tasks</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background:
+                radial-gradient(ellipse 70% 55% at 10% 20%, rgba(99, 102, 241, 0.12) 0%, transparent 100%),
+                radial-gradient(ellipse 60% 70% at 90% 80%, rgba(168, 85, 247, 0.1) 0%, transparent 100%),
+                linear-gradient(135deg, #f0f4ff 0%, #faf5ff 100%);
+            min-height: 100vh;
+            color: #1e293b;
+        }
+
+        /* ── Header ── */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            height: 72px;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+        }
+
+        .header-logo {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            text-transform: lowercase;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            text-decoration: none;
+        }
+
+        .header-back {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #64748b;
+            text-decoration: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .header-back:hover {
+            color: #6366f1;
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        .header-back svg { width: 16px; height: 16px; }
+
+        /* ── Page layout ── */
+        .page-content {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 4rem 2rem 6rem;
+        }
+
+        .page-header {
+            margin-bottom: 3rem;
+        }
+
+        .page-header h1 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            line-height: 1.1;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-header p {
+            font-size: 1rem;
+            color: #94a3b8;
+        }
+
+        /* ── Projects grid ── */
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 2rem;
+        }
+
+        /* ── Project card ── */
+        .project-card {
+            background: rgba(255, 255, 255, 0.28);
+            backdrop-filter: blur(40px) saturate(180%);
+            -webkit-backdrop-filter: blur(40px) saturate(180%);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.55);
+            box-shadow:
+                0 2px 8px rgba(0, 0, 0, 0.06),
+                0 8px 32px rgba(0, 0, 0, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9);
+            overflow: hidden;
+            transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            position: relative;
+        }
+
+        .project-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 8%;
+            right: 8%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.85) 50%, transparent);
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .project-card:hover {
+            transform: translateY(-5px);
+            box-shadow:
+                0 4px 16px rgba(0, 0, 0, 0.08),
+                0 20px 52px rgba(99, 102, 241, 0.14),
+                inset 0 1px 0 rgba(255, 255, 255, 1);
+        }
+
+        /* ── Media area ── */
+        .project-media {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: linear-gradient(135deg, #e0e7ff 0%, #ede9fe 100%);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .project-media img,
+        .project-media video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .project-media video {
+            cursor: pointer;
+        }
+
+        /* ── Card body ── */
+        .project-body {
+            padding: 1.5rem;
+        }
+
+        .project-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 0.75rem;
+        }
+
+        .project-tag {
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: rgba(99, 102, 241, 0.1);
+            color: #6366f1;
+        }
+
+        .project-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+            line-height: 1.3;
+        }
+
+        .project-description {
+            font-size: 0.875rem;
+            color: #64748b;
+            line-height: 1.65;
+            margin-bottom: 1.25rem;
+        }
+
+        .project-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #6366f1;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 10px;
+            background: rgba(99, 102, 241, 0.08);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .project-link:hover {
+            background: rgba(99, 102, 241, 0.15);
+            border-color: rgba(99, 102, 241, 0.4);
+            gap: 8px;
+        }
+
+        .project-link svg { width: 13px; height: 13px; }
+
+        /* ── States ── */
+        .state-container {
+            text-align: center;
+            padding: 5rem 2rem;
+        }
+
+        .state-icon {
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 1.25rem;
+            opacity: 0.35;
+        }
+
+        .state-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 0.5rem;
+        }
+
+        .state-body {
+            font-size: 0.875rem;
+            color: #94a3b8;
+            max-width: 360px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        /* ── Skeleton loader ── */
+        .skeleton-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 2rem;
+        }
+
+        .skeleton-card {
+            background: rgba(255, 255, 255, 0.28);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.55);
+            overflow: hidden;
+        }
+
+        .skeleton-media {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.6s infinite;
+        }
+
+        .skeleton-body { padding: 1.5rem; }
+
+        .skeleton-line {
+            height: 12px;
+            border-radius: 6px;
+            background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.6s infinite;
+            margin-bottom: 10px;
+        }
+
+        .skeleton-line.short { width: 40%; }
+        .skeleton-line.medium { width: 70%; }
+        .skeleton-line.long { width: 90%; }
+        .skeleton-line.title { height: 20px; width: 80%; margin-bottom: 14px; }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        @media (max-width: 768px) {
+            .page-content { padding: 2rem 1rem 4rem; }
+            .projects-grid { grid-template-columns: 1fr; }
+            .skeleton-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="./index.html" class="header-logo">the tiny tasks</a>
+        <a href="./index.html" class="header-back">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10 12L6 8l4-4"/>
+            </svg>
+            Back
+        </a>
+    </header>
+
+    <main class="page-content">
+        <div class="page-header">
+            <h1>Bigger Projects</h1>
+            <p>Full-scale work beyond the task toolkit</p>
+        </div>
+
+        <div id="projects-root"></div>
+    </main>
+
+    <script>
+        // ── Sanity config ────────────────────────────────────────────────────
+        // Replace these with your Sanity project ID and dataset name
+        const SANITY_PROJECT_ID = 'YOUR_PROJECT_ID';
+        const SANITY_DATASET    = 'production';
+        const SANITY_API_VER    = '2024-01-01';
+        // ────────────────────────────────────────────────────────────────────
+
+        const GROQ_QUERY = encodeURIComponent(`
+            *[_type == "project"] | order(order asc, _createdAt desc) {
+                _id,
+                title,
+                description,
+                "coverImageUrl": coverImage.asset->url,
+                "coverVideoUrl": coverVideo.asset->url,
+                projectUrl,
+                tags
+            }
+        `);
+
+        const API_URL = `https://${SANITY_PROJECT_ID}.apicdn.sanity.io/v${SANITY_API_VER}/data/query/${SANITY_DATASET}?query=${GROQ_QUERY}`;
+
+        const root = document.getElementById('projects-root');
+
+        function renderSkeletons(count = 3) {
+            const grid = document.createElement('div');
+            grid.className = 'skeleton-grid';
+            for (let i = 0; i < count; i++) {
+                grid.innerHTML += `
+                    <div class="skeleton-card">
+                        <div class="skeleton-media"></div>
+                        <div class="skeleton-body">
+                            <div class="skeleton-line short"></div>
+                            <div class="skeleton-line title"></div>
+                            <div class="skeleton-line long"></div>
+                            <div class="skeleton-line medium"></div>
+                        </div>
+                    </div>`;
+            }
+            return grid;
+        }
+
+        function renderEmpty() {
+            return `
+                <div class="state-container">
+                    <svg class="state-icon" viewBox="0 0 56 56" fill="none" stroke="#94a3b8" stroke-width="1.5">
+                        <rect x="8" y="8" width="40" height="40" rx="8"/>
+                        <path d="M18 28h20M18 20h20M18 36h12"/>
+                    </svg>
+                    <p class="state-title">No projects yet</p>
+                    <p class="state-body">Add your first project in Sanity Studio — it'll appear here automatically.</p>
+                </div>`;
+        }
+
+        function renderError(message) {
+            return `
+                <div class="state-container">
+                    <svg class="state-icon" viewBox="0 0 56 56" fill="none" stroke="#f87171" stroke-width="1.5">
+                        <circle cx="28" cy="28" r="20"/>
+                        <path d="M28 18v12M28 34v2"/>
+                    </svg>
+                    <p class="state-title">Couldn't load projects</p>
+                    <p class="state-body">${message}</p>
+                </div>`;
+        }
+
+        function renderMedia(project) {
+            if (project.coverVideoUrl) {
+                return `<video src="${project.coverVideoUrl}" muted loop playsinline
+                    onmouseenter="this.play()" onmouseleave="this.pause(); this.currentTime=0;"
+                    poster="${project.coverImageUrl || ''}"></video>`;
+            }
+            if (project.coverImageUrl) {
+                return `<img src="${project.coverImageUrl}" alt="${project.title}" loading="lazy">`;
+            }
+            return '';
+        }
+
+        function renderTags(tags) {
+            if (!tags || tags.length === 0) return '';
+            return `<div class="project-tags">${tags.map(t => `<span class="project-tag">${t}</span>`).join('')}</div>`;
+        }
+
+        function renderProjects(projects) {
+            const grid = document.createElement('div');
+            grid.className = 'projects-grid';
+            grid.innerHTML = projects.map(p => `
+                <div class="project-card">
+                    ${p.coverImageUrl || p.coverVideoUrl
+                        ? `<div class="project-media">${renderMedia(p)}</div>`
+                        : ''}
+                    <div class="project-body">
+                        ${renderTags(p.tags)}
+                        <h2 class="project-title">${p.title}</h2>
+                        ${p.description ? `<p class="project-description">${p.description}</p>` : ''}
+                        ${p.projectUrl ? `
+                            <a href="${p.projectUrl}" target="_blank" rel="noopener" class="project-link">
+                                Visit Project
+                                <svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M2.5 10.5l8-8M5.5 2.5h5v5"/>
+                                </svg>
+                            </a>` : ''}
+                    </div>
+                </div>
+            `).join('');
+            return grid;
+        }
+
+        async function loadProjects() {
+            // Show skeleton while loading
+            root.appendChild(renderSkeletons(3));
+
+            // Guard: placeholder project ID means Sanity isn't configured yet
+            if (SANITY_PROJECT_ID === 'YOUR_PROJECT_ID') {
+                root.innerHTML = renderEmpty();
+                return;
+            }
+
+            try {
+                const res = await fetch(API_URL);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                const projects = data.result || [];
+
+                root.innerHTML = '';
+                if (projects.length === 0) {
+                    root.innerHTML = renderEmpty();
+                } else {
+                    root.appendChild(renderProjects(projects));
+                }
+            } catch (err) {
+                console.error('Sanity fetch failed:', err);
+                root.innerHTML = renderError('Check your Sanity project ID and CORS settings, then reload.');
+            }
+        }
+
+        loadProjects();
+    </script>
+</body>
+</html>
