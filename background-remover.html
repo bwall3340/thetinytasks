@@ -211,6 +211,66 @@
             box-shadow: none;
         }
 
+        .vector-mode-toggle {
+            display: flex;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .vector-mode-btn {
+            flex: 1;
+            padding: 0.5rem 1rem;
+            border: none;
+            background: white;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #64748b;
+            transition: all 0.15s ease;
+        }
+        .vector-mode-btn.active {
+            background: #6366f1;
+            color: white;
+        }
+        .vtracer-settings {
+            margin-top: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .vtracer-setting-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.8rem;
+        }
+        .vtracer-setting-row label {
+            width: 120px;
+            flex-shrink: 0;
+            color: #64748b;
+        }
+        .vtracer-setting-row input[type=range] { flex: 1; }
+        .vtracer-setting-row span {
+            width: 24px;
+            text-align: right;
+            color: #1e293b;
+            font-weight: 500;
+        }
+        #vtracerDetails summary {
+            cursor: pointer;
+            font-size: 0.875rem;
+            color: #64748b;
+            padding: 0.25rem 0;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            user-select: none;
+        }
+        #vtracerDetails summary::-webkit-details-marker { display: none; }
+        #vtracerDetails[open] summary::after { content: ' ▲'; font-size: 0.7em; }
+        #vtracerDetails:not([open]) summary::after { content: ' ▼'; font-size: 0.7em; }
+
         .canvas-container {
             background: rgba(255, 255, 255, 0.8);
             border: 1px solid rgba(226, 232, 240, 0.8);
@@ -570,6 +630,14 @@
                         </button>
                     </div>
 
+                    <div class="tool-group" id="vectorModeGroup" style="display: none;">
+                        <label><i class="fas fa-layer-group"></i> Output Format</label>
+                        <div class="vector-mode-toggle">
+                            <button class="vector-mode-btn active" data-vmode="binary">Binary</button>
+                            <button class="vector-mode-btn" data-vmode="color">Color</button>
+                        </div>
+                    </div>
+
                     <div class="tool-group" id="vectorDetailGroup" style="display: none;">
                         <label for="detailLevel">
                             <i class="fas fa-eye"></i> Detail Level
@@ -581,6 +649,34 @@
                             <option value="0.02">Normal</option>
                             <option value="0.05">Low</option>
                         </select>
+                    </div>
+
+                    <div class="tool-group" id="vtracerAdvancedGroup" style="display: none;">
+                        <details id="vtracerDetails">
+                            <summary><i class="fas fa-sliders-h"></i> Advanced Settings</summary>
+                            <div class="vtracer-settings">
+                                <div class="vtracer-setting-row">
+                                    <label for="vtracerSpeckle">Noise Removal</label>
+                                    <input type="range" id="vtracerSpeckle" min="1" max="10" value="4">
+                                    <span id="vtracerSpeckleVal">4</span>
+                                </div>
+                                <div class="vtracer-setting-row">
+                                    <label for="vtracerColorPrecision">Color Precision</label>
+                                    <input type="range" id="vtracerColorPrecision" min="2" max="8" value="6">
+                                    <span id="vtracerColorPrecisionVal">6</span>
+                                </div>
+                                <div class="vtracer-setting-row">
+                                    <label for="vtracerLayerDiff">Color Merging</label>
+                                    <input type="range" id="vtracerLayerDiff" min="8" max="64" value="16">
+                                    <span id="vtracerLayerDiffVal">16</span>
+                                </div>
+                                <div class="vtracer-setting-row">
+                                    <label for="vtracerCorner">Corner Sharpness</label>
+                                    <input type="range" id="vtracerCorner" min="10" max="180" value="60">
+                                    <span id="vtracerCornerVal">60</span>
+                                </div>
+                            </div>
+                        </details>
                     </div>
 
                     <div class="tool-group" id="upscaleGroup" style="display: none;">
@@ -649,6 +745,9 @@
                 <div class="canvas-container">
                     <div class="canvas-wrapper">
                         <canvas id="imageCanvas"></canvas>
+                        <div id="svgPreviewContainer" style="display: none; width: 100%; background: repeating-conic-gradient(#f0f0f0 0% 25%, white 0% 50%) 0 0 / 20px 20px; border-radius: 8px; overflow: auto; max-height: 600px;">
+                            <img id="svgPreviewImg" style="max-width: 100%; max-height: 600px; display: block; margin: auto;">
+                        </div>
                         <div class="canvas-overlay" id="canvasOverlay">
                             <div class="instructions">
                                 <i class="fas fa-hand-pointer"></i>
@@ -720,6 +819,7 @@
 
         // Background Remover Specific JavaScript
         let currentMode = 'interactive';
+        let vectorizerColorMode = 'binary'; // 'binary' or 'color'
         let canvas, ctx, originalImageData, editHistory = [];
         let isDrawing = false;
         let processedImageData = null; // Store processed results
@@ -753,7 +853,9 @@
         });
 
         function updateUIForMode() {
+            const vectorModeGroup = document.getElementById('vectorModeGroup');
             const vectorDetailGroup = document.getElementById('vectorDetailGroup');
+            const vtracerAdvancedGroup = document.getElementById('vtracerAdvancedGroup');
             const upscaleGroup = document.getElementById('upscaleGroup');
             const upscaleMethodGroup = document.getElementById('upscaleMethodGroup');
             const enhancementGroup = document.getElementById('enhancementGroup');
@@ -764,7 +866,9 @@
             const instructionSubtext = document.getElementById('instructionSubtext');
 
             // Hide all mode-specific controls first
+            vectorModeGroup.style.display = 'none';
             vectorDetailGroup.style.display = 'none';
+            vtracerAdvancedGroup.style.display = 'none';
             upscaleGroup.style.display = 'none';
             upscaleMethodGroup.style.display = 'none';
             enhancementGroup.style.display = 'none';
@@ -778,7 +882,12 @@
                     instructionSubtext.textContent = 'Choose Remove to delete areas, or Flatten to average colors. Results appear instantly!';
                     break;
                 case 'vectorizer':
-                    vectorDetailGroup.style.display = 'block';
+                    vectorModeGroup.style.display = 'block';
+                    if (vectorizerColorMode === 'color') {
+                        vtracerAdvancedGroup.style.display = 'block';
+                    } else {
+                        vectorDetailGroup.style.display = 'block';
+                    }
                     vectorizeButtonGroup.style.display = 'block';
                     instructionText.textContent = 'Edit image, then click Vectorize';
                     instructionSubtext.textContent = 'Remove/flatten areas first, then convert to scalable vector format';
@@ -1138,12 +1247,52 @@
                 const canvasContainer = document.querySelector('.canvas-container');
                 canvasContainer.style.overflow = 'visible';
                 canvasContainer.style.maxHeight = 'none';
+
+                // Restore canvas, hide SVG preview
+                canvas.style.display = '';
+                const svgPreview = document.getElementById('svgPreviewContainer');
+                if (svgPreview) {
+                    svgPreview.style.display = 'none';
+                    const svgImg = document.getElementById('svgPreviewImg');
+                    if (svgImg) svgImg.src = '';
+                }
+
                 // Hide download section
                 document.getElementById('downloadSection').style.display = 'none';
             }
         }
 
         document.getElementById('resetBtn').addEventListener('click', resetToOriginal);
+
+        // Vector output format toggle (Binary / Color)
+        document.querySelectorAll('.vector-mode-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.vector-mode-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                vectorizerColorMode = this.dataset.vmode;
+                const detailGroup = document.getElementById('vectorDetailGroup');
+                const advancedGroup = document.getElementById('vtracerAdvancedGroup');
+                if (vectorizerColorMode === 'color') {
+                    detailGroup.style.display = 'none';
+                    advancedGroup.style.display = 'block';
+                } else {
+                    advancedGroup.style.display = 'none';
+                    detailGroup.style.display = 'block';
+                }
+            });
+        });
+
+        // VTracer slider live value display
+        [['vtracerSpeckle', 'vtracerSpeckleVal'],
+         ['vtracerColorPrecision', 'vtracerColorPrecisionVal'],
+         ['vtracerLayerDiff', 'vtracerLayerDiffVal'],
+         ['vtracerCorner', 'vtracerCornerVal']].forEach(([sliderId, valId]) => {
+            const slider = document.getElementById(sliderId);
+            const valEl = document.getElementById(valId);
+            if (slider && valEl) {
+                slider.addEventListener('input', () => { valEl.textContent = slider.value; });
+            }
+        });
 
         document.getElementById('startNewBtn').addEventListener('click', () => {
             // Clear canvas and reset to upload state
@@ -1363,6 +1512,114 @@
                     setTimeout(() => indicator.remove(), 300);
                 }
             }, 5000);
+        }
+
+        async function sendToVtracer() {
+            const downloadSection = document.getElementById('downloadSection');
+            const downloadSvgBtn = document.getElementById('downloadSvgBtn');
+            const downloadPngBtn = document.getElementById('downloadPngBtn');
+
+            if (originalImageData && currentState !== 'original') {
+                const useEdited = confirm("Vectorize your current edited image, or reset to the original first?\n\nOK = use edited image\nCancel = reset to original");
+                if (!useEdited) resetToOriginal();
+            }
+
+            const progressSection = document.getElementById('progressSection');
+            const progressFill = document.querySelector('.progress-fill');
+            const progressText = document.querySelector('.progress-text');
+
+            progressSection.style.display = 'block';
+            progressFill.style.width = '0%';
+            progressText.textContent = 'Preparing image for color vectorization...';
+
+            try {
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                const formData = new FormData();
+                formData.append('image', blob, 'edited-image.png');
+                formData.append('filter_speckle', document.getElementById('vtracerSpeckle').value);
+                formData.append('color_precision', document.getElementById('vtracerColorPrecision').value);
+                formData.append('layer_difference', document.getElementById('vtracerLayerDiff').value);
+                formData.append('corner_threshold', document.getElementById('vtracerCorner').value);
+
+                progressText.textContent = 'Sending to color vectorization engine...';
+                progressFill.style.width = '30%';
+
+                const response = await fetch(`${API_BASE}/process_vtracer`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                progressText.textContent = 'Tracing color paths...';
+                progressFill.style.width = '70%';
+
+                const result = await response.json();
+
+                if (result.success) {
+                    window.currentSVG = result.svg_content;
+
+                    progressText.textContent = 'Rendering color preview...';
+                    progressFill.style.width = '90%';
+
+                    displayColorSVG(result.svg_content);
+
+                    progressText.textContent = 'Processing complete...';
+                    showProcessedIndicator('vectorized', `${result.path_count} color paths`);
+                    progressFill.style.width = '100%';
+
+                    setTimeout(() => {
+                        progressSection.style.display = 'none';
+                        downloadSection.style.display = 'block';
+                        downloadSvgBtn.style.display = 'inline-block';
+                        downloadPngBtn.style.display = 'none';
+                        showVectorizationComplete(result.path_count);
+                    }, 500);
+                } else {
+                    throw new Error(result.error || 'Color vectorization failed');
+                }
+
+            } catch (error) {
+                console.error('VTracer error:', error);
+                progressSection.style.display = 'none';
+
+                let errorMessage = 'Color vectorization failed';
+                let helpText = '';
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    errorMessage = 'Cannot connect to vectorization service';
+                    helpText = '<br><small style="opacity: 0.8; font-size: 0.85em;">Make sure the Python backend is running on port 5000</small>';
+                } else if (error.message.includes('500')) {
+                    errorMessage = 'Server processing error';
+                    helpText = '<br><small style="opacity: 0.8; font-size: 0.85em;">Check backend logs for details</small>';
+                }
+
+                const errorMsg = document.createElement('div');
+                errorMsg.style.cssText = `
+                    position: fixed; top: 50%; left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+                    color: white; padding: 1.5rem 2rem; border-radius: 12px;
+                    font-weight: 500; z-index: 1000;
+                    box-shadow: 0 8px 32px rgba(239, 68, 68, 0.3);
+                    text-align: center; max-width: 400px;
+                `;
+                errorMsg.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${errorMessage}${helpText}`;
+                document.body.appendChild(errorMsg);
+                setTimeout(() => errorMsg.remove(), 5000);
+            }
+        }
+
+        function displayColorSVG(svgContent) {
+            const svgPreview = document.getElementById('svgPreviewContainer');
+            const svgImg = document.getElementById('svgPreviewImg');
+
+            canvas.style.display = 'none';
+            svgPreview.style.display = 'block';
+
+            const svgBlob = new Blob([svgContent], { type: 'image/svg+xml' });
+            const svgUrl = URL.createObjectURL(svgBlob);
+            svgImg.src = svgUrl;
+
+            currentState = 'processed';
+            updateResetButton();
         }
 
         function showVectorizationComplete(contourCount) {
@@ -1648,7 +1905,11 @@
 
         // Button event listeners
         document.getElementById('vectorizeBtn').addEventListener('click', () => {
-            autoVectorize();
+            if (vectorizerColorMode === 'color') {
+                sendToVtracer();
+            } else {
+                autoVectorize();
+            }
         });
 
         document.getElementById('upscaleBtn').addEventListener('click', () => {

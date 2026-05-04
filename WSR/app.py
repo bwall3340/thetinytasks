@@ -18,6 +18,7 @@ from detailed_vectorizer import DetailedVectorizer
 from extreme_vectorizer import ExtremeDetailVectorizer
 from test_vectorizer import AdvancedTestVectorizer
 from logo_upscaler import LogoUpscaler
+from vtracer_engine import VtracerEngine
 
 
 app = Flask(__name__)
@@ -242,6 +243,7 @@ detailed_vectorizer = DetailedVectorizer()
 extreme_vectorizer = ExtremeDetailVectorizer()
 test_vectorizer = AdvancedTestVectorizer()
 logo_upscaler = LogoUpscaler()
+vtracer_engine = VtracerEngine()
 
 
 @app.route('/')
@@ -477,6 +479,65 @@ def process_test():
             'error': f'Server error: {str(e)}'
         })
 
+
+
+@app.route('/process_vtracer', methods=['POST'])
+def process_vtracer():
+    """Process image with VTracer for multi-color filled SVG output"""
+    try:
+        if 'image' not in request.files:
+            return jsonify({'success': False, 'error': 'No image file provided'})
+
+        file = request.files['image']
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'No file selected'})
+
+        image_data = file.read()
+
+        if len(image_data) > 10 * 1024 * 1024:
+            return jsonify({'success': False, 'error': 'File size must be less than 10MB'})
+
+        try:
+            filter_speckle = int(request.form.get('filter_speckle', 4))
+            color_precision = int(request.form.get('color_precision', 6))
+            layer_difference = int(request.form.get('layer_difference', 16))
+            corner_threshold = int(request.form.get('corner_threshold', 60))
+        except ValueError:
+            return jsonify({'success': False, 'error': 'Invalid parameter value'})
+
+        filter_speckle = max(1, min(filter_speckle, 10))
+        color_precision = max(2, min(color_precision, 8))
+        layer_difference = max(8, min(layer_difference, 64))
+        corner_threshold = max(10, min(corner_threshold, 180))
+
+        image = Image.open(io.BytesIO(image_data))
+        original_size = f"{image.size[0]}x{image.size[1]}"
+
+        start_time = time.time()
+
+        result = vtracer_engine.vectorize_color(
+            image_data,
+            filter_speckle=filter_speckle,
+            color_precision=color_precision,
+            layer_difference=layer_difference,
+            corner_threshold=corner_threshold,
+        )
+
+        if not result['success']:
+            return jsonify(result)
+
+        return jsonify({
+            'success': True,
+            'svg_content': result['svg_content'],
+            'path_count': result['path_count'],
+            'original_size': original_size,
+            'processing_time': round(time.time() - start_time, 2),
+        })
+
+    except Exception as e:
+        app.logger.error(f"Error processing vtracer request: {str(e)}")
+        app.logger.error(traceback.format_exc())
+        return jsonify({'success': False, 'error': f'Server error: {str(e)}'})
 
 
 @app.route('/process_upscale', methods=['POST'])
