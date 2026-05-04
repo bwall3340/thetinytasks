@@ -190,6 +190,51 @@
             height: 14px;
         }
 
+        /* ── Project list ── */
+        .project-list {
+            list-style: none;
+            margin-top: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .project-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 0.9rem;
+            color: #475569;
+            line-height: 1.5;
+        }
+
+        .project-list li::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            flex-shrink: 0;
+            margin-top: 6px;
+        }
+
+        .project-list li strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+
+        /* ── Location badge ── */
+        .location-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-top: 0.75rem;
+        }
+
+        .location-badge svg { width: 13px; height: 13px; }
+
         /* ── Divider ── */
         .divider {
             height: 1px;
@@ -217,37 +262,63 @@
     <main class="page-content">
         <div class="page-header">
             <h1>Brandon Wallace</h1>
-            <p class="byline">Builder, designer, and the person behind The Tiny Tasks</p>
+            <p class="byline">Solutions Engineer &amp; AI Builder</p>
         </div>
 
         <div class="glass-card">
-            <h2><span class="dot"></span>About me</h2>
+            <h2><span class="dot"></span>About</h2>
             <p>
-                I build things. Some of them are small and useful — the tools on this site —
-                and some of them are larger, longer projects that live elsewhere.
+                I sit at the intersection of enterprise financial technology and applied AI —
+                helping complex organizations solve real problems through thoughtful systems
+                design and strategic client partnership.
             </p>
             <p>
-                The Tiny Tasks started as a personal toolkit: one-off utilities I kept rebuilding
-                from scratch, finally given a home. It grew from there.
+                My background spans enterprise SaaS, financial data, and product design,
+                rooted in a B.A. in Environmental Design from the University of Colorado Boulder.
+                I approach every problem with a systems thinker's instinct and a builder's bias
+                toward action.
+            </p>
+            <div class="location-badge">
+                <svg viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6.5 1C4.567 1 3 2.567 3 4.5c0 2.625 3.5 7.5 3.5 7.5S10 7.125 10 4.5C10 2.567 8.433 1 6.5 1Z"/>
+                    <circle cx="6.5" cy="4.5" r="1.25"/>
+                </svg>
+                Charlotte, NC
+            </div>
+        </div>
+
+        <div class="glass-card">
+            <h2><span class="dot"></span>By day</h2>
+            <p>
+                I'm a Solutions Engineer and Customer Success Manager at
+                <strong style="color: #1e293b;">Informa Financial Intelligence</strong>,
+                where I work with RIAs, banks, and asset managers on the Zephyr investment
+                management platform. My work spans technical implementation, client strategy,
+                and translating nuanced business requirements into scalable solutions.
             </p>
         </div>
 
         <div class="glass-card">
-            <h2><span class="dot"></span>What I work on</h2>
+            <h2><span class="dot"></span>Lightspace Labs</h2>
             <p>
-                My work spans product design, software development, and data — often at the
-                intersection of all three. I'm drawn to problems where a well-made tool saves
-                hours of manual work.
+                I co-founded <a href="https://lightspacelabs.com" target="_blank" rel="noopener"
+                style="color: #6366f1; text-decoration: none; font-weight: 500;">Lightspace Labs</a> —
+                an AI-native studio building tools at the edge of what's possible with large
+                language models. We're pre-revenue and heads-down in build mode.
             </p>
-            <p>
-                Outside of this site, I build larger products. See the
-                <a href="./bigger-projects.html" style="color: #6366f1; text-decoration: none; font-weight: 500;">Bigger Projects</a>
-                page for those.
-            </p>
+            <ul class="project-list">
+                <li><strong>Client Intelligence Monitor</strong> — agentic architecture</li>
+                <li><strong>Market Commentary Aggregator</strong> — LLM-powered sentiment analysis</li>
+                <li><strong>GEO Tracking &amp; Competitive Intelligence</strong> — search visibility and market positioning</li>
+                <li><strong>Financial Statement Parser</strong> — structured data extraction from unstructured filings</li>
+            </ul>
         </div>
 
         <div class="glass-card">
             <h2><span class="dot"></span>Get in touch</h2>
+            <p style="margin-bottom: 1.25rem;">
+                Always open to conversations about product, AI, and what comes next.
+            </p>
             <div class="links-row">
                 <a href="https://lightspacelabs.com" target="_blank" rel="noopener" class="link-chip">
                     <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
