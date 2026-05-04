@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About — The Tiny Tasks</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background:
+                radial-gradient(ellipse 70% 55% at 10% 20%, rgba(99, 102, 241, 0.12) 0%, transparent 100%),
+                radial-gradient(ellipse 60% 70% at 90% 80%, rgba(168, 85, 247, 0.1) 0%, transparent 100%),
+                linear-gradient(135deg, #f0f4ff 0%, #faf5ff 100%);
+            min-height: 100vh;
+            color: #1e293b;
+        }
+
+        /* ── Header ── */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            height: 72px;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+        }
+
+        .header-logo {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            text-transform: lowercase;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            text-decoration: none;
+        }
+
+        .header-back {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #64748b;
+            text-decoration: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .header-back:hover {
+            color: #6366f1;
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        .header-back svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* ── Content ── */
+        .page-content {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 4rem 2rem 6rem;
+        }
+
+        .page-header {
+            margin-bottom: 3rem;
+        }
+
+        .page-header h1 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            line-height: 1.1;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-header .byline {
+            font-size: 1rem;
+            color: #94a3b8;
+            font-weight: 400;
+            letter-spacing: 0.02em;
+        }
+
+        /* ── Glass card ── */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.28);
+            backdrop-filter: blur(40px) saturate(180%);
+            -webkit-backdrop-filter: blur(40px) saturate(180%);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.55);
+            box-shadow:
+                0 2px 8px rgba(0, 0, 0, 0.06),
+                0 8px 32px rgba(0, 0, 0, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9);
+            padding: 2.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 8%;
+            right: 8%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.85) 50%, transparent);
+            pointer-events: none;
+        }
+
+        .glass-card h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .glass-card h2 .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            flex-shrink: 0;
+        }
+
+        .glass-card p {
+            color: #475569;
+            font-size: 0.975rem;
+            line-height: 1.75;
+        }
+
+        .glass-card p + p {
+            margin-top: 1rem;
+        }
+
+        /* ── Links row ── */
+        .links-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .link-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-decoration: none;
+            background: rgba(99, 102, 241, 0.08);
+            color: #6366f1;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .link-chip:hover {
+            background: rgba(99, 102, 241, 0.15);
+            border-color: rgba(99, 102, 241, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .link-chip svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* ── Divider ── */
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.2) 50%, transparent);
+            margin: 1.5rem 0;
+        }
+
+        @media (max-width: 768px) {
+            .page-content { padding: 2rem 1rem 4rem; }
+            .glass-card { padding: 1.75rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="./index.html" class="header-logo">the tiny tasks</a>
+        <a href="./index.html" class="header-back">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10 12L6 8l4-4"/>
+            </svg>
+            Back
+        </a>
+    </header>
+
+    <main class="page-content">
+        <div class="page-header">
+            <h1>Brandon Wallace</h1>
+            <p class="byline">Builder, designer, and the person behind The Tiny Tasks</p>
+        </div>
+
+        <div class="glass-card">
+            <h2><span class="dot"></span>About me</h2>
+            <p>
+                I build things. Some of them are small and useful — the tools on this site —
+                and some of them are larger, longer projects that live elsewhere.
+            </p>
+            <p>
+                The Tiny Tasks started as a personal toolkit: one-off utilities I kept rebuilding
+                from scratch, finally given a home. It grew from there.
+            </p>
+        </div>
+
+        <div class="glass-card">
+            <h2><span class="dot"></span>What I work on</h2>
+            <p>
+                My work spans product design, software development, and data — often at the
+                intersection of all three. I'm drawn to problems where a well-made tool saves
+                hours of manual work.
+            </p>
+            <p>
+                Outside of this site, I build larger products. See the
+                <a href="./bigger-projects.html" style="color: #6366f1; text-decoration: none; font-weight: 500;">Bigger Projects</a>
+                page for those.
+            </p>
+        </div>
+
+        <div class="glass-card">
+            <h2><span class="dot"></span>Get in touch</h2>
+            <div class="links-row">
+                <a href="https://lightspacelabs.com" target="_blank" rel="noopener" class="link-chip">
+                    <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="7" cy="7" r="5.5"/>
+                        <path d="M7 1.5C7 1.5 5 4 5 7s2 5.5 2 5.5M7 1.5C7 1.5 9 4 9 7s-2 5.5-2 5.5M1.5 7h11"/>
+                    </svg>
+                    Lightspace Labs
+                </a>
+            </div>
+        </div>
+    </main>
+</body>
+</html>
