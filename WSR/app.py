@@ -275,6 +275,16 @@ def data_finder():
     return send_from_directory(SITE_DIR, 'data-finder.html')
 
 
+@app.route('/about.html')
+def about():
+    return send_from_directory(SITE_DIR, 'about.html')
+
+
+@app.route('/bigger-projects.html')
+def bigger_projects():
+    return send_from_directory(SITE_DIR, 'bigger-projects.html')
+
+
 @app.route('/Sankey/<path:filename>')
 def sankey_files(filename):
     return send_from_directory(os.path.join(SITE_DIR, 'Sankey'), filename)
