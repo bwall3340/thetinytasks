@@ -421,6 +421,14 @@
             cursor: grabbing;
         }
 
+        #fullscreenChart {
+            cursor: grab;
+        }
+
+        #fullscreenChart.dragging {
+            cursor: grabbing;
+        }
+
         .status {
             padding: 1rem 1.5rem;
             margin: 1.5rem;
@@ -2047,10 +2055,21 @@ Heat,Residential,30</pre>
             // Setup zoom behavior
             zoomBehavior = d3.zoom()
                 .scaleExtent([0.1, 5])
+                .on("start", function(event) {
+                    if (event.sourceEvent) {
+                        d3.select(`#${containerId}`).classed('dragging', true);
+                    }
+                })
                 .on("zoom", function(event) {
                     currentZoom = event.transform;
                     zoomGroup.attr("transform", currentZoom);
+                })
+                .on("end", function() {
+                    d3.select(`#${containerId}`).classed('dragging', false);
                 });
+
+            // Attach scroll-to-zoom and click-drag-to-pan event listeners
+            svg.call(zoomBehavior);
 
             // Set initial zoom transform to identity since viewBox handles initial centering
             const initialTransform = d3.zoomIdentity;
