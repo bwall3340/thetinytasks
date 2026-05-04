@@ -11,6 +11,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY WSR/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Pre-download the rembg u2net model so the first request isn't slow
+RUN python -c "from rembg import new_session; new_session('u2net')"
+
 COPY WSR/ .
 
 # Copy root-level static site files for the home page and other tools

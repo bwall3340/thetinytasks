@@ -456,6 +456,47 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        .ai-remove-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .ai-remove-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.45);
+        }
+
+        .ai-remove-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .ai-remove-btn .spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255,255,255,0.4);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            display: none;
+        }
+
+        .ai-remove-btn.loading .spinner { display: block; }
+        .ai-remove-btn.loading .btn-icon { display: none; }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -567,6 +608,14 @@
                         </button>
                         <button id="startNewBtn" class="tool-btn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
                             <i class="fas fa-plus"></i> Start New
+                        </button>
+                    </div>
+
+                    <div class="tool-group" id="aiRemoveGroup">
+                        <button id="aiRemoveBtn" class="ai-remove-btn" disabled onclick="aiRemoveBackground()">
+                            <span class="spinner"></span>
+                            <span class="btn-icon">✦</span>
+                            AI Remove Background
                         </button>
                     </div>
 
@@ -760,6 +809,7 @@
             const sharpeningGroup = document.getElementById('sharpeningGroup');
             const vectorizeButtonGroup = document.getElementById('vectorizeButtonGroup');
             const upscaleButtonGroup = document.getElementById('upscaleButtonGroup');
+            const aiRemoveGroup = document.getElementById('aiRemoveGroup');
             const instructionText = document.getElementById('instructionText');
             const instructionSubtext = document.getElementById('instructionSubtext');
 
@@ -771,9 +821,11 @@
             sharpeningGroup.style.display = 'none';
             vectorizeButtonGroup.style.display = 'none';
             upscaleButtonGroup.style.display = 'none';
+            aiRemoveGroup.style.display = 'none';
 
             switch(currentMode) {
                 case 'interactive':
+                    aiRemoveGroup.style.display = 'block';
                     instructionText.textContent = 'Click areas to remove or flatten colors';
                     instructionSubtext.textContent = 'Choose Remove to delete areas, or Flatten to average colors. Results appear instantly!';
                     break;
@@ -867,6 +919,7 @@
                 document.getElementById('canvasOverlay').style.display = 'none';
 
                 // Enable buttons based on current mode
+                document.getElementById('aiRemoveBtn').disabled = false;
                 if (currentMode === 'vectorizer') {
                     document.getElementById('vectorizeBtn').disabled = false;
                 } else if (currentMode === 'upscaler') {
@@ -1196,6 +1249,60 @@
 
             downloadSection.style.display = 'block';
             downloadPngBtn.style.display = 'inline-block';
+        }
+
+        async function aiRemoveBackground() {
+            const btn = document.getElementById('aiRemoveBtn');
+            const progressSection = document.getElementById('progressSection');
+            const progressFill = document.querySelector('.progress-fill');
+            const progressText = document.querySelector('.progress-text');
+
+            btn.classList.add('loading');
+            btn.disabled = true;
+            progressSection.style.display = 'block';
+            progressText.textContent = 'Sending image to AI...';
+            progressFill.style.width = '20%';
+
+            try {
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                const formData = new FormData();
+                formData.append('image', blob, 'image.png');
+
+                progressText.textContent = 'AI is removing the background...';
+                progressFill.style.width = '50%';
+
+                const response = await fetch(`${API_BASE}/remove_background`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                progressFill.style.width = '90%';
+
+                if (!result.success) throw new Error(result.error || 'AI removal failed');
+
+                // Draw the result back onto the canvas
+                const img = new Image();
+                img.onload = function() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    saveToHistory();
+                    progressFill.style.width = '100%';
+                    setTimeout(() => {
+                        progressSection.style.display = 'none';
+                        showDownloadOptions();
+                    }, 400);
+                };
+                img.src = 'data:image/png;base64,' + result.image;
+
+            } catch (err) {
+                console.error('AI remove error:', err);
+                progressSection.style.display = 'none';
+                alert('AI background removal failed: ' + err.message);
+            } finally {
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
         }
 
         async function autoVectorize() {

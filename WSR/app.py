@@ -13,6 +13,7 @@ import io
 import base64
 import time
 import traceback
+from rembg import remove as rembg_remove
 from vectorizer_engine import ImprovedVectorizer
 from detailed_vectorizer import DetailedVectorizer
 from extreme_vectorizer import ExtremeDetailVectorizer
@@ -273,6 +274,26 @@ def return_stream():
 @app.route('/data-finder.html')
 def data_finder():
     return send_from_directory(SITE_DIR, 'data-finder.html')
+
+
+@app.route('/remove_background', methods=['POST'])
+def remove_background_ai():
+    if 'image' not in request.files:
+        return jsonify({'success': False, 'error': 'No image provided'})
+
+    file = request.files['image']
+    image_data = file.read()
+
+    if len(image_data) > 10 * 1024 * 1024:
+        return jsonify({'success': False, 'error': 'File too large (max 10MB)'})
+
+    try:
+        output_bytes = rembg_remove(image_data)
+        output_b64 = base64.b64encode(output_bytes).decode()
+        return jsonify({'success': True, 'image': output_b64})
+    except Exception as e:
+        app.logger.error('rembg error: %s', e)
+        return jsonify({'success': False, 'error': str(e)})
 
 
 @app.route('/about.html')

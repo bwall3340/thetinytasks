@@ -6,6 +6,7 @@ Flask==3.0.0
 Flask-CORS==4.0.0
 scipy
 gunicorn
+rembg[gpu]
 # Market commentary module
 psycopg2-binary
 anthropic
