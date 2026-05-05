@@ -186,10 +186,27 @@ def start_scheduler(app):
         id='consensus_insights',
         replace_existing=True,
     )
+
+    # Meal plan auto-fill: midnight UTC daily
+    try:
+        from meal.scheduler import run_meal_auto_fill
+        _scheduler.add_job(
+            func=run_meal_auto_fill,
+            args=[app],
+            trigger='cron',
+            hour=0,
+            minute=5,
+            id='meal_auto_fill',
+            replace_existing=True,
+        )
+    except ImportError:
+        logger.warning('Meal scheduler not available — skipping meal auto-fill job')
+
     _scheduler.start()
     logger.info(
         'Scheduler started: scrape (Mon–Fri 07:00 + 19:00 UTC), '
-        'consensus insights (weekly Sun 02:00 UTC)'
+        'consensus insights (weekly Sun 02:00 UTC), '
+        'meal auto-fill (daily 00:05 UTC)'
     )
 
 

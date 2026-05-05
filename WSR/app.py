@@ -49,11 +49,15 @@ app.config['GOOGLE_CLIENT_SECRET'] = os.environ.get('GOOGLE_CLIENT_SECRET')
 from market.models import db
 from market.admin import admin_bp, init_oauth
 from market.routes import market_bp
+from meal.admin import meal_admin_bp
+from meal.routes import meal_bp
 
 db.init_app(app)
 init_oauth(app)
 app.register_blueprint(admin_bp)
 app.register_blueprint(market_bp)
+app.register_blueprint(meal_admin_bp)
+app.register_blueprint(meal_bp)
 
 _db_setup_done = False
 

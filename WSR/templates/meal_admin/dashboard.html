@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meal Planner — Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* ── Header ── */
+        .admin-header {
+            background: #1e293b; color: #fff;
+            padding: 0 1.5rem; height: 52px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .admin-header .brand { font-size: 0.85rem; font-weight: 600; }
+        .admin-header .brand span { color: #10b981; }
+        .admin-header nav { display: flex; gap: 1rem; align-items: center; }
+        .admin-header nav a { font-size: 0.78rem; color: #94a3b8; text-decoration: none; transition: color 0.15s; }
+        .admin-header nav a:hover { color: #fff; }
+        .user-badge { font-size: 0.72rem; color: #64748b; background: #0f172a; padding: 0.25rem 0.65rem; border-radius: 100px; }
+
+        /* ── Tab bar ── */
+        .tab-bar { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 0 1.5rem; display: flex; gap: 0; flex-shrink: 0; }
+        .tab-btn {
+            padding: 0.75rem 1.25rem; font-size: 0.82rem; font-weight: 500; color: #64748b;
+            background: none; border: none; cursor: pointer; border-bottom: 2px solid transparent;
+            transition: all 0.15s; margin-bottom: -1px;
+        }
+        .tab-btn.active { color: #10b981; border-bottom-color: #10b981; }
+        .tab-btn:hover:not(.active) { color: #1e293b; }
+
+        /* ── Content area ── */
+        .content { flex: 1; overflow: hidden; display: flex; }
+        .tab-panel { display: none; flex: 1; overflow: hidden; }
+        .tab-panel.active { display: flex; }
+
+        /* ── CHAT TAB ── */
+        #tab-chat { flex-direction: row; }
+        .chat-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .chat-sidebar {
+            width: 240px; flex-shrink: 0; background: #fff; border-left: 1px solid #e2e8f0;
+            overflow-y: auto; padding: 1rem;
+        }
+        .sidebar-section { margin-bottom: 1.5rem; }
+        .sidebar-title { font-size: 0.72rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; }
+        .plan-day { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; font-size: 0.78rem; gap: 0.5rem; }
+        .plan-day .d { font-weight: 600; color: #1e293b; white-space: nowrap; }
+        .plan-day .d.today { color: #10b981; }
+        .plan-day .r { color: #64748b; text-align: right; font-size: 0.72rem; line-height: 1.3; }
+        .plan-day .tbd { color: #cbd5e1; font-style: italic; }
+        .stat-row { font-size: 0.78rem; color: #64748b; margin-bottom: 0.35rem; }
+        .stat-row strong { color: #1e293b; }
+
+        .messages { flex: 1; overflow-y: auto; padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+        .msg { max-width: 72%; display: flex; flex-direction: column; gap: 0.25rem; }
+        .msg.user { align-self: flex-end; align-items: flex-end; }
+        .msg.assistant { align-self: flex-start; align-items: flex-start; }
+        .msg-bubble {
+            padding: 0.65rem 0.9rem; border-radius: 12px; font-size: 0.875rem; line-height: 1.55;
+            white-space: pre-wrap; word-break: break-word;
+        }
+        .msg.user .msg-bubble { background: #10b981; color: #fff; border-bottom-right-radius: 4px; }
+        .msg.assistant .msg-bubble { background: #fff; color: #1e293b; border: 1px solid #e2e8f0; border-bottom-left-radius: 4px; }
+        .tool-pills { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.2rem; }
+        .tool-pill { font-size: 0.68rem; padding: 0.15rem 0.5rem; border-radius: 100px; background: rgba(16,185,129,0.1); color: #059669; }
+        .typing { display: flex; gap: 4px; padding: 0.65rem 0.9rem; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; border-bottom-left-radius: 4px; align-self: flex-start; }
+        .typing span { width: 6px; height: 6px; border-radius: 50%; background: #94a3b8; animation: bounce 1.2s infinite; }
+        .typing span:nth-child(2) { animation-delay: 0.2s; }
+        .typing span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-6px); } }
+
+        .chat-input-area { padding: 1rem 1.5rem; background: #fff; border-top: 1px solid #e2e8f0; display: flex; gap: 0.75rem; align-items: flex-end; }
+        .chat-input {
+            flex: 1; resize: none; border: 1.5px solid #e2e8f0; border-radius: 10px;
+            padding: 0.6rem 0.85rem; font-family: inherit; font-size: 0.875rem; color: #1e293b;
+            outline: none; max-height: 140px; overflow-y: auto; line-height: 1.5;
+            transition: border-color 0.15s;
+        }
+        .chat-input:focus { border-color: #10b981; }
+        .send-btn {
+            flex-shrink: 0; width: 38px; height: 38px; border-radius: 10px; border: none;
+            background: #10b981; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: background 0.15s;
+        }
+        .send-btn:hover { background: #059669; }
+        .send-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+        .send-btn svg { width: 16px; height: 16px; }
+
+        /* ── RECIPES TAB ── */
+        #tab-recipes { flex-direction: column; overflow-y: auto; }
+        .tab-content { padding: 1.5rem; max-width: 900px; width: 100%; margin: 0 auto; }
+        h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; }
+        .recipe-note { font-size: 0.83rem; color: #64748b; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; line-height: 1.5; }
+        .recipe-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+        .recipe-table th { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 2px solid #e2e8f0; font-weight: 600; color: #64748b; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
+        .recipe-table td { padding: 0.65rem 0.75rem; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+        .recipe-table tr:hover td { background: #f8fafc; }
+        .recipe-name-cell { font-weight: 500; }
+        .recipe-source { font-size: 0.75rem; color: #64748b; margin-top: 0.15rem; }
+        .recipe-source a { color: #10b981; text-decoration: none; }
+        .tag { display: inline-block; padding: 0.15rem 0.45rem; border-radius: 100px; font-size: 0.68rem; margin: 0.1rem; }
+        .tag-easy { background: #dcfce7; color: #15803d; }
+        .tag-medium { background: #fef9c3; color: #854d0e; }
+        .tag-hard { background: #fee2e2; color: #991b1b; }
+        .tag-default { background: #f1f5f9; color: #475569; }
+        .del-btn { background: none; border: none; cursor: pointer; color: #cbd5e1; font-size: 1rem; transition: color 0.15s; padding: 0.1rem; }
+        .del-btn:hover { color: #dc2626; }
+        .empty-state { color: #94a3b8; font-size: 0.875rem; padding: 2rem 0; text-align: center; }
+
+        /* ── PREFERENCES TAB ── */
+        #tab-preferences { flex-direction: column; overflow-y: auto; }
+        .pref-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem; }
+        .pref-item {
+            display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+            background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+            padding: 0.75rem 1rem; font-size: 0.85rem;
+        }
+        .pref-item .rule { flex: 1; }
+        .pref-item .pref-id { font-size: 0.7rem; color: #cbd5e1; margin-right: 0.5rem; }
+
+        /* ── PLAN TAB ── */
+        #tab-plan { flex-direction: column; overflow-y: auto; }
+        .plan-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+        .plan-card {
+            background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1rem;
+            display: flex; flex-direction: column; gap: 0.5rem;
+        }
+        .plan-card.today-card { border-color: #10b981; box-shadow: 0 0 0 1px #10b981; }
+        .plan-card .pc-day { font-size: 0.72rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; }
+        .plan-card .pc-date { font-size: 0.78rem; color: #64748b; }
+        .plan-card .pc-recipe { font-size: 0.875rem; font-weight: 500; }
+        .plan-card .pc-tbd { font-size: 0.875rem; color: #cbd5e1; font-style: italic; }
+        .plan-card .pc-source { font-size: 0.68rem; color: #94a3b8; }
+        .clear-btn { background: none; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.25rem 0.6rem; font-size: 0.72rem; color: #94a3b8; cursor: pointer; transition: all 0.15s; align-self: flex-start; margin-top: auto; }
+        .clear-btn:hover { border-color: #dc2626; color: #dc2626; }
+    </style>
+</head>
+<body>
+
+<header class="admin-header">
+    <div class="brand">the tiny tasks &nbsp;/&nbsp; <span>meal planner</span></div>
+    <nav>
+        <a href="/meal-planner" target="_blank">Public View ↗</a>
+        <span class="user-badge">{{ admin_user.email }}</span>
+        <a href="{{ url_for('meal_admin.logout') }}">Log out</a>
+    </nav>
+</header>
+
+<div class="tab-bar">
+    <button class="tab-btn active" data-tab="chat">Chat</button>
+    <button class="tab-btn" data-tab="recipes">Recipes ({{ recipe_count }})</button>
+    <button class="tab-btn" data-tab="preferences">Preferences ({{ pref_count }})</button>
+    <button class="tab-btn" data-tab="plan">Plan</button>
+</div>
+
+<div class="content">
+
+    <!-- ── CHAT ── -->
+    <div class="tab-panel active" id="tab-chat">
+        <div class="chat-main">
+            <div class="messages" id="messages">
+                <div class="msg assistant">
+                    <div class="msg-bubble">Hi! I'm your meal planning assistant. I can help you add recipes, set your preferences, plan your dinners, and build grocery lists. What would you like to do?</div>
+                </div>
+            </div>
+            <div class="chat-input-area">
+                <textarea class="chat-input" id="chat-input" placeholder="Ask me to plan dinners, add a recipe, update preferences…" rows="1"></textarea>
+                <button class="send-btn" id="send-btn" title="Send (Enter)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div class="chat-sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-title">This Week</div>
+                {% for day in plan_days %}
+                <div class="plan-day">
+                    <span class="d {% if day.is_today %}today{% endif %}">{{ day.weekday }} {{ day.date.strftime('%-d') }}</span>
+                    {% if day.recipe_name %}
+                    <span class="r">{{ day.recipe_name }}</span>
+                    {% else %}
+                    <span class="tbd r">TBD</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <div class="sidebar-section">
+                <div class="sidebar-title">Library</div>
+                <div class="stat-row"><strong>{{ recipe_count }}</strong> recipes</div>
+                <div class="stat-row"><strong>{{ pref_count }}</strong> rules</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── RECIPES ── -->
+    <div class="tab-panel" id="tab-recipes">
+        <div class="tab-content">
+            <h2>Recipe Library</h2>
+            <div class="recipe-note">Add recipes by chatting — paste any recipe text and Claude will parse it into structured fields. Use the Chat tab to add, edit, or remove recipes.</div>
+            {% if recipes %}
+            <table class="recipe-table">
+                <thead>
+                    <tr>
+                        <th>Recipe</th>
+                        <th>Difficulty</th>
+                        <th>Cuisine</th>
+                        <th>Tags</th>
+                        <th>Time</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for r in recipes %}
+                <tr id="recipe-row-{{ r.id }}">
+                    <td>
+                        <div class="recipe-name-cell">{{ r.name }}</div>
+                        {% if r.source_name %}
+                        <div class="recipe-source">
+                            {% if r.source_url %}<a href="{{ r.source_url }}" target="_blank">{{ r.source_name }}</a>{% else %}{{ r.source_name }}{% endif %}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if r.difficulty %}
+                        <span class="tag tag-{{ r.difficulty }}">{{ r.difficulty }}</span>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>{{ r.cuisine or '—' }}</td>
+                    <td>
+                        {% for tag in (r.tags or []) %}
+                        <span class="tag tag-default">{{ tag }}</span>
+                        {% endfor %}
+                    </td>
+                    <td>{{ r.prep_minutes ~ ' min' if r.prep_minutes else '—' }}</td>
+                    <td>
+                        <button class="del-btn" onclick="deleteRecipe({{ r.id }})" title="Remove recipe">✕</button>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">No recipes yet. Add some via the Chat tab.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ── PREFERENCES ── -->
+    <div class="tab-panel" id="tab-preferences">
+        <div class="tab-content">
+            <h2>Preference Rules</h2>
+            <div class="recipe-note">Add rules by chatting — e.g. "Add a rule: no pasta more than once per week." Claude will save it automatically.</div>
+            {% if preferences %}
+            <div class="pref-list">
+                {% for p in preferences %}
+                <div class="pref-item" id="pref-{{ p.id }}">
+                    <span class="pref-id">#{{ p.id }}</span>
+                    <span class="rule">{{ p.rule_text }}</span>
+                    <button class="del-btn" onclick="deletePreference({{ p.id }})" title="Remove rule">✕</button>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">No preference rules yet. Add some via the Chat tab.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ── PLAN ── -->
+    <div class="tab-panel" id="tab-plan">
+        <div class="tab-content">
+            <h2>Next 7 Days</h2>
+            <div class="recipe-note">Assign meals via Chat. Use the clear button to remove an assignment — the nightly scheduler will auto-fill it.</div>
+            <div class="plan-grid">
+                {% for day in plan_days %}
+                <div class="plan-card {% if day.is_today %}today-card{% endif %}" id="plan-card-{{ day.date }}">
+                    <div class="pc-day">{{ day.weekday }}</div>
+                    <div class="pc-date">{{ day.date.strftime('%b %-d') }}</div>
+                    {% if day.recipe_name %}
+                    <div class="pc-recipe">{{ day.recipe_name }}</div>
+                    <button class="clear-btn" onclick="clearPlanEntry('{{ day.date }}')">Clear</button>
+                    {% else %}
+                    <div class="pc-tbd">TBD</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+});
+
+// ── Chat ──────────────────────────────────────────────────────────────────────
+const messagesEl = document.getElementById('messages');
+const inputEl = document.getElementById('chat-input');
+const sendBtn = document.getElementById('send-btn');
+
+// Conversation history sent to the server each turn
+const history = []; // [{role, content}]
+
+function autoResize() {
+    inputEl.style.height = 'auto';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + 'px';
+}
+inputEl.addEventListener('input', autoResize);
+inputEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+sendBtn.addEventListener('click', sendMessage);
+
+function appendMsg(role, text, toolCalls) {
+    const wrap = document.createElement('div');
+    wrap.className = 'msg ' + role;
+    const bubble = document.createElement('div');
+    bubble.className = 'msg-bubble';
+    bubble.textContent = text;
+    wrap.appendChild(bubble);
+    if (toolCalls && toolCalls.length) {
+        const pills = document.createElement('div');
+        pills.className = 'tool-pills';
+        [...new Set(toolCalls)].forEach(t => {
+            const p = document.createElement('span');
+            p.className = 'tool-pill';
+            p.textContent = t.replace(/_/g, ' ');
+            pills.appendChild(p);
+        });
+        wrap.appendChild(pills);
+    }
+    messagesEl.appendChild(wrap);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function showTyping() {
+    const el = document.createElement('div');
+    el.className = 'typing';
+    el.id = 'typing-indicator';
+    el.innerHTML = '<span></span><span></span><span></span>';
+    messagesEl.appendChild(el);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function hideTyping() {
+    const el = document.getElementById('typing-indicator');
+    if (el) el.remove();
+}
+
+async function sendMessage() {
+    const text = inputEl.value.trim();
+    if (!text || sendBtn.disabled) return;
+
+    appendMsg('user', text);
+    history.push({ role: 'user', content: text });
+    inputEl.value = '';
+    inputEl.style.height = 'auto';
+    sendBtn.disabled = true;
+    showTyping();
+
+    try {
+        const res = await fetch('{{ url_for("meal_admin.chat") }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: history }),
+        });
+        const data = await res.json();
+        hideTyping();
+
+        if (data.error) {
+            appendMsg('assistant', 'Error: ' + data.error);
+        } else {
+            history.push({ role: 'assistant', content: data.reply });
+            appendMsg('assistant', data.reply, data.tool_calls);
+            if (data.refresh) {
+                // Soft-refresh: reload page after short delay so user can read the reply
+                setTimeout(() => window.location.reload(), 2500);
+            }
+        }
+    } catch (err) {
+        hideTyping();
+        appendMsg('assistant', 'Network error — please try again.');
+    }
+
+    sendBtn.disabled = false;
+    inputEl.focus();
+}
+
+// ── Recipe delete ─────────────────────────────────────────────────────────────
+async function deleteRecipe(id) {
+    if (!confirm('Remove this recipe from the library?')) return;
+    await fetch(`/meal-planner/admin/recipes/${id}/delete`, { method: 'POST' });
+    const row = document.getElementById('recipe-row-' + id);
+    if (row) row.remove();
+}
+
+// ── Plan clear ────────────────────────────────────────────────────────────────
+async function clearPlanEntry(dateStr) {
+    if (!confirm('Clear this day's assignment?')) return;
+    const res = await fetch('/meal-planner/admin/plan/clear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: dateStr }),
+    });
+    if (res.ok) window.location.reload();
+}
+
+// ── Preference delete ─────────────────────────────────────────────────────────
+async function deletePreference(id) {
+    if (!confirm('Remove this preference rule?')) return;
+    await fetch(`/meal-planner/admin/preferences/${id}/delete`, { method: 'POST' });
+    const el = document.getElementById('pref-' + id);
+    if (el) el.remove();
+}
+</script>
+</body>
+</html>
