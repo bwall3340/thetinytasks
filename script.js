@@ -323,6 +323,12 @@ class TinyTasksApp {
                 }, 500);
                 break;
 
+            case 'meal-planner':
+                setTimeout(() => {
+                    window.location.href = '/meal-planner';
+                }, 500);
+                break;
+
             case 'about':
                 setTimeout(() => {
                     window.location.href = './about.html';
