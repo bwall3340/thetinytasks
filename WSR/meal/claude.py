@@ -262,7 +262,58 @@ TOOLS = [
             'required': ['raw_text', 'parsed_items'],
         },
     },
+    {
+        'name': 'scrape_recipe_url',
+        'description': (
+            'Fetch a recipe URL and return the page text so you can parse it into add_recipe. '
+            'If scraping fails (blocked, paywall, timeout), return the error so the user knows '
+            'to paste the recipe text manually instead.'
+        ),
+        'input_schema': {
+            'type': 'object',
+            'properties': {'url': {'type': 'string', 'description': 'Full URL of the recipe page'}},
+            'required': ['url'],
+        },
+    },
 ]
+
+
+# ── URL scraper ───────────────────────────────────────────────────────────────
+
+def _scrape_url(url: str) -> dict:
+    try:
+        import requests
+        from bs4 import BeautifulSoup
+    except ImportError:
+        return {'error': 'Scraping dependencies not available — paste the recipe text instead.'}
+
+    try:
+        resp = requests.get(
+            url, timeout=10,
+            headers={'User-Agent': 'Mozilla/5.0 (compatible; recipe-parser/1.0)'},
+            allow_redirects=True,
+        )
+    except requests.exceptions.Timeout:
+        return {'error': 'Request timed out — the site may be slow or blocking scrapers. Paste the recipe text instead.'}
+    except requests.exceptions.RequestException as e:
+        return {'error': f'Could not reach the URL ({e}). Paste the recipe text instead.'}
+
+    if resp.status_code == 403:
+        return {'error': 'Site blocked the request (403 Forbidden) — likely a paywall or bot protection. Paste the recipe text instead.'}
+    if resp.status_code == 401:
+        return {'error': 'Site requires login (401) — paste the recipe text instead.'}
+    if resp.status_code != 200:
+        return {'error': f'Site returned HTTP {resp.status_code} — paste the recipe text instead.'}
+
+    soup = BeautifulSoup(resp.text, 'lxml')
+    for tag in soup(['script', 'style', 'nav', 'footer', 'header', 'aside', 'iframe']):
+        tag.decompose()
+
+    text = soup.get_text(' ', strip=True)
+    if len(text) < 100:
+        return {'error': 'Page returned very little text — likely a paywall or JS-rendered site. Paste the recipe text instead.'}
+
+    return {'text': text[:8000], 'url': url}
 
 
 # ── Tool execution ────────────────────────────────────────────────────────────
@@ -381,6 +432,9 @@ def _execute_tool(name: str, inp: dict) -> dict:
         db.session.add(history)
         db.session.commit()
         return {'status': 'saved', 'order_id': history.id}
+
+    if name == 'scrape_recipe_url':
+        return _scrape_url(inp['url'])
 
     return {'error': f'Unknown tool: {name}'}
 
