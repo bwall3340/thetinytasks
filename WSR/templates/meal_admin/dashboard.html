@@ -312,8 +312,7 @@ const messagesEl = document.getElementById('messages');
 const inputEl = document.getElementById('chat-input');
 const sendBtn = document.getElementById('send-btn');
 
-// Conversation history sent to the server each turn
-const history = []; // [{role, content}]
+const chatHistory = []; // renamed from 'history' to avoid shadowing window.history
 
 function autoResize() {
     inputEl.style.height = 'auto';
@@ -361,22 +360,45 @@ function hideTyping() {
     if (el) el.remove();
 }
 
+function showUpdateBanner(toolCalls) {
+    const actionMap = {
+        add_recipe: 'Recipe added',
+        update_recipe: 'Recipe updated',
+        deactivate_recipe: 'Recipe removed',
+        save_preference: 'Rule saved',
+        deactivate_preference: 'Rule removed',
+        set_plan_entry: 'Plan updated',
+        clear_plan_entry: 'Plan cleared',
+        save_order_history: 'Order saved',
+    };
+    const actions = [...new Set(toolCalls)]
+        .map(t => actionMap[t])
+        .filter(Boolean);
+    if (!actions.length) return;
+
+    const banner = document.createElement('div');
+    banner.style.cssText = 'font-size:0.72rem;color:#059669;text-align:center;padding:0.4rem;';
+    banner.textContent = actions.join(' · ') + ' — refresh other tabs to see changes';
+    messagesEl.appendChild(banner);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
 async function sendMessage() {
     const text = inputEl.value.trim();
     if (!text || sendBtn.disabled) return;
 
     appendMsg('user', text);
-    history.push({ role: 'user', content: text });
+    chatHistory.push({ role: 'user', content: text });
     inputEl.value = '';
     inputEl.style.height = 'auto';
     sendBtn.disabled = true;
     showTyping();
 
     try {
-        const res = await fetch('{{ url_for("meal_admin.chat") }}', {
+        const res = await fetch('/meal-planner/admin/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messages: history }),
+            body: JSON.stringify({ messages: chatHistory }),
         });
         const data = await res.json();
         hideTyping();
@@ -384,16 +406,16 @@ async function sendMessage() {
         if (data.error) {
             appendMsg('assistant', 'Error: ' + data.error);
         } else {
-            history.push({ role: 'assistant', content: data.reply });
+            chatHistory.push({ role: 'assistant', content: data.reply });
             appendMsg('assistant', data.reply, data.tool_calls);
-            if (data.refresh) {
-                // Soft-refresh: reload page after short delay so user can read the reply
-                setTimeout(() => window.location.reload(), 2500);
+            if (data.tool_calls && data.tool_calls.length) {
+                showUpdateBanner(data.tool_calls);
             }
         }
     } catch (err) {
         hideTyping();
-        appendMsg('assistant', 'Network error — please try again.');
+        appendMsg('assistant', 'Something went wrong — please try again. (' + err.message + ')');
+        console.error('Chat error:', err);
     }
 
     sendBtn.disabled = false;
@@ -410,7 +432,7 @@ async function deleteRecipe(id) {
 
 // ── Plan clear ────────────────────────────────────────────────────────────────
 async function clearPlanEntry(dateStr) {
-    if (!confirm('Clear this day's assignment?')) return;
+    if (!confirm('Clear this day\'s assignment?')) return;
     const res = await fetch('/meal-planner/admin/plan/clear', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
