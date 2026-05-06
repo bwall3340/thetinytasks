@@ -136,6 +136,26 @@
         .plan-card .pc-source { font-size: 0.68rem; color: #94a3b8; }
         .clear-btn { background: none; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.25rem 0.6rem; font-size: 0.72rem; color: #94a3b8; cursor: pointer; transition: all 0.15s; align-self: flex-start; margin-top: auto; }
         .clear-btn:hover { border-color: #dc2626; color: #dc2626; }
+
+        /* ── ORDERS TAB ── */
+        #tab-orders { flex-direction: column; overflow-y: auto; }
+        .order-items-row td { background: #f8fafc; }
+        .order-items-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+        .order-items-table th { text-align: left; padding: 0.2rem 0.5rem; color: #94a3b8; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.03em; }
+        .order-items-table td { padding: 0.2rem 0.5rem; border-top: 1px solid #f1f5f9; }
+        .order-items-table .price-col { text-align: right; }
+        .expand-btn { background: none; border: none; cursor: pointer; font-size: 0.75rem; color: #94a3b8; padding: 0.1rem 0.3rem; transition: color 0.15s; }
+        .expand-btn:hover { color: #10b981; }
+
+        /* ── Upload button ── */
+        .upload-btn {
+            flex-shrink: 0; width: 38px; height: 38px; border-radius: 10px;
+            border: 1.5px solid #e2e8f0; background: #fff; color: #94a3b8;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: all 0.15s;
+        }
+        .upload-btn:hover { border-color: #10b981; color: #10b981; }
+        .upload-btn svg { width: 16px; height: 16px; }
     </style>
 </head>
 <body>
@@ -154,6 +174,7 @@
     <button class="tab-btn" data-tab="recipes">Recipes ({{ recipe_count }})</button>
     <button class="tab-btn" data-tab="preferences">Preferences ({{ pref_count }})</button>
     <button class="tab-btn" data-tab="plan">Plan</button>
+    <button class="tab-btn" data-tab="orders">Orders ({{ order_count }})</button>
 </div>
 
 <div class="content">
@@ -168,7 +189,13 @@
             </div>
             <div class="chat-input-area">
                 <textarea class="chat-input" id="chat-input" placeholder="Ask me to plan dinners, add a recipe, update preferences…" rows="1"></textarea>
-                <button class="send-btn" id="send-btn" title="Send (Enter)">
+                <input type="file" id="invoice-file-input" accept=".pdf" style="display:none">
+                <button type="button" class="upload-btn" id="invoice-upload-btn" title="Upload invoice PDF">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                    </svg>
+                </button>
+                <button type="button" class="send-btn" id="send-btn" title="Send (Enter)">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="22" y1="2" x2="11" y2="13"></line>
                         <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
@@ -294,6 +321,67 @@
         </div>
     </div>
 
+    <!-- ── ORDERS ── -->
+    <div class="tab-panel" id="tab-orders">
+        <div class="tab-content">
+            <h2>Order History</h2>
+            <div class="recipe-note">Upload invoices using the 📎 button in the Chat tab. Claude will parse and confirm before saving. Price history is stored for future meal cost estimation.</div>
+            {% if orders %}
+            <table class="recipe-table">
+                <thead>
+                    <tr>
+                        <th>Order Date</th>
+                        <th>Store</th>
+                        <th>Items</th>
+                        <th>Total</th>
+                        <th>Uploaded</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td>{{ order.order_date.strftime('%b %-d, %Y') if order.order_date else '—' }}</td>
+                    <td>{{ order.store or 'Whole Foods' }}</td>
+                    <td>
+                        {{ (order.parsed_items or [])|length }}
+                        <button class="expand-btn" onclick="toggleOrderItems({{ order.id }}, this)" title="View items">▶</button>
+                    </td>
+                    <td>{{ "${:.2f}".format(order.order_total | float) if order.order_total else '—' }}</td>
+                    <td>{{ order.created_at.strftime('%b %-d') }}</td>
+                    <td><button class="del-btn" onclick="deleteOrder({{ order.id }})" title="Delete order">✕</button></td>
+                </tr>
+                <tr class="order-items-row" id="order-items-{{ order.id }}" style="display:none;">
+                    <td colspan="6" style="padding: 0.25rem 0.75rem 0.75rem;">
+                        <table class="order-items-table">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Qty</th>
+                                    <th class="price-col">Price</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for it in (order.parsed_items or []) %}
+                            <tr>
+                                <td>{{ it.item }}{% if it.brand %} <span style="color:#94a3b8;font-size:0.72rem;">{{ it.brand }}</span>{% endif %}</td>
+                                <td style="color:#64748b;">{{ it.qty or '—' }}{% if it.unit %} {{ it.unit }}{% endif %}</td>
+                                <td class="price-col">{{ "${:.2f}".format(it.price | float) if it.price else '—' }}</td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">No orders saved yet. Upload an invoice using the 📎 button in the Chat tab.</div>
+            {% endif %}
+        </div>
+    </div>
+
 </div>
 
 <script>
@@ -383,17 +471,8 @@ function showUpdateBanner(toolCalls) {
     messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
-async function sendMessage() {
-    const text = inputEl.value.trim();
-    if (!text || sendBtn.disabled) return;
-
-    appendMsg('user', text);
-    chatHistory.push({ role: 'user', content: text });
-    inputEl.value = '';
-    inputEl.style.height = 'auto';
-    sendBtn.disabled = true;
-    showTyping();
-
+// Shared fetch logic used by both sendMessage and uploadInvoice
+async function sendToChatAPI() {
     try {
         const res = await fetch('/meal-planner/admin/chat', {
             method: 'POST',
@@ -402,7 +481,6 @@ async function sendMessage() {
         });
         const data = await res.json();
         hideTyping();
-
         if (data.error) {
             appendMsg('assistant', 'Error: ' + data.error);
         } else {
@@ -415,11 +493,72 @@ async function sendMessage() {
     } catch (err) {
         hideTyping();
         appendMsg('assistant', 'Something went wrong — please try again. (' + err.message + ')');
-        console.error('Chat error:', err);
     }
-
     sendBtn.disabled = false;
     inputEl.focus();
+}
+
+async function sendMessage() {
+    const text = inputEl.value.trim();
+    if (!text || sendBtn.disabled) return;
+    appendMsg('user', text);
+    chatHistory.push({ role: 'user', content: text });
+    inputEl.value = '';
+    inputEl.style.height = 'auto';
+    sendBtn.disabled = true;
+    showTyping();
+    await sendToChatAPI();
+}
+
+// ── Invoice upload ─────────────────────────────────────────────────────────────
+const invoiceFileInput = document.getElementById('invoice-file-input');
+const invoiceUploadBtn = document.getElementById('invoice-upload-btn');
+
+invoiceUploadBtn.addEventListener('click', () => invoiceFileInput.click());
+invoiceFileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    invoiceFileInput.value = '';
+    await uploadInvoice(file);
+});
+
+async function uploadInvoice(file) {
+    if (sendBtn.disabled) return;
+    sendBtn.disabled = true;
+
+    // Show a compact user bubble — don't dump the raw PDF text into the chat
+    appendMsg('user', '📎 ' + file.name);
+    showTyping();
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    let invoiceText, pageCount;
+    try {
+        const uploadRes = await fetch('/meal-planner/admin/invoice/upload', {
+            method: 'POST',
+            body: formData,
+        });
+        const uploadData = await uploadRes.json();
+        if (uploadData.error) {
+            hideTyping();
+            appendMsg('assistant', 'Could not read the PDF: ' + uploadData.error);
+            sendBtn.disabled = false;
+            return;
+        }
+        invoiceText = uploadData.text;
+        pageCount = uploadData.pages;
+    } catch (err) {
+        hideTyping();
+        appendMsg('assistant', 'Upload failed: ' + err.message);
+        sendBtn.disabled = false;
+        return;
+    }
+
+    // The full invoice text goes to the API but the chat bubble only shows the filename
+    const userContent = `Please parse this grocery invoice and show me all items with quantities and prices before saving. The file is ${pageCount} page${pageCount !== 1 ? 's' : ''}.\n\n${invoiceText}`;
+    chatHistory.push({ role: 'user', content: userContent });
+    await sendToChatAPI();
 }
 
 // ── Recipe delete ─────────────────────────────────────────────────────────────
@@ -447,6 +586,30 @@ async function deletePreference(id) {
     await fetch(`/meal-planner/admin/preferences/${id}/delete`, { method: 'POST' });
     const el = document.getElementById('pref-' + id);
     if (el) el.remove();
+}
+
+// ── Order delete ──────────────────────────────────────────────────────────────
+async function deleteOrder(id) {
+    if (!confirm('Delete this order from history? This cannot be undone.')) return;
+    await fetch(`/meal-planner/admin/orders/${id}/delete`, { method: 'POST' });
+    // Remove both the data row and the items expand row
+    const rows = document.querySelectorAll(`[id="order-items-${id}"]`);
+    rows.forEach(r => r.remove());
+    // Remove parent row by finding the expand button and walking up
+    document.querySelectorAll('.del-btn').forEach(btn => {
+        if (btn.getAttribute('onclick') === `deleteOrder(${id})`) {
+            btn.closest('tr').remove();
+        }
+    });
+}
+
+// ── Order items expand/collapse ───────────────────────────────────────────────
+function toggleOrderItems(id, btn) {
+    const row = document.getElementById('order-items-' + id);
+    if (!row) return;
+    const isHidden = row.style.display === 'none';
+    row.style.display = isHidden ? 'table-row' : 'none';
+    btn.textContent = isHidden ? '▼' : '▶';
 }
 </script>
 </body>

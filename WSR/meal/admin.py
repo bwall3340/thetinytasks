@@ -89,6 +89,8 @@ def dashboard():
     today = date.today()
     recipes = Recipe.query.filter_by(active=True).order_by(Recipe.name).all()
     preferences = Preference.query.filter_by(active=True).order_by(Preference.created_at).all()
+    orders = OrderHistory.query.order_by(OrderHistory.order_date.desc().nullslast(),
+                                         OrderHistory.created_at.desc()).all()
 
     # Next 7 days for the plan overview panel
     plan_days = []
@@ -109,8 +111,10 @@ def dashboard():
         recipes=recipes,
         preferences=preferences,
         plan_days=plan_days,
+        orders=orders,
         recipe_count=len(recipes),
         pref_count=len(preferences),
+        order_count=len(orders),
     )
 
 
@@ -206,5 +210,52 @@ def delete_preference(pref_id):
     pref = db.session.get(Preference, pref_id)
     if pref:
         pref.active = False
+        db.session.commit()
+    return jsonify({'status': 'ok'})
+
+
+# ── Invoice upload (PDF → text extraction only, no Claude) ────────────────────
+
+@meal_admin_bp.route('/invoice/upload', methods=['POST'])
+@require_meal_auth
+def invoice_upload():
+    import pdfplumber
+    import io
+
+    file = request.files.get('file')
+    if not file:
+        return jsonify({'error': 'No file provided'}), 400
+    if not file.filename.lower().endswith('.pdf'):
+        return jsonify({'error': 'Only PDF files are supported'}), 400
+
+    try:
+        pdf_bytes = file.read()
+        pages_text = []
+        with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+            for page in pdf.pages:
+                text = (page.extract_text() or '').strip()
+                if text:
+                    pages_text.append(text)
+
+        if not pages_text:
+            return jsonify({'error': 'Could not extract any text from this PDF'}), 400
+
+        # Mark page boundaries so Claude can stitch split items
+        full_text = '\n\n[PAGE BREAK]\n\n'.join(pages_text)
+        return jsonify({'text': full_text, 'pages': len(pages_text)})
+
+    except Exception as e:
+        logger.error('Invoice PDF extraction error: %s', e)
+        return jsonify({'error': f'Failed to read PDF: {e}'}), 500
+
+
+# ── Order history management ───────────────────────────────────────────────────
+
+@meal_admin_bp.route('/orders/<int:order_id>/delete', methods=['POST'])
+@require_meal_auth
+def delete_order(order_id):
+    order = db.session.get(OrderHistory, order_id)
+    if order:
+        db.session.delete(order)
         db.session.commit()
     return jsonify({'status': 'ok'})
