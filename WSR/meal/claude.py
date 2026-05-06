@@ -50,6 +50,57 @@ _INGREDIENT_ALIASES: dict[str, str] = {
     'salted butter': 'butter',
     'unsalted butter': 'butter',
     'sweet cream butter': 'butter',
+    'vegan butter': 'butter',
+    # parmesan — all forms combine
+    'parmesan cheese': 'parmesan',
+    'grated parmesan': 'parmesan',
+    'parmesan cheese, grated': 'parmesan',
+    'freshly grated parmesan': 'parmesan',
+    'freshly grated parmesan cheese': 'parmesan',
+    'shredded parmesan': 'parmesan',
+    'parmigiano': 'parmesan',
+    'parmigiano reggiano': 'parmesan',
+    'pecorino romano': 'parmesan',
+    # mozzarella
+    'mozzarella cheese': 'mozzarella',
+    'fresh mozzarella': 'mozzarella',
+    'buffalo mozzarella': 'mozzarella',
+    'part-skim mozzarella': 'mozzarella',
+    'low-moisture mozzarella': 'mozzarella',
+    'shredded mozzarella': 'mozzarella',
+    # ricotta
+    'ricotta cheese': 'ricotta',
+    'whole milk ricotta': 'ricotta',
+    'part-skim ricotta': 'ricotta',
+    # milk
+    'whole milk': 'milk',
+    '2% milk': 'milk',
+    '1% milk': 'milk',
+    'skim milk': 'milk',
+    'full-fat milk': 'milk',
+    'reduced-fat milk': 'milk',
+    # greek yogurt
+    'plain greek yogurt': 'greek yogurt',
+    'non-fat greek yogurt': 'greek yogurt',
+    'nonfat greek yogurt': 'greek yogurt',
+    'full-fat greek yogurt': 'greek yogurt',
+    'low-fat greek yogurt': 'greek yogurt',
+    '2% greek yogurt': 'greek yogurt',
+    'whole milk greek yogurt': 'greek yogurt',
+    '0% greek yogurt': 'greek yogurt',
+    'plain nonfat greek yogurt': 'greek yogurt',
+    # eggs
+    'eggs': 'egg',
+    'large egg': 'egg',
+    'large eggs': 'egg',
+    'extra-large egg': 'egg',
+    'extra-large eggs': 'egg',
+    'whole egg': 'egg',
+    'whole eggs': 'egg',
+    # olive oil
+    'extra virgin olive oil': 'olive oil',
+    'extra-virgin olive oil': 'olive oil',
+    'evoo': 'olive oil',
     # lemon forms
     'lemon juice': 'lemon',
     'fresh lemon juice': 'lemon',
@@ -177,6 +228,13 @@ def aggregate_ingredients(all_ingredients: list) -> dict:
         display = alias if alias else raw_item
         groups[key]['item'] = display[0].upper() + display[1:] if display else display
         groups[key]['category'] = (ing.get('category') or 'other').lower()
+
+    # If a canonical already has a volume group, the no-unit (count-defaulted)
+    # group for the same canonical is redundant — drop it to prevent duplicates
+    # like "1 Butter" + "5 tbsp Butter" from appearing side-by-side.
+    volume_canonicals = {c for c, f in groups if f == '__volume__'}
+    for c in volume_canonicals:
+        groups.pop((c, ''), None)
 
     category_order = ['produce', 'proteins', 'dairy', 'grains', 'pantry', 'other']
     result = {}
