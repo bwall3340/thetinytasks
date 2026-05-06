@@ -205,6 +205,29 @@
             .grocery-item::before { content: '•'; color: #10b981; margin-right: 0.4rem; font-size: 0.7rem; }
         }
 
+        /* ── Recipe include toggle ── */
+        .recipe-include {
+            display: flex; align-items: center; gap: 0.3rem;
+            margin-top: auto; padding-top: 0.4rem;
+            font-size: 0.65rem; color: #94a3b8;
+            cursor: pointer; user-select: none;
+        }
+        .recipe-include-check {
+            appearance: none; -webkit-appearance: none;
+            width: 12px; height: 12px; flex-shrink: 0;
+            border: 1.5px solid #cbd5e1; border-radius: 2px;
+            cursor: pointer; position: relative;
+            transition: background 0.12s, border-color 0.12s;
+        }
+        .recipe-include-check:checked { background: var(--green); border-color: var(--green); }
+        .recipe-include-check:checked::after {
+            content: ''; position: absolute;
+            left: 1px; top: 0px; width: 7px; height: 4px;
+            border-left: 1.5px solid #fff; border-bottom: 1.5px solid #fff;
+            transform: rotate(-45deg);
+        }
+        .recipe-include:has(.recipe-include-check:not(:checked)) { color: #cbd5e1; }
+
         /* ── Admin link ── */
         .admin-link { font-size: 0.72rem; color: #94a3b8; }
     </style>
@@ -269,6 +292,12 @@
                                     {% if e.recipe.prep_minutes %}
                                     <div class="prep-time">{{ e.recipe.prep_minutes }} min</div>
                                     {% endif %}
+                                    <label class="recipe-include" onclick="event.stopPropagation()">
+                                        <input type="checkbox" class="recipe-include-check" checked
+                                               data-recipe-id="{{ e.recipe.id }}"
+                                               onchange="scheduleGroceryUpdate()">
+                                        <span>Add to list</span>
+                                    </label>
                                     <div class="flip-hint">tap to see recipe →</div>
                                 {% else %}
                                     <div class="tbd-text">To be decided</div>
@@ -317,8 +346,7 @@
 
     <!-- ── GROCERIES TAB ── -->
     <div class="tab-panel" id="tab-groceries">
-        {% if grocery %}
-        <div class="grocery-actions">
+        <div class="grocery-actions" id="grocery-action-bar"{% if not grocery %} style="display:none"{% endif %}>
             <span class="grocery-count"><strong id="item-remaining">0</strong> of <strong id="item-total">0</strong> items remaining</span>
             <div class="grocery-btns">
                 <button class="action-btn" onclick="copyGroceryList()">
@@ -335,7 +363,7 @@
                 </button>
             </div>
         </div>
-        <div class="grocery-grid">
+        <div class="grocery-grid" id="grocery-grid">
             {% for category, items in grocery.items() %}
             <div class="grocery-cat">
                 <div class="grocery-cat-title">{{ category | capitalize }}</div>
@@ -352,9 +380,9 @@
             </div>
             {% endfor %}
         </div>
-        {% else %}
-        <div class="empty-grocery">No recipes planned yet — grocery list will appear once the week is filled.</div>
-        {% endif %}
+        <div class="empty-grocery" id="grocery-empty"{% if grocery %} style="display:none"{% endif %}>
+            No recipes planned yet — grocery list will appear once the week is filled.
+        </div>
     </div>
 
 </div>
@@ -374,6 +402,68 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 function flipCard(container) {
     const card = container.querySelector('.card');
     if (card) card.classList.toggle('flipped');
+}
+
+// ── Recipe include/exclude ────────────────────────────────────────────────────
+let _groceryTimer = null;
+
+function scheduleGroceryUpdate() {
+    clearTimeout(_groceryTimer);
+    _groceryTimer = setTimeout(updateGroceryFromChecks, 300);
+}
+
+async function updateGroceryFromChecks() {
+    const ids = [...document.querySelectorAll('.recipe-include-check:checked')]
+        .map(cb => parseInt(cb.dataset.recipeId));
+    try {
+        const res = await fetch('/meal-planner/api/grocery', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({recipe_ids: ids}),
+        });
+        const data = await res.json();
+        rebuildGroceryTab(data.grocery || {});
+    } catch (err) {
+        console.error('Grocery update failed:', err);
+    }
+}
+
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function rebuildGroceryTab(grocery) {
+    const grid = document.getElementById('grocery-grid');
+    const empty = document.getElementById('grocery-empty');
+    const bar = document.getElementById('grocery-action-bar');
+    const categories = Object.keys(grocery || {});
+
+    if (!categories.length) {
+        grid.innerHTML = '';
+        empty.textContent = 'No days selected — check the boxes on the recipe cards to include ingredients.';
+        empty.style.display = 'block';
+        if (bar) bar.style.display = 'none';
+        updateGroceryCount();
+        return;
+    }
+
+    if (empty) empty.style.display = 'none';
+    if (bar) bar.style.display = 'flex';
+
+    grid.innerHTML = categories.map(cat => {
+        const title = escapeHtml(cat.charAt(0).toUpperCase() + cat.slice(1));
+        const rows = grocery[cat].map(item =>
+            `<li><label class="grocery-item"><input type="checkbox" class="item-check"><span class="item-text">${escapeHtml(item.combined)}</span></label></li>`
+        ).join('');
+        return `<div class="grocery-cat"><div class="grocery-cat-title">${title}</div><ul class="grocery-list">${rows}</ul></div>`;
+    }).join('');
+
+    document.querySelectorAll('.item-check').forEach(cb => {
+        cb.addEventListener('change', updateGroceryCount);
+    });
+    updateGroceryCount();
 }
 
 // ── Grocery list ──────────────────────────────────────────────────────────────
