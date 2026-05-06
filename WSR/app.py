@@ -85,6 +85,10 @@ def _lazy_db_setup():
         # identical content are no longer incorrectly blocked as duplicates.
         'ALTER TABLE articles DROP CONSTRAINT IF EXISTS articles_content_hash_key',
         'CREATE UNIQUE INDEX IF NOT EXISTS uq_article_source_hash ON articles (source_id, content_hash)',
+        # meal_order_history columns added after initial schema
+        'ALTER TABLE meal_order_history ADD COLUMN order_date DATE',
+        "ALTER TABLE meal_order_history ADD COLUMN store VARCHAR(100) DEFAULT 'Whole Foods'",
+        'ALTER TABLE meal_order_history ADD COLUMN order_total FLOAT',
     ]
     for _sql in _migrations:
         try:
