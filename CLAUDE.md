@@ -343,7 +343,7 @@ Status: `scoping` → `in progress` → `needs review` → `done`
 
 ## 🔒 Learned Rules
 
-*(Empty on project start — rules accumulate here as errors are resolved per Rule 3.)*
+**2026-05-06 — Schema Migration**: Added columns to an existing table by only updating the SQLAlchemy model. `db.create_all()` creates missing tables but never alters existing ones, so the new columns were absent in production → `UndefinedColumn` crash on first request. **Prevention rule**: Any time a column is added to an existing model, also append an `ALTER TABLE … ADD COLUMN` statement to the `_migrations` list in `WSR/app.py`. The try/except wrapper makes it safe to re-run (silently ignored if column already exists).
 
 ---
 
