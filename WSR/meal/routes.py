@@ -3,9 +3,10 @@ Meal planner public blueprint — rolling 7-day view, no auth required.
 """
 from datetime import date, timedelta
 
-from flask import Blueprint, jsonify, render_template
+from flask import Blueprint, jsonify, render_template, request
 
-from .models import PlanEntry
+from market.models import db
+from .models import PlanEntry, Recipe
 from .claude import aggregate_ingredients
 
 meal_bp = Blueprint('meal', __name__, url_prefix='/meal-planner')
@@ -42,6 +43,29 @@ def _rolling_week():
 def index():
     entries, grocery = _rolling_week()
     return render_template('meal/index.html', entries=entries, grocery=grocery)
+
+
+@meal_bp.route('/api/grocery', methods=['POST'])
+def api_grocery():
+    """Return aggregated grocery list for a specific set of recipe IDs."""
+    data = request.get_json() or {}
+    recipe_ids = []
+    for rid in (data.get('recipe_ids') or []):
+        try:
+            recipe_ids.append(int(rid))
+        except (TypeError, ValueError):
+            pass
+
+    if not recipe_ids:
+        return jsonify({'grocery': {}})
+
+    all_ingredients = []
+    for rid in recipe_ids:
+        recipe = db.session.get(Recipe, rid)
+        if recipe and recipe.active and recipe.ingredients:
+            all_ingredients.extend(recipe.ingredients)
+
+    return jsonify({'grocery': aggregate_ingredients(all_ingredients)})
 
 
 @meal_bp.route('/api/week')
