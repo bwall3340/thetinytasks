@@ -126,6 +126,23 @@
         .back-flip-btn:hover { border-color: var(--green); color: var(--green); }
 
         /* ── Grocery list tab ── */
+        .grocery-actions {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;
+        }
+        .grocery-count { font-size: 0.78rem; color: var(--muted); }
+        .grocery-count strong { color: var(--slate); }
+        .grocery-btns { display: flex; gap: 0.5rem; }
+        .action-btn {
+            display: flex; align-items: center; gap: 0.35rem;
+            padding: 0.38rem 0.85rem; border-radius: 7px;
+            border: 1px solid var(--border); background: #fff;
+            font-size: 0.78rem; font-weight: 500; color: var(--slate);
+            cursor: pointer; transition: all 0.15s; font-family: inherit;
+        }
+        .action-btn:hover { border-color: var(--green); color: var(--green); }
+        .action-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+
         .grocery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1.25rem; }
         .grocery-cat { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.1rem; }
         .grocery-cat-title {
@@ -134,11 +151,59 @@
             padding-bottom: 0.5rem; border-bottom: 1px solid var(--border);
         }
         .grocery-list { list-style: none; display: flex; flex-direction: column; gap: 0.35rem; }
-        .grocery-list li { font-size: 0.82rem; color: var(--slate); display: flex; align-items: baseline; gap: 0.4rem; }
-        .grocery-list li::before { content: '·'; color: var(--green); flex-shrink: 0; }
+        .grocery-list li { font-size: 0.82rem; }
+
+        .grocery-item {
+            display: flex; align-items: baseline; gap: 0.45rem;
+            cursor: pointer; user-select: none; width: 100%;
+        }
+        .item-check {
+            appearance: none; -webkit-appearance: none;
+            width: 13px; height: 13px; flex-shrink: 0;
+            border: 1.5px solid #cbd5e1; border-radius: 3px;
+            cursor: pointer; position: relative; top: 1px;
+            transition: background 0.12s, border-color 0.12s;
+        }
+        .item-check:checked { background: var(--green); border-color: var(--green); }
+        .item-check:checked::after {
+            content: ''; position: absolute;
+            left: 2px; top: 0px; width: 7px; height: 4px;
+            border-left: 1.5px solid #fff; border-bottom: 1.5px solid #fff;
+            transform: rotate(-45deg);
+        }
+        .item-text { transition: color 0.12s; color: var(--slate); line-height: 1.5; }
+        .grocery-item:has(.item-check:checked) .item-text {
+            text-decoration: line-through; color: #94a3b8;
+        }
+
         .empty-grocery { color: #94a3b8; font-size: 0.875rem; text-align: center; padding: 3rem 0; }
         .tab-panel { display: none; }
         .tab-panel.active { display: block; }
+
+        .copy-toast {
+            position: fixed; bottom: 24px; left: 50%;
+            transform: translateX(-50%) translateY(8px);
+            background: var(--slate); color: #fff;
+            padding: 0.5rem 1.1rem; border-radius: 8px;
+            font-size: 0.8rem; font-weight: 500;
+            opacity: 0; transition: opacity 0.2s, transform 0.2s;
+            pointer-events: none; z-index: 200;
+        }
+        .copy-toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* ── Print ── */
+        @media print {
+            .header, .hero, .tabs, #tab-week, .grocery-actions { display: none !important; }
+            #tab-groceries { display: block !important; }
+            body { background: #fff; }
+            .page-content { padding: 0; }
+            .grocery-grid { grid-template-columns: repeat(3, 1fr); }
+            .grocery-cat { box-shadow: none; }
+            .item-check { display: none; }
+            .grocery-item:has(.item-check:checked) { display: none; }
+            .grocery-item { gap: 0; }
+            .grocery-item::before { content: '•'; color: #10b981; margin-right: 0.4rem; font-size: 0.7rem; }
+        }
 
         /* ── Admin link ── */
         .admin-link { font-size: 0.72rem; color: #94a3b8; }
@@ -253,13 +318,35 @@
     <!-- ── GROCERIES TAB ── -->
     <div class="tab-panel" id="tab-groceries">
         {% if grocery %}
+        <div class="grocery-actions">
+            <span class="grocery-count"><strong id="item-remaining">0</strong> of <strong id="item-total">0</strong> items remaining</span>
+            <div class="grocery-btns">
+                <button class="action-btn" onclick="copyGroceryList()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    </svg>
+                    Copy list
+                </button>
+                <button class="action-btn" onclick="window.print()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
+                    </svg>
+                    Save as PDF
+                </button>
+            </div>
+        </div>
         <div class="grocery-grid">
             {% for category, items in grocery.items() %}
             <div class="grocery-cat">
                 <div class="grocery-cat-title">{{ category | capitalize }}</div>
                 <ul class="grocery-list">
                     {% for item in items %}
-                    <li>{{ item.combined }}</li>
+                    <li>
+                        <label class="grocery-item">
+                            <input type="checkbox" class="item-check">
+                            <span class="item-text">{{ item.combined }}</span>
+                        </label>
+                    </li>
                     {% endfor %}
                 </ul>
             </div>
@@ -287,6 +374,58 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 function flipCard(container) {
     const card = container.querySelector('.card');
     if (card) card.classList.toggle('flipped');
+}
+
+// ── Grocery list ──────────────────────────────────────────────────────────────
+function updateGroceryCount() {
+    const all = document.querySelectorAll('.item-check');
+    const checked = document.querySelectorAll('.item-check:checked');
+    const totalEl = document.getElementById('item-total');
+    const remainEl = document.getElementById('item-remaining');
+    if (totalEl) totalEl.textContent = all.length;
+    if (remainEl) remainEl.textContent = all.length - checked.length;
+}
+
+document.querySelectorAll('.item-check').forEach(cb => {
+    cb.addEventListener('change', updateGroceryCount);
+});
+updateGroceryCount();
+
+function copyGroceryList() {
+    const lines = ['Grocery List\n'];
+    document.querySelectorAll('.grocery-cat').forEach(cat => {
+        const title = cat.querySelector('.grocery-cat-title').textContent.trim();
+        const unchecked = [...cat.querySelectorAll('.item-check')]
+            .filter(cb => !cb.checked)
+            .map(cb => cb.closest('.grocery-item').querySelector('.item-text').textContent.trim());
+        if (unchecked.length) {
+            lines.push(title.toUpperCase());
+            unchecked.forEach(t => lines.push('• ' + t));
+            lines.push('');
+        }
+    });
+    if (lines.length === 1) {
+        lines.push('All items checked off!');
+    }
+    navigator.clipboard.writeText(lines.join('\n')).then(() => {
+        showCopyToast('Copied to clipboard');
+    }).catch(() => {
+        showCopyToast('Copy failed — try selecting manually');
+    });
+}
+
+function showCopyToast(msg) {
+    const existing = document.querySelector('.copy-toast');
+    if (existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.className = 'copy-toast';
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('visible'));
+    setTimeout(() => {
+        toast.classList.remove('visible');
+        setTimeout(() => toast.remove(), 250);
+    }, 2200);
 }
 </script>
 </body>

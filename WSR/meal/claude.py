@@ -39,23 +39,97 @@ def _extract_json(text: str):
 
 # ── Ingredient aggregation ───────────────────────────────────────────────────
 
+# Interchangeable/similar ingredients → canonical grocery item
+_INGREDIENT_ALIASES: dict[str, str] = {
+    # dairy interchangeables
+    'half and half': 'heavy cream',
+    'heavy whipping cream': 'heavy cream',
+    'whipping cream': 'heavy cream',
+    'double cream': 'heavy cream',
+    # butter variants
+    'salted butter': 'butter',
+    'unsalted butter': 'butter',
+    'sweet cream butter': 'butter',
+    # lemon forms
+    'lemon juice': 'lemon',
+    'fresh lemon juice': 'lemon',
+    'juice of 1 lemon': 'lemon',
+    'juice of lemon': 'lemon',
+    'small lemon': 'lemon',
+    'lemons': 'lemon',
+    # lime forms
+    'lime juice': 'lime',
+    'fresh lime juice': 'lime',
+    'limes': 'lime',
+    # onion family
+    'green onion': 'scallion',
+    'green onions': 'scallion',
+    'scallions': 'scallion',
+    'spring onion': 'scallion',
+    'spring onions': 'scallion',
+}
+
+# Spices shown without quantity when total is under a jar's worth
+_SPICE_NAMES: frozenset[str] = frozenset({
+    'paprika', 'smoked paprika', 'sweet paprika',
+    'cumin', 'coriander', 'turmeric', 'cinnamon',
+    'oregano', 'dried oregano', 'thyme', 'dried thyme',
+    'rosemary', 'dried rosemary', 'basil', 'dried basil',
+    'sage', 'dried sage', 'dill', 'dried dill',
+    'cayenne', 'cayenne pepper', 'chili powder',
+    'garlic powder', 'onion powder',
+    'ginger', 'ground ginger', 'nutmeg', 'allspice',
+    'cloves', 'cardamom', 'fennel seeds',
+    'black pepper', 'white pepper', 'pepper',
+    'red pepper flakes', 'crushed red pepper',
+    'bay leaf', 'bay leaves',
+    'mustard powder', 'mustard seeds',
+    'curry powder', 'garam masala',
+    'italian seasoning', 'herbs de provence',
+    "za'atar", 'zaatar', 'chinese five spice', 'five spice',
+    'ancho chili', 'chipotle powder',
+    'salt', 'kosher salt', 'sea salt', 'flaky salt',
+})
+
+_UNIT_TO_TSP: dict[str, float] = {
+    'tsp': 1, 'teaspoon': 1, 'teaspoons': 1,
+    'tbsp': 3, 'tablespoon': 3, 'tablespoons': 3, 't': 3,
+    'cup': 48, 'cups': 48,
+}
+_SPICE_TSP_LIMIT = 9  # ≤ 3 tbsp → a standard jar covers it, omit quantity
+
+
 def aggregate_ingredients(all_ingredients: list) -> dict:
     """
     Aggregate a flat list of ingredient dicts into a category-grouped dict.
     Input:  [{amount, unit, item, category}, ...]
     Output: {category: [{item, combined}, ...], ...}
+
+    Smart combining: aliases map similar items to one canonical entry;
+    missing amounts default to 1; spices under _SPICE_TSP_LIMIT show name only.
     """
     groups = defaultdict(lambda: {'amounts': [], 'unit': '', 'item': '', 'category': 'other'})
 
     for ing in all_ingredients:
-        item_key = ing.get('item', '').lower().strip()
-        unit_key = (ing.get('unit') or '').lower().strip()
-        if not item_key:
+        raw_item = (ing.get('item') or '').strip()
+        if not raw_item:
             continue
-        key = (item_key, unit_key)
-        groups[key]['amounts'].append(str(ing.get('amount', '')))
+
+        item_lower = raw_item.lower()
+        canonical = _INGREDIENT_ALIASES.get(item_lower, item_lower)
+        unit_key = (ing.get('unit') or '').lower().strip()
+        key = (canonical, unit_key)
+
+        # Default missing amount to 1 so items always have a countable quantity
+        raw_amount = str(ing.get('amount') or '').strip()
+        amount_val = raw_amount if raw_amount else '1'
+
+        groups[key]['amounts'].append(amount_val)
         groups[key]['unit'] = ing.get('unit') or ''
-        groups[key]['item'] = ing.get('item', '')
+        # Display name: alias or original, always capitalize first letter
+        alias = _INGREDIENT_ALIASES.get(item_lower)
+        display = alias if alias else raw_item
+        groups[key]['item'] = display[0].upper() + display[1:] if display else display
         groups[key]['category'] = (ing.get('category') or 'other').lower()
 
     category_order = ['produce', 'proteins', 'dairy', 'grains', 'pantry', 'other']
@@ -66,7 +140,10 @@ def aggregate_ingredients(all_ingredients: list) -> dict:
         for (item_key, unit_key), data in groups.items():
             if data['category'] != cat:
                 continue
-            amounts = [a for a in data['amounts'] if a]
+
+            display_item = data['item']
+            amounts = data['amounts']
+
             try:
                 parsed = []
                 for a in amounts:
@@ -75,18 +152,31 @@ def aggregate_ingredients(all_ingredients: list) -> dict:
                         parsed.append(Fraction(int(parts[0])) + Fraction(parts[1]))
                     else:
                         parsed.append(Fraction(a))
-                total = sum(parsed)
+                total = sum(parsed) if parsed else Fraction(0)
+
+                # Spices: omit quantity when total fits in a standard jar
+                if display_item.lower() in _SPICE_NAMES:
+                    tsp_mult = _UNIT_TO_TSP.get(unit_key, 1)
+                    if float(total) * tsp_mult <= _SPICE_TSP_LIMIT:
+                        cat_items.append({'item': display_item, 'combined': display_item})
+                        continue
+
                 if total.denominator == 1:
                     amount_str = str(total.numerator)
                 else:
                     whole = total.numerator // total.denominator
                     rem = total - whole
                     amount_str = f'{whole} {rem}' if whole else str(total)
+
             except (ValueError, ZeroDivisionError):
+                # Unparseable amount (e.g. "to taste") — spices still drop quantity
+                if display_item.lower() in _SPICE_NAMES:
+                    cat_items.append({'item': display_item, 'combined': display_item})
+                    continue
                 amount_str = ', '.join(a for a in amounts if a)
 
-            parts = [p for p in [amount_str, data['unit'], data['item']] if p]
-            cat_items.append({'item': data['item'], 'combined': ' '.join(parts)})
+            parts = [p for p in [amount_str, data['unit'], display_item] if p]
+            cat_items.append({'item': display_item, 'combined': ' '.join(parts)})
 
         if cat_items:
             result[cat] = sorted(cat_items, key=lambda x: x['item'].lower())
