@@ -69,34 +69,78 @@ _INGREDIENT_ALIASES: dict[str, str] = {
     'spring onions': 'scallion',
 }
 
-# Spices shown without quantity when total is under a jar's worth
+# Spices shown without quantity when total is under a jar's worth.
+# All units for a spice are merged into one grocery list entry.
 _SPICE_NAMES: frozenset[str] = frozenset({
     'paprika', 'smoked paprika', 'sweet paprika',
     'cumin', 'coriander', 'turmeric', 'cinnamon',
     'oregano', 'dried oregano', 'thyme', 'dried thyme',
     'rosemary', 'dried rosemary', 'basil', 'dried basil',
     'sage', 'dried sage', 'dill', 'dried dill',
+    'parsley', 'dried parsley', 'fresh parsley flakes',
     'cayenne', 'cayenne pepper', 'chili powder',
+    'chili flakes', 'chile flakes', 'red chili flakes',
     'garlic powder', 'onion powder',
     'ginger', 'ground ginger', 'nutmeg', 'allspice',
-    'cloves', 'cardamom', 'fennel seeds',
-    'black pepper', 'white pepper', 'pepper',
+    'cloves', 'ground cloves', 'cardamom', 'fennel seeds',
+    'black pepper', 'white pepper', 'pepper', 'ground pepper',
     'red pepper flakes', 'crushed red pepper',
     'bay leaf', 'bay leaves',
-    'mustard powder', 'mustard seeds',
+    'mustard powder', 'mustard seeds', 'dry mustard',
     'curry powder', 'garam masala',
     'italian seasoning', 'herbs de provence',
     "za'atar", 'zaatar', 'chinese five spice', 'five spice',
-    'ancho chili', 'chipotle powder',
-    'salt', 'kosher salt', 'sea salt', 'flaky salt',
+    'ancho chili', 'chipotle powder', 'smoked chili powder',
+    'salt', 'kosher salt', 'sea salt', 'flaky salt', 'table salt',
+    'msg',
 })
 
-_UNIT_TO_TSP: dict[str, float] = {
-    'tsp': 1, 'teaspoon': 1, 'teaspoons': 1,
-    'tbsp': 3, 'tablespoon': 3, 'tablespoons': 3, 't': 3,
-    'cup': 48, 'cups': 48,
+# Volume unit → teaspoons (exact Fraction arithmetic)
+_VOLUME_TO_TSP: dict[str, Fraction] = {
+    'tsp': Fraction(1), 'teaspoon': Fraction(1), 'teaspoons': Fraction(1),
+    'tbsp': Fraction(3), 'tablespoon': Fraction(3), 'tablespoons': Fraction(3),
+    'cup': Fraction(48), 'cups': Fraction(48),
 }
 _SPICE_TSP_LIMIT = 9  # ≤ 3 tbsp → a standard jar covers it, omit quantity
+
+
+def _unit_family(unit: str, is_spice: bool) -> str:
+    """Return the grouping family for a unit.
+    Spices always merge regardless of unit; volume units normalize to tsp.
+    """
+    if is_spice:
+        return '__spice__'
+    if unit in _VOLUME_TO_TSP:
+        return '__volume__'
+    return unit
+
+
+def _parse_amount(a: str) -> Fraction:
+    parts = a.strip().split()
+    if not parts:
+        return Fraction(1)
+    if len(parts) == 2:
+        return Fraction(int(parts[0])) + Fraction(parts[1])
+    return Fraction(parts[0])
+
+
+def _fmt_fraction(f: Fraction) -> str:
+    if f.denominator == 1:
+        return str(f.numerator)
+    whole = f.numerator // f.denominator
+    rem = f - whole
+    return f'{whole} {rem}' if whole else str(f)
+
+
+def _fmt_volume(total_tsp: Fraction) -> tuple[str, str]:
+    """Return (amount_string, unit) for a total expressed in teaspoons."""
+    if total_tsp >= 48:
+        val = total_tsp / 48
+        return _fmt_fraction(val), 'cup' if val == 1 else 'cups'
+    if total_tsp >= 3:
+        val = total_tsp / 3
+        return _fmt_fraction(val), 'tbsp'
+    return _fmt_fraction(total_tsp), 'tsp'
 
 
 def aggregate_ingredients(all_ingredients: list) -> dict:
@@ -105,10 +149,13 @@ def aggregate_ingredients(all_ingredients: list) -> dict:
     Input:  [{amount, unit, item, category}, ...]
     Output: {category: [{item, combined}, ...], ...}
 
-    Smart combining: aliases map similar items to one canonical entry;
-    missing amounts default to 1; spices under _SPICE_TSP_LIMIT show name only.
+    Grouping rules:
+    - Spices: all unit forms merge into one entry; omit quantity if ≤ 3 tbsp total.
+    - Volume units (tsp/tbsp/cup): normalize to tsp, sum, reformat intelligently.
+    - Everything else: group by (canonical, unit) and sum amounts.
+    Missing amounts default to 1.
     """
-    groups = defaultdict(lambda: {'amounts': [], 'unit': '', 'item': '', 'category': 'other'})
+    groups = defaultdict(lambda: {'entries': [], 'item': '', 'category': 'other'})
 
     for ing in all_ingredients:
         raw_item = (ing.get('item') or '').strip()
@@ -117,16 +164,15 @@ def aggregate_ingredients(all_ingredients: list) -> dict:
 
         item_lower = raw_item.lower()
         canonical = _INGREDIENT_ALIASES.get(item_lower, item_lower)
-        unit_key = (ing.get('unit') or '').lower().strip()
-        key = (canonical, unit_key)
+        is_spice = canonical in _SPICE_NAMES
+        raw_unit = (ing.get('unit') or '').lower().strip()
+        family = _unit_family(raw_unit, is_spice)
+        key = (canonical, family)
 
-        # Default missing amount to 1 so items always have a countable quantity
         raw_amount = str(ing.get('amount') or '').strip()
         amount_val = raw_amount if raw_amount else '1'
 
-        groups[key]['amounts'].append(amount_val)
-        groups[key]['unit'] = ing.get('unit') or ''
-        # Display name: alias or original, always capitalize first letter
+        groups[key]['entries'].append((amount_val, raw_unit))
         alias = _INGREDIENT_ALIASES.get(item_lower)
         display = alias if alias else raw_item
         groups[key]['item'] = display[0].upper() + display[1:] if display else display
@@ -137,45 +183,64 @@ def aggregate_ingredients(all_ingredients: list) -> dict:
 
     for cat in category_order:
         cat_items = []
-        for (item_key, unit_key), data in groups.items():
+        for (canonical, family), data in groups.items():
             if data['category'] != cat:
                 continue
 
             display_item = data['item']
-            amounts = data['amounts']
+            entries = data['entries']
 
-            try:
-                parsed = []
-                for a in amounts:
-                    parts = a.strip().split()
-                    if len(parts) == 2:
-                        parsed.append(Fraction(int(parts[0])) + Fraction(parts[1]))
-                    else:
-                        parsed.append(Fraction(a))
-                total = sum(parsed) if parsed else Fraction(0)
-
-                # Spices: omit quantity when total fits in a standard jar
-                if display_item.lower() in _SPICE_NAMES:
-                    tsp_mult = _UNIT_TO_TSP.get(unit_key, 1)
-                    if float(total) * tsp_mult <= _SPICE_TSP_LIMIT:
-                        cat_items.append({'item': display_item, 'combined': display_item})
-                        continue
-
-                if total.denominator == 1:
-                    amount_str = str(total.numerator)
-                else:
-                    whole = total.numerator // total.denominator
-                    rem = total - whole
-                    amount_str = f'{whole} {rem}' if whole else str(total)
-
-            except (ValueError, ZeroDivisionError):
-                # Unparseable amount (e.g. "to taste") — spices still drop quantity
-                if display_item.lower() in _SPICE_NAMES:
+            # ── Spices ──────────────────────────────────────────────────────
+            if family == '__spice__':
+                total_tsp = Fraction(0)
+                under_limit = True
+                for amt_str, unit in entries:
+                    try:
+                        mult = _VOLUME_TO_TSP.get(unit, Fraction(1))
+                        total_tsp += _parse_amount(amt_str) * mult
+                        if total_tsp > _SPICE_TSP_LIMIT:
+                            under_limit = False
+                            break
+                    except (ValueError, ZeroDivisionError):
+                        break  # unparseable (e.g. "to taste") → treat as under limit
+                if under_limit:
                     cat_items.append({'item': display_item, 'combined': display_item})
-                    continue
-                amount_str = ', '.join(a for a in amounts if a)
+                else:
+                    amount_str, out_unit = _fmt_volume(total_tsp)
+                    cat_items.append({'item': display_item,
+                                      'combined': f'{amount_str} {out_unit} {display_item}'})
+                continue
 
-            parts = [p for p in [amount_str, data['unit'], display_item] if p]
+            # ── Volume (tsp / tbsp / cup) ────────────────────────────────────
+            if family == '__volume__':
+                total_tsp = Fraction(0)
+                parse_ok = True
+                for amt_str, unit in entries:
+                    try:
+                        mult = _VOLUME_TO_TSP.get(unit, Fraction(1))
+                        total_tsp += _parse_amount(amt_str) * mult
+                    except (ValueError, ZeroDivisionError):
+                        parse_ok = False
+                        break
+                if parse_ok and total_tsp > 0:
+                    amount_str, out_unit = _fmt_volume(total_tsp)
+                else:
+                    amount_str = ' + '.join(f'{a} {u}'.strip() for a, u in entries)
+                    out_unit = ''
+                parts = [p for p in [amount_str, out_unit, display_item] if p]
+                cat_items.append({'item': display_item, 'combined': ' '.join(parts)})
+                continue
+
+            # ── Everything else: same-unit aggregation ───────────────────────
+            amounts = [a for a, _ in entries]
+            display_unit = entries[0][1] if entries else ''
+            try:
+                parsed = [_parse_amount(a) for a in amounts]
+                total = sum(parsed) if parsed else Fraction(0)
+                amount_str = _fmt_fraction(total)
+            except (ValueError, ZeroDivisionError):
+                amount_str = ', '.join(a for a in amounts if a)
+            parts = [p for p in [amount_str, display_unit, display_item] if p]
             cat_items.append({'item': display_item, 'combined': ' '.join(parts)})
 
         if cat_items:
