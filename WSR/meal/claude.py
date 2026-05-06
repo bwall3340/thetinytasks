@@ -330,26 +330,33 @@ TOOLS = [
     },
     {
         'name': 'save_order_history',
-        'description': 'Save a parsed Whole Foods invoice to order history.',
+        'description': (
+            'Save a confirmed grocery invoice to order history with price data. '
+            'ALWAYS show the user a full item list and ask for confirmation before calling this tool.'
+        ),
         'input_schema': {
             'type': 'object',
             'properties': {
-                'raw_text': {'type': 'string'},
+                'order_date': {'type': 'string', 'description': 'Order date as YYYY-MM-DD'},
+                'store': {'type': 'string', 'description': 'Store name (default: Whole Foods)'},
+                'order_total': {'type': 'number', 'description': 'Invoice grand total in dollars'},
+                'raw_text': {'type': 'string', 'description': 'Full invoice text for the record'},
                 'parsed_items': {
                     'type': 'array',
                     'items': {
                         'type': 'object',
                         'properties': {
-                            'item': {'type': 'string'},
-                            'amount': {'type': 'string'},
-                            'unit': {'type': 'string'},
-                            'brand': {'type': 'string'},
+                            'item': {'type': 'string', 'description': 'Product name'},
+                            'qty': {'type': 'string', 'description': 'Quantity (e.g. "2", "1 lb")'},
+                            'unit': {'type': 'string', 'description': 'Unit if separate from qty'},
+                            'price': {'type': 'number', 'description': 'Total price for this line item'},
+                            'brand': {'type': 'string', 'description': 'Brand name if shown'},
                         },
-                        'required': ['item'],
+                        'required': ['item', 'price'],
                     },
                 },
             },
-            'required': ['raw_text', 'parsed_items'],
+            'required': ['order_date', 'raw_text', 'parsed_items'],
         },
     },
     {
@@ -515,13 +522,24 @@ def _execute_tool(name: str, inp: dict) -> dict:
         return aggregate_ingredients(all_ingredients)
 
     if name == 'save_order_history':
+        order_date = None
+        if inp.get('order_date'):
+            try:
+                from datetime import date as _date_cls
+                order_date = _date_cls.fromisoformat(inp['order_date'])
+            except ValueError:
+                pass
         history = OrderHistory(
+            order_date=order_date,
+            store=inp.get('store', 'Whole Foods'),
+            order_total=inp.get('order_total'),
             raw_text=inp['raw_text'],
             parsed_items=inp.get('parsed_items', []),
         )
         db.session.add(history)
         db.session.commit()
-        return {'status': 'saved', 'order_id': history.id}
+        item_count = len(history.parsed_items or [])
+        return {'status': 'saved', 'order_id': history.id, 'items_saved': item_count}
 
     if name == 'scrape_recipe_url':
         return _scrape_url(inp['url'])
@@ -559,11 +577,25 @@ Use your tools to:
 - Set/manage preference rules
 - Assign recipes to calendar dates to build the weekly plan
 - Generate grocery lists from planned recipes
-- Save Whole Foods invoices to order history
+- Parse and save grocery invoices to order history
 
 When the user pastes a recipe, confirm what you parsed before saving.
 When assigning meals for multiple days, respect all active preference rules and avoid repeating recipes served in the past 14 days unless necessary.
-Format dates as YYYY-MM-DD when calling tools. Be concise."""
+Format dates as YYYY-MM-DD when calling tools. Be concise.
+
+INVOICE PARSING — follow this exact process:
+1. The user will share invoice text, possibly containing [PAGE BREAK] markers between pages.
+   IMPORTANT: Items can be split across page breaks — the product name may appear at the bottom
+   of one page while its quantity and price appear at the top of the next. Always read across
+   page breaks before assuming a line is complete.
+2. Extract: order date, store name, every line item (name, qty, price), and the grand total.
+   Skip non-product lines (delivery fees, tips, taxes — include tax in order_total only).
+3. Before calling save_order_history, show a confirmation in this format:
+   "Order date: [date] | [store] | [N] items | Total: $[X.XX]
+   1. [item] — qty: [q] — $[price]
+   2. ..."
+4. End with: "Does this look correct? Reply 'save it' to confirm, or tell me what to fix."
+5. Only call save_order_history after the user explicitly confirms. Never save speculatively."""
 
 
 # ── Chat handler ──────────────────────────────────────────────────────────────

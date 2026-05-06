@@ -78,6 +78,9 @@ class OrderHistory(db.Model):
     __tablename__ = 'meal_order_history'
 
     id = db.Column(db.Integer, primary_key=True)
+    order_date = db.Column(db.Date, nullable=True)          # extracted from invoice
+    store = db.Column(db.String(100), default='Whole Foods')
+    order_total = db.Column(db.Float, nullable=True)        # invoice grand total
     raw_text = db.Column(db.Text)
-    parsed_items = db.Column(db.JSON)    # [{item, amount, unit, brand}]
+    parsed_items = db.Column(db.JSON)    # [{item, qty, unit, price, brand}]
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
