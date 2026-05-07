@@ -236,6 +236,18 @@ body {
     transform: rotate(-45deg) translate(7px, -6px);
 }
 
+/* Koi pond canvas — sits behind glass cards */
+#koi-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.85;
+}
+
 /* Tools Container */
 .tools-container {
     max-width: 1200px;

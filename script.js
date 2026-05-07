@@ -147,6 +147,8 @@ class TinyTasksApp {
         this.coverPage.classList.add('slide-up');
         this.coverPage.style.transform = 'translateY(-100vh)';
 
+        if (window.koiPond) window.koiPond.start();
+
         document.body.style.overflow = 'hidden';
         document.body.style.height = '100vh';
 
@@ -173,6 +175,8 @@ class TinyTasksApp {
         document.body.style.height = '100vh';
 
         this.mainPage.scrollTop = 0;
+
+        if (window.koiPond) window.koiPond.stop();
 
         // Reset cards so they re-animate next time
         document.querySelectorAll('.tool-card').forEach(card => {
