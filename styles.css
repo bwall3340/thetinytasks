@@ -24,16 +24,13 @@ body {
     height: 100vh;
     z-index: 1000;
 
-    /* IMPORTANT: Transition for sliding */
     transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    transform: translateY(0); /* Ensure starting position */
+    transform: translateY(0);
 
-    /* Gradient background for text cutout effect */
     background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
     background-size: 400% 400%;
     animation: gradientShift 4s ease-in-out infinite;
 
-    /* Ensure proper centering */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -41,7 +38,7 @@ body {
 }
 
 .cover-page.slide-up {
-    transform: translateY(-100vh) !important; /* Force the transform */
+    transform: translateY(-100vh) !important;
 }
 
 /* White overlay layer for cutout effect */
@@ -54,7 +51,7 @@ body {
     height: 100%;
     background: #ffffff;
     z-index: 1;
-    pointer-events: none; /* Allow interaction with content below */
+    pointer-events: none;
 }
 
 .cover-content {
@@ -78,14 +75,12 @@ body {
     line-height: 1.1;
     text-transform: lowercase;
 
-    /* Ensure enough space for descenders and letter edges */
     padding: 0.2em 0.1em 0.3em 0.1em;
     margin: 0;
     width: auto;
     min-width: fit-content;
     overflow: visible;
 
-    /* This creates the cutout effect */
     color: transparent;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
     background-size: 400% 400%;
@@ -93,16 +88,14 @@ body {
     -webkit-background-clip: text;
     animation: gradientShift 4s ease-in-out infinite;
 
-    /* Mask the white layer behind the text */
     position: relative;
 
-    /* Better text rendering */
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* Cover subtitle — "By Brandon Wallace" */
+/* Cover subtitle */
 .cover-subtitle {
     font-size: clamp(0.85rem, 2vw, 1.1rem);
     font-weight: 400;
@@ -120,34 +113,6 @@ body {
     opacity: 0.65;
 }
 
-/* Alternative approach using backdrop-filter for better browser support */
-.cover-page-alt {
-    background:
-        linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-    background-size: 400% 400%;
-    animation: gradientShift 4s ease-in-out infinite;
-}
-
-.cover-page-alt::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: #ffffff;
-    /* Use CSS mask to cut out text area */
-    mask:
-        radial-gradient(circle at center, transparent 20%, black 21%),
-        linear-gradient(black, black);
-    mask-composite: subtract;
-    -webkit-mask:
-        radial-gradient(circle at center, transparent 20%, black 21%),
-        linear-gradient(black, black);
-    -webkit-mask-composite: subtract;
-    z-index: 2;
-}
-
 @keyframes gradientShift {
     0%, 100% {
         background-position: 0% 50%;
@@ -161,6 +126,7 @@ body {
 .scroll-indicator {
     position: absolute;
     bottom: 40px;
+    z-index: 4;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -200,14 +166,14 @@ body {
 .main-page {
     position: relative;
     min-height: 100vh;
-    max-height: 100vh; /* Lock to viewport height */
+    max-height: 100vh;
     background:
         radial-gradient(ellipse 70% 55% at 10% 20%, rgba(99, 102, 241, 0.22) 0%, transparent 100%),
         radial-gradient(ellipse 60% 70% at 90% 80%, rgba(168, 85, 247, 0.2) 0%, transparent 100%),
         radial-gradient(ellipse 50% 40% at 55% 0%,  rgba(236, 72, 153, 0.1) 0%, transparent 100%),
         linear-gradient(135deg, #f0f4ff 0%, #faf5ff 100%);
     padding-top: 80px;
-    overflow-y: auto; /* Allow internal scrolling */
+    overflow-y: auto;
     box-sizing: border-box;
 }
 
@@ -240,7 +206,7 @@ body {
     color: transparent;
 }
 
-/* Hamburger Menu */
+/* Hamburger Menu — mobile only */
 .hamburger-menu {
     display: flex;
     flex-direction: column;
@@ -279,23 +245,19 @@ body {
 
 .tools-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 2rem;
-    justify-items: center;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
 }
 
 /* Tool Cards — Apple Liquid Glass */
 .tool-card {
     position: relative;
     overflow: hidden;
-    /* Translucent glass fill */
     background: rgba(255, 255, 255, 0.28);
     backdrop-filter: blur(40px) saturate(180%);
     -webkit-backdrop-filter: blur(40px) saturate(180%);
     border-radius: 28px;
-    /* Luminous glass edge */
     border: 1px solid rgba(255, 255, 255, 0.55);
-    /* Layered shadows: ambient + depth + inner-top highlight */
     box-shadow:
         0 2px 8px  rgba(0, 0, 0, 0.06),
         0 8px 32px rgba(0, 0, 0, 0.09),
@@ -305,11 +267,11 @@ body {
     text-align: center;
     cursor: pointer;
     transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    max-width: 320px;
     width: 100%;
+    opacity: 0;
 }
 
-/* Specular edge — the bright line where light hits the glass rim */
+/* Specular edge */
 .tool-card::before {
     content: '';
     position: absolute;
@@ -329,7 +291,7 @@ body {
     pointer-events: none;
 }
 
-/* Inner upper-half reflection — like light refracting through the top of the glass */
+/* Inner upper-half reflection */
 .tool-card::after {
     content: '';
     position: absolute;
@@ -359,6 +321,39 @@ body {
         inset 0 -1px 0 rgba(0, 0, 0, 0.03);
 }
 
+/* Category badge */
+.tool-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 0.25em 0.65em;
+    border-radius: 100px;
+    background: rgba(99, 102, 241, 0.1);
+    color: #6366f1;
+    z-index: 4;
+    pointer-events: none;
+}
+
+/* Card entrance animation */
+@keyframes cardEnter {
+    from {
+        opacity: 0;
+        transform: translateY(24px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.tool-card.visible {
+    animation: cardEnter 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
 .tool-icon {
     margin-bottom: 1.5rem;
     position: relative;
@@ -370,7 +365,6 @@ body {
     height: 64px;
     margin: 0 auto;
     transition: transform 0.3s ease;
-    /* Soft drop shadow on the icon for depth */
     filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.18));
 }
 
@@ -380,7 +374,7 @@ body {
 }
 
 .tool-card h3 {
-    font-size: 1.25rem;
+    font-size: 1.1rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
     color: #1e293b;
@@ -390,10 +384,80 @@ body {
 
 .tool-card p {
     color: #475569;
-    font-size: 0.875rem;
+    font-size: 0.8rem;
     line-height: 1.5;
     position: relative;
     z-index: 3;
+}
+
+/* Coming Soon Modal */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 500;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-box {
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(40px);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.15);
+    padding: 2.5rem;
+    max-width: 340px;
+    width: 90%;
+    text-align: center;
+    transform: scale(0.92);
+    transition: transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.modal-overlay.active .modal-box {
+    transform: scale(1);
+}
+
+.modal-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.75rem;
+}
+
+.modal-body {
+    font-size: 0.9rem;
+    color: #64748b;
+    margin-bottom: 1.75rem;
+    line-height: 1.6;
+}
+
+.modal-close {
+    background: #1e293b;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 0.7rem 2rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.2s ease;
+}
+
+.modal-close:hover {
+    background: #334155;
 }
 
 /* Mobile Menu */
@@ -464,6 +528,12 @@ body {
 }
 
 /* Responsive Design */
+@media (min-width: 769px) {
+    .hamburger-menu {
+        display: none;
+    }
+}
+
 @media (max-width: 768px) {
     .main-header {
         padding: 0 1rem;
@@ -474,8 +544,8 @@ body {
     }
 
     .tools-grid {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
     }
 
     .mobile-menu-content {
@@ -490,6 +560,10 @@ body {
 
     .logo h2 {
         font-size: 1.25rem;
+    }
+
+    .tools-grid {
+        grid-template-columns: 1fr;
     }
 }
 
