@@ -110,8 +110,7 @@ class TinyTasksApp {
                 e.preventDefault();
                 this.transitionToMainPage();
             } else if (!this.isOnCoverPage && deltaY < -50 && deltaTime < 500) {
-                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-                if (scrollTop <= this.scrollThreshold) {
+                if (this.mainPage.scrollTop <= 10) {
                     e.preventDefault();
                     this.transitionToCoverPage();
                 }
