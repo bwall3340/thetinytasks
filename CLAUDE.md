@@ -110,6 +110,32 @@ Every bug becomes a permanent guardrail.
 
 ---
 
+## 🎨 RULE 4 — DESIGN ALIGNMENT
+
+**Before planning or building any new feature, UI change, or visual enhancement**, open `design.md` and verify the proposed work aligns with the design system defined there.
+
+### Checklist before any UI work
+
+1. **Color** — does it use the defined palette (`--cream`, `--olive`, `--terra`, `--stone`, `--ink`, `--border`)? No neon, no pure black/white.
+2. **Typography** — headings use the designated serif; body uses the designated sans-serif.
+3. **Tone** — does the copy feel calm, understated, and quietly confident? No buzzwords.
+4. **Motion** — animations are slow, smooth, subtle. No flashy transitions.
+5. **Aesthetic** — does it feel like a boutique Italian workshop, not a Silicon Valley startup?
+
+### When in doubt
+
+Flag the conflict explicitly before building:
+
+```
+DESIGN CONFLICT: [what you're about to build]
+CONFLICTS WITH: [specific design.md rule or section]
+PROPOSED RESOLUTION: [how to align it]
+```
+
+Do not proceed until resolved.
+
+---
+
 ## Project Overview
 
 The Tiny Tasks is a multi-tool web application deployed on Railway. The home page is a static frontend; individual tools are either pure client-side HTML/JS or served by a Python Flask backend. Each tool is a self-contained utility — image processing, AI-powered data scraping, chart digitization, and more.
@@ -159,6 +185,7 @@ Railway (separate service — DataFinderAgent)
 - **Product**: The Tiny Tasks
 - **Tone**: Minimal, utilitarian, quietly delightful — tools that just work
 - **Styling**: Apple Liquid Glass aesthetic on home page cards; individual tools match the header bar pattern
+- **Full design system**: See `design.md` — all UI work must align with it (see Rule 4)
 
 ---
 
