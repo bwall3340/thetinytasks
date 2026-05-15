@@ -264,10 +264,6 @@ class TinyTasksApp {
                 window.location.href = './return-stream.html';
                 break;
 
-            case 'data-finder':
-                window.location.href = './data-finder.html';
-                break;
-
             case 'market-outlook':
                 window.location.href = '/market';
                 break;
