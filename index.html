@@ -12,9 +12,10 @@
     <!-- ─── Cover / Hero ─── -->
     <section class="cover-page" id="cover-page">
         <div class="cover-content">
-            <h1 class="cover-title">the tiny tasks</h1>
-            <p class="cover-subtitle">By Brandon Wallace</p>
-            <button class="cover-cta">View the tools</button>
+            <span class="cover-eyebrow">The Tiny Tasks</span>
+            <h1 class="cover-title">AI solutions,<br>beautifully built.</h1>
+            <p class="cover-description">I design and automate intelligent systems that save time, scale operations, and solve real problems.</p>
+            <button class="cover-cta">View my work</button>
         </div>
         <div class="scroll-indicator">
             <div class="scroll-line"></div>
@@ -30,6 +31,12 @@
             <div class="logo">
                 <h2>the tiny tasks</h2>
             </div>
+            <nav class="main-nav">
+                <a href="#">Work</a>
+                <a href="#">About</a>
+                <a href="#">Tools</a>
+                <a href="#">Journal</a>
+            </nav>
             <div class="hamburger-menu" id="hamburger-menu">
                 <span></span>
                 <span></span>
@@ -39,183 +46,135 @@
 
         <!-- Tools Grid -->
         <main class="tools-container">
+
+            <div class="tools-section-header">
+                <div>
+                    <span class="section-label">Featured Work</span>
+                    <h2 class="section-heading">A few recent builds.</h2>
+                </div>
+                <span class="section-count">8 tools</span>
+            </div>
+
             <div class="tools-grid">
 
                 <!-- Sankey Chart -->
                 <div class="tool-card" data-tool="sankey-chart" role="button" aria-label="Open Sankey Chart">
-                    <span class="tool-badge">Data Viz</span>
-                    <div class="tool-icon">
-                        <svg viewBox="0 0 64 64" class="icon">
-                            <circle cx="32" cy="32" r="28" fill="#66725B"/>
-                            <rect x="8"  y="18" width="8" height="12" rx="2" fill="#B46B4E"/>
-                            <rect x="8"  y="34" width="8" height="12" rx="2" fill="#B46B4E"/>
-                            <rect x="48" y="14" width="8" height="8"  rx="2" fill="#2B2A28"/>
-                            <rect x="48" y="26" width="8" height="16" rx="2" fill="#2B2A28"/>
-                            <rect x="48" y="46" width="8" height="6"  rx="2" fill="#2B2A28"/>
-                            <path d="M16,24 Q32,20 48,18" stroke="#F7F3EC" stroke-width="6" fill="none" opacity="0.8"/>
-                            <path d="M16,28 Q32,28 48,34" stroke="#F7F3EC" stroke-width="8" fill="none" opacity="0.8"/>
-                            <path d="M16,40 Q32,44 48,49" stroke="#F7F3EC" stroke-width="4" fill="none" opacity="0.8"/>
-                            <polygon points="44,16 47,18 44,20" fill="#F7F3EC"/>
-                            <polygon points="44,32 47,34 44,36" fill="#F7F3EC"/>
-                            <polygon points="44,47 47,49 44,51" fill="#F7F3EC"/>
-                        </svg>
+                    <div class="tool-card-image"></div>
+                    <div class="tool-card-body">
+                        <div class="tool-card-meta">
+                            <h3>Sankey Chart</h3>
+                            <span class="tool-badge">Data Viz</span>
+                        </div>
+                        <p>Create flow diagrams to visualize data relationships and movement</p>
+                        <div class="tool-card-footer">
+                            <span class="tool-card-link">View tool →</span>
+                        </div>
                     </div>
-                    <h3>Sankey Chart</h3>
-                    <p>Create flow diagrams to visualize data relationships</p>
                 </div>
 
                 <!-- Background Remover Pro -->
                 <div class="tool-card" data-tool="background-remover" role="button" aria-label="Open Background Remover Pro">
-                    <span class="tool-badge">Image</span>
-                    <div class="tool-icon">
-                        <svg viewBox="0 0 64 64" class="icon">
-                            <defs>
-                                <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop offset="0%"   style="stop-color:#F7F3EC;stop-opacity:0.8"/>
-                                    <stop offset="50%"  style="stop-color:#D9CCBD;stop-opacity:0.4"/>
-                                    <stop offset="100%" style="stop-color:#F7F3EC;stop-opacity:0.2"/>
-                                </linearGradient>
-                            </defs>
-                            <circle cx="32" cy="32" r="28" fill="#66725B"/>
-                            <rect x="12" y="16" width="40" height="32" rx="4" fill="url(#bgGrad)" stroke="#2B2A28" stroke-width="1.5"/>
-                            <circle cx="28" cy="32" r="8"  fill="#B46B4E" opacity="0.9"/>
-                            <circle cx="28" cy="32" r="6"  fill="#4D5645"/>
-                            <path d="M36 20 Q42 24 40 30 Q38 36 42 40" stroke="#F7F3EC" stroke-width="2" fill="none" opacity="0.8"/>
-                            <path d="M44 22 Q48 26 46 32"              stroke="#F7F3EC" stroke-width="1.5" fill="none" opacity="0.6"/>
-                            <g transform="translate(46, 18)">
-                                <rect width="8" height="2" rx="1" fill="#2B2A28" transform="rotate(45)"/>
-                                <circle cx="0" cy="0" r="1.5" fill="#F7F3EC"/>
-                                <path d="M-2 4 L2 4 L0 8 Z" fill="#B46B4E"/>
-                            </g>
-                        </svg>
+                    <div class="tool-card-image"></div>
+                    <div class="tool-card-body">
+                        <div class="tool-card-meta">
+                            <h3>Background Remover Pro</h3>
+                            <span class="tool-badge">Image</span>
+                        </div>
+                        <p>Advanced background removal with vectorization and upscaling tools</p>
+                        <div class="tool-card-footer">
+                            <span class="tool-card-link">View tool →</span>
+                        </div>
                     </div>
-                    <h3>Background Remover Pro</h3>
-                    <p>Advanced background removal with vectorization and upscaling tools</p>
                 </div>
 
                 <!-- Return Stream Digitizer -->
                 <div class="tool-card" data-tool="return-stream" role="button" aria-label="Open Return Stream Digitizer">
-                    <span class="tool-badge">Finance</span>
-                    <div class="tool-icon">
-                        <svg viewBox="0 0 64 64" class="icon">
-                            <circle cx="32" cy="32" r="28" fill="#66725B"/>
-                            <line x1="12" y1="10" x2="12" y2="50" stroke="#F7F3EC" stroke-width="1.5" opacity="0.4"/>
-                            <line x1="12" y1="50" x2="52" y2="50" stroke="#F7F3EC" stroke-width="1.5" opacity="0.4"/>
-                            <polyline points="12,44 20,38 26,42 32,28 40,22 52,16"
-                                      stroke="#B46B4E" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-                            <rect x="15" y="47" width="4" height="3" fill="#B46B4E" opacity="0.8"/>
-                            <rect x="21" y="46" width="4" height="4" fill="#4D5645" opacity="0.8"/>
-                            <rect x="27" y="47" width="4" height="3" fill="#B46B4E" opacity="0.8"/>
-                            <rect x="33" y="46" width="4" height="4" fill="#B46B4E" opacity="0.8"/>
-                            <rect x="39" y="47" width="4" height="3" fill="#4D5645" opacity="0.8"/>
-                            <rect x="45" y="46" width="4" height="4" fill="#B46B4E" opacity="0.8"/>
-                            <rect x="42" y="8" width="14" height="16" rx="2" fill="#2B2A28" stroke="#F7F3EC" stroke-width="1"/>
-                            <line x1="45" y1="13" x2="53" y2="13" stroke="#B46B4E" stroke-width="1.2"/>
-                            <line x1="45" y1="16" x2="53" y2="16" stroke="#B46B4E" stroke-width="1.2"/>
-                            <line x1="45" y1="19" x2="53" y2="19" stroke="#B46B4E" stroke-width="1.2"/>
-                        </svg>
+                    <div class="tool-card-image"></div>
+                    <div class="tool-card-body">
+                        <div class="tool-card-meta">
+                            <h3>Return Stream Digitizer</h3>
+                            <span class="tool-badge">Finance</span>
+                        </div>
+                        <p>Extract a period-by-period return stream from any performance chart</p>
+                        <div class="tool-card-footer">
+                            <span class="tool-card-link">View tool →</span>
+                        </div>
                     </div>
-                    <h3>Return Stream Digitizer</h3>
-                    <p>Upload a fact sheet and extract a period-by-period return stream from any performance chart</p>
                 </div>
 
                 <!-- DataFinder Agent -->
                 <div class="tool-card" data-tool="data-finder" role="button" aria-label="Open DataFinder Agent">
-                    <span class="tool-badge">AI</span>
-                    <div class="tool-icon">
-                        <svg viewBox="0 0 64 64" class="icon">
-                            <circle cx="32" cy="32" r="28" fill="#66725B"/>
-                            <rect x="14" y="16" width="26" height="32" rx="3" fill="#F7F3EC" opacity="0.15" stroke="#F7F3EC" stroke-width="1.5"/>
-                            <rect x="18" y="22" width="14" height="2.5" rx="1" fill="#B46B4E"/>
-                            <rect x="18" y="27" width="10" height="2.5" rx="1" fill="#F7F3EC" opacity="0.7"/>
-                            <rect x="18" y="32" width="12" height="2.5" rx="1" fill="#F7F3EC" opacity="0.5"/>
-                            <rect x="18" y="37" width="8"  height="2.5" rx="1" fill="#F7F3EC" opacity="0.4"/>
-                            <circle cx="38" cy="38" r="10" fill="none" stroke="#F7F3EC" stroke-width="3"/>
-                            <circle cx="38" cy="38" r="5"  fill="none" stroke="#B46B4E" stroke-width="2"/>
-                            <line x1="45" y1="45" x2="52" y2="52" stroke="#F7F3EC" stroke-width="3" stroke-linecap="round"/>
-                        </svg>
+                    <div class="tool-card-image"></div>
+                    <div class="tool-card-body">
+                        <div class="tool-card-meta">
+                            <h3>DataFinder Agent</h3>
+                            <span class="tool-badge">AI Agent</span>
+                        </div>
+                        <p>Describe the data you want — the agent finds and extracts it automatically</p>
+                        <div class="tool-card-footer">
+                            <span class="tool-card-link">View tool →</span>
+                        </div>
                     </div>
-                    <h3>DataFinder Agent</h3>
-                    <p>AI-powered data extraction — describe the data you want and the agent finds it</p>
                 </div>
 
                 <!-- Market Outlook -->
                 <div class="tool-card" data-tool="market-outlook" role="button" aria-label="Open Market Outlook">
-                    <span class="tool-badge">Finance</span>
-                    <div class="tool-icon">
-                        <svg viewBox="0 0 64 64" class="icon">
-                            <circle cx="32" cy="32" r="28" fill="#66725B"/>
-                            <line x1="10" y1="10" x2="10" y2="50" stroke="#F7F3EC" stroke-width="1.5" opacity="0.4"/>
-                            <line x1="10" y1="50" x2="54" y2="50" stroke="#F7F3EC" stroke-width="1.5" opacity="0.4"/>
-                            <polyline points="10,44 20,36 28,40 36,24 44,28 54,16"
-                                      stroke="#B46B4E" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-                            <circle cx="10" cy="44" r="2.5" fill="#B46B4E"/>
-                            <circle cx="28" cy="40" r="2.5" fill="#B46B4E"/>
-                            <circle cx="44" cy="28" r="2.5" fill="#B46B4E"/>
-                            <circle cx="54" cy="16" r="2.5" fill="#B46B4E"/>
-                            <polyline points="50,14 54,10 58,14" stroke="#F7F3EC" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-                        </svg>
+                    <div class="tool-card-image"></div>
+                    <div class="tool-card-body">
+                        <div class="tool-card-meta">
+                            <h3>Market Outlook</h3>
+                            <span class="tool-badge">Finance</span>
+                        </div>
+                        <p>AI-aggregated consensus from leading financial firms — trends and contrarian views</p>
+                        <div class="tool-card-footer">
+                            <span class="tool-card-link">View tool →</span>
+                        </div>
                     </div>
-                    <h3>Market Outlook</h3>
-                    <p>AI-aggregated consensus from leading financial firms — trends, confidence, and contrarian views</p>
                 </div>
 
                 <!-- Meal Planner -->
                 <div class="tool-card" data-tool="meal-planner" role="button" aria-label="Open Meal Planner">
-                    <span class="tool-badge">AI</span>
-                    <div class="tool-icon">
-                        <svg viewBox="0 0 64 64" class="icon">
-                            <circle cx="32" cy="32" r="28" fill="#66725B"/>
-                            <circle cx="32" cy="34" r="14" fill="#F7F3EC" opacity="0.15" stroke="#F7F3EC" stroke-width="1.5"/>
-                            <circle cx="32" cy="34" r="10" fill="none" stroke="#B46B4E" stroke-width="1.5" opacity="0.7"/>
-                            <line x1="20" y1="16" x2="20" y2="26" stroke="#F7F3EC" stroke-width="1.8" stroke-linecap="round"/>
-                            <line x1="18" y1="16" x2="18" y2="22" stroke="#F7F3EC" stroke-width="1.2" stroke-linecap="round"/>
-                            <line x1="22" y1="16" x2="22" y2="22" stroke="#F7F3EC" stroke-width="1.2" stroke-linecap="round"/>
-                            <line x1="44" y1="16" x2="44" y2="28" stroke="#F7F3EC" stroke-width="1.8" stroke-linecap="round"/>
-                            <path d="M44,16 Q48,20 44,24" fill="#B46B4E" opacity="0.85"/>
-                            <circle cx="26" cy="34" r="2" fill="#B46B4E"/>
-                            <circle cx="32" cy="34" r="2" fill="#B46B4E" opacity="0.6"/>
-                            <circle cx="38" cy="34" r="2" fill="#B46B4E" opacity="0.3"/>
-                        </svg>
+                    <div class="tool-card-image"></div>
+                    <div class="tool-card-body">
+                        <div class="tool-card-meta">
+                            <h3>Meal Planner</h3>
+                            <span class="tool-badge">AI</span>
+                        </div>
+                        <p>AI-curated weekly dinner plans with recipes, rules, and a compiled grocery list</p>
+                        <div class="tool-card-footer">
+                            <span class="tool-card-link">View tool →</span>
+                        </div>
                     </div>
-                    <h3>Meal Planner</h3>
-                    <p>AI-curated weekly dinner plans with recipes, preference rules, and a compiled grocery list</p>
                 </div>
 
                 <!-- About -->
                 <div class="tool-card" data-tool="about" role="button" aria-label="About The Tiny Tasks">
-                    <span class="tool-badge">Info</span>
-                    <div class="tool-icon">
-                        <svg viewBox="0 0 64 64" class="icon">
-                            <circle cx="32" cy="32" r="28" fill="#66725B"/>
-                            <circle cx="32" cy="22" r="9" fill="#F7F3EC" opacity="0.9"/>
-                            <path d="M14,52 C14,38 50,38 50,52 Z" fill="#F7F3EC" opacity="0.9"/>
-                            <line x1="26" y1="40" x2="38" y2="40" stroke="#B46B4E" stroke-width="1.8" stroke-linecap="round" opacity="0.8"/>
-                            <line x1="24" y1="44" x2="40" y2="44" stroke="#B46B4E" stroke-width="1.8" stroke-linecap="round" opacity="0.5"/>
-                        </svg>
+                    <div class="tool-card-image"></div>
+                    <div class="tool-card-body">
+                        <div class="tool-card-meta">
+                            <h3>About</h3>
+                            <span class="tool-badge">Info</span>
+                        </div>
+                        <p>Who built this, and why — background, interests, and the story behind The Tiny Tasks</p>
+                        <div class="tool-card-footer">
+                            <span class="tool-card-link">Read more →</span>
+                        </div>
                     </div>
-                    <h3>About</h3>
-                    <p>Who built this, and why — background, interests, and the story behind The Tiny Tasks</p>
                 </div>
 
                 <!-- Bigger Projects -->
                 <div class="tool-card" data-tool="bigger-projects" role="button" aria-label="Open Bigger Projects">
-                    <span class="tool-badge">Portfolio</span>
-                    <div class="tool-icon">
-                        <svg viewBox="0 0 64 64" class="icon">
-                            <circle cx="32" cy="32" r="28" fill="#66725B"/>
-                            <rect x="10" y="12" width="26" height="20" rx="3" fill="#F7F3EC" opacity="0.9"/>
-                            <polygon points="19,19 19,27 27,23" fill="#B46B4E"/>
-                            <rect x="40" y="12" width="14" height="9"  rx="2" fill="#B46B4E" opacity="0.85"/>
-                            <rect x="40" y="23" width="14" height="9"  rx="2" fill="#F7F3EC" opacity="0.6"/>
-                            <rect x="10" y="36" width="9"  height="16" rx="2" fill="#B46B4E" opacity="0.6"/>
-                            <rect x="22" y="36" width="9"  height="16" rx="2" fill="#F7F3EC" opacity="0.7"/>
-                            <rect x="34" y="36" width="9"  height="16" rx="2" fill="#F7F3EC" opacity="0.5"/>
-                            <rect x="46" y="36" width="8"  height="16" rx="2" fill="#B46B4E" opacity="0.4"/>
-                        </svg>
+                    <div class="tool-card-image"></div>
+                    <div class="tool-card-body">
+                        <div class="tool-card-meta">
+                            <h3>Bigger Projects</h3>
+                            <span class="tool-badge">Portfolio</span>
+                        </div>
+                        <p>Full-scale work — photos, videos, and links to larger builds beyond the toolkit</p>
+                        <div class="tool-card-footer">
+                            <span class="tool-card-link">View projects →</span>
+                        </div>
                     </div>
-                    <h3>Bigger Projects</h3>
-                    <p>Full-scale work — photos, videos, and links to larger builds beyond the task toolkit</p>
                 </div>
 
             </div>
@@ -225,8 +184,10 @@
         <section class="philosophy-section">
             <div class="philosophy-inner">
                 <div class="philosophy-text">
+                    <span class="section-label-light">Behind the builds</span>
                     <h2>Builder by day,<br>problem solver always.</h2>
                     <p>I combine AI, automation, and product thinking to build tools that make a real impact — systems that are thoughtfully designed, quietly powerful, and actually useful.</p>
+                    <a class="philosophy-link" href="./about.html">A little more about me →</a>
                 </div>
                 <div class="philosophy-panel"></div>
             </div>
@@ -235,7 +196,7 @@
         <!-- Tools & Stack -->
         <section class="stack-section">
             <div class="stack-inner">
-                <span class="stack-label">Built with</span>
+                <span class="stack-label">Tools I use</span>
                 <div class="stack-divider"></div>
                 <div class="stack-items">
                     <span>Claude</span>
