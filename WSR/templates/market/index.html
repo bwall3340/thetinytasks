@@ -4,46 +4,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Market Outlook — The Tiny Tasks</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             font-family: 'Inter', -apple-system, sans-serif;
-            background: radial-gradient(ellipse 70% 55% at 10% 20%, rgba(99,102,241,0.18) 0%, transparent 100%),
-                        radial-gradient(ellipse 60% 70% at 90% 80%, rgba(168,85,247,0.16) 0%, transparent 100%),
-                        linear-gradient(135deg, #f0f4ff 0%, #faf5ff 100%);
+            background: #F7F3EC;
             min-height: 100vh;
-            color: #1e293b;
+            color: #2B2A28;
         }
 
         /* ── Header bar ── */
         .site-header {
             position: sticky; top: 0; z-index: 100;
-            background: rgba(255,255,255,0.92);
+            background: rgba(247, 243, 236, 0.95);
             backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(226,232,240,0.8);
+            border-bottom: 1px solid #E7DED2;
             height: 64px;
             display: flex; align-items: center;
             padding: 0 1.5rem; gap: 1rem;
         }
         .site-header a.home-link {
-            font-size: 0.85rem; font-weight: 500; color: #6366f1;
+            font-size: 0.85rem; font-weight: 500; color: #B46B4E;
             text-decoration: none; display: flex; align-items: center; gap: 0.35rem;
         }
         .site-header a.home-link:hover { text-decoration: underline; }
         .site-header h1 {
-            font-size: 1.1rem; font-weight: 700; color: #1e293b;
+            font-size: 1.1rem; font-weight: 700; color: #2B2A28;
             letter-spacing: -0.02em;
         }
-        .site-header .sep { color: #cbd5e1; }
+        .site-header .sep { color: #D9CCBD; }
 
         /* ── Layout ── */
         .page { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
 
         /* ── Glass card ── */
         .card {
-            background: rgba(255,255,255,0.7);
+            background: rgba(253, 250, 246, 0.85);
             backdrop-filter: blur(24px) saturate(180%);
             border: 1px solid rgba(255,255,255,0.6);
             border-radius: 20px;
@@ -54,7 +52,7 @@
 
         .section-title {
             font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em;
-            text-transform: uppercase; color: #94a3b8; margin-bottom: 1rem;
+            text-transform: uppercase; color: rgba(43, 42, 40, 0.38); margin-bottom: 1rem;
         }
 
         /* ── Consensus hero ── */
@@ -86,12 +84,12 @@
         .ol-neutral  { color: #d97706; }
 
         .confidence-row {
-            font-size: 0.9rem; color: #64748b; margin-bottom: 1rem;
+            font-size: 0.9rem; color: rgba(43, 42, 40, 0.55); margin-bottom: 1rem;
         }
-        .confidence-row strong { color: #1e293b; }
+        .confidence-row strong { color: #2B2A28; }
 
         .sentiment-bar-wrap { margin-top: 0.75rem; }
-        .sentiment-label { font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.3rem;
+        .sentiment-label { font-size: 0.75rem; color: rgba(43, 42, 40, 0.38); margin-bottom: 0.3rem;
             display: flex; justify-content: space-between; }
         .sentiment-track {
             height: 8px; border-radius: 4px;
@@ -101,7 +99,7 @@
         .sentiment-thumb {
             position: absolute; top: -4px; width: 16px; height: 16px;
             border-radius: 50%; background: #fff;
-            border: 2px solid #6366f1;
+            border: 2px solid #B46B4E;
             box-shadow: 0 1px 4px rgba(0,0,0,0.2);
             transform: translateX(-50%);
         }
@@ -122,8 +120,8 @@
             display: flex; flex-direction: column; gap: 0.75rem; justify-content: center;
         }
         .stat-row { display: flex; justify-content: space-between; align-items: baseline; }
-        .stat-label { font-size: 0.8rem; color: #64748b; }
-        .stat-value { font-size: 1.1rem; font-weight: 700; color: #1e293b; }
+        .stat-label { font-size: 0.8rem; color: rgba(43, 42, 40, 0.55); }
+        .stat-value { font-size: 1.1rem; font-weight: 700; color: #2B2A28; }
 
         /* ── Asset views grid ── */
         .asset-grid {
@@ -138,7 +136,7 @@
             padding: 1rem;
             text-align: center;
         }
-        .asset-name { font-size: 0.75rem; color: #64748b; text-transform: capitalize;
+        .asset-name { font-size: 0.75rem; color: rgba(43, 42, 40, 0.55); text-transform: capitalize;
             margin-bottom: 0.4rem; font-weight: 500; }
         .asset-view {
             font-size: 0.85rem; font-weight: 700; text-transform: capitalize;
@@ -147,52 +145,52 @@
         .av-overweight  { color: #059669; }
         .av-underweight { color: #dc2626; }
         .av-neutral      { color: #d97706; }
-        .asset-conf { font-size: 0.7rem; color: #94a3b8; }
+        .asset-conf { font-size: 0.7rem; color: rgba(43, 42, 40, 0.38); }
 
         /* ── Themes ── */
         .theme-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; }
         .theme-tag {
             display: inline-flex; align-items: center; gap: 0.35rem;
             padding: 0.35rem 0.7rem; border-radius: 20px;
-            background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.18);
-            font-size: 0.8rem; color: #4338ca; font-weight: 500;
+            background: rgba(180, 107, 78, 0.08); border: 1px solid rgba(180, 107, 78, 0.18);
+            font-size: 0.8rem; color: #B46B4E; font-weight: 500;
             transition: background 0.15s;
         }
-        .theme-tag:hover { background: rgba(99,102,241,0.15); }
+        .theme-tag:hover { background: rgba(180, 107, 78, 0.15); }
         .theme-tag-badge {
-            background: #6366f1; color: #fff; font-size: 0.65rem; font-weight: 700;
+            background: #B46B4E; color: #fff; font-size: 0.65rem; font-weight: 700;
             border-radius: 10px; padding: 0.05rem 0.35rem; min-width: 1.4rem;
             text-align: center;
         }
         /* larger badges for high-frequency themes */
-        .theme-tag.freq-high { background: rgba(99,102,241,0.14); border-color: rgba(99,102,241,0.35); font-size: 0.875rem; }
-        .theme-tag.freq-high .theme-tag-badge { background: #4f46e5; }
+        .theme-tag.freq-high { background: rgba(180, 107, 78, 0.14); border-color: rgba(180, 107, 78, 0.35); font-size: 0.875rem; }
+        .theme-tag.freq-high .theme-tag-badge { background: #9A5A3E; }
 
         /* ── Unique insights ── */
         .insight-card {
-            border-left: 3px solid #6366f1;
-            background: rgba(99,102,241,0.04);
+            border-left: 3px solid #B46B4E;
+            background: rgba(180, 107, 78, 0.04);
             border-radius: 0 12px 12px 0;
             padding: 0.85rem 1rem;
             margin-bottom: 0.75rem;
         }
-        .insight-text { font-size: 0.9rem; color: #1e293b; line-height: 1.5; margin-bottom: 0.35rem; }
-        .insight-meta { font-size: 0.75rem; color: #94a3b8; }
+        .insight-text { font-size: 0.9rem; color: #2B2A28; line-height: 1.5; margin-bottom: 0.35rem; }
+        .insight-meta { font-size: 0.75rem; color: rgba(43, 42, 40, 0.38); }
         .insight-outlook { display: inline-block; padding: 0.1rem 0.4rem; border-radius: 4px;
             font-size: 0.65rem; font-weight: 600; text-transform: uppercase; margin-left: 0.35rem; }
         .insight-why {
             margin-top: 0.5rem; padding: 0.4rem 0.6rem;
-            background: rgba(99,102,241,0.07); border-radius: 6px;
-            font-size: 0.78rem; color: #4338ca; line-height: 1.45;
+            background: rgba(180, 107, 78, 0.07); border-radius: 6px;
+            font-size: 0.78rem; color: #9A5A3E; line-height: 1.45;
         }
         .insight-why-label { font-weight: 700; margin-right: 0.3rem; font-size: 0.7rem;
             text-transform: uppercase; letter-spacing: 0.04em; }
         .insights-meta-bar {
             display: flex; align-items: center; gap: 0.5rem;
-            margin-bottom: 1rem; font-size: 0.75rem; color: #94a3b8;
+            margin-bottom: 1rem; font-size: 0.75rem; color: rgba(43, 42, 40, 0.38);
         }
         .insights-meta-bar .ci-badge {
-            background: rgba(99,102,241,0.1); color: #4338ca; border-radius: 100px;
+            background: rgba(180, 107, 78, 0.1); color: #9A5A3E; border-radius: 100px;
             padding: 0.15rem 0.5rem; font-size: 0.7rem; font-weight: 600;
         }
 
@@ -200,7 +198,7 @@
         .article-row {
             display: flex; gap: 1rem; align-items: flex-start;
             padding: 0.85rem 0;
-            border-bottom: 1px solid rgba(226,232,240,0.6);
+            border-bottom: 1px solid rgba(231, 222, 210, 0.6);
         }
         .article-row:last-child { border-bottom: none; }
         .article-dot {
@@ -209,9 +207,9 @@
         .dot-bullish { background: #059669; }
         .dot-bearish { background: #dc2626; }
         .dot-neutral  { background: #d97706; }
-        .dot-none     { background: #cbd5e1; }
-        .article-title { font-size: 0.875rem; font-weight: 500; color: #1e293b; margin-bottom: 0.2rem; }
-        .article-meta  { font-size: 0.75rem; color: #94a3b8; }
+        .dot-none     { background: #D9CCBD; }
+        .article-title { font-size: 0.875rem; font-weight: 500; color: #2B2A28; margin-bottom: 0.2rem; }
+        .article-meta  { font-size: 0.75rem; color: rgba(43, 42, 40, 0.38); }
 
         /* ── Main grid layout ── */
         .main-grid {
@@ -230,12 +228,12 @@
         }
         .scroll-body::-webkit-scrollbar { width: 4px; }
         .scroll-body::-webkit-scrollbar-track { background: transparent; }
-        .scroll-body::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.2); border-radius: 2px; }
-        .scroll-body::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.4); }
+        .scroll-body::-webkit-scrollbar-thumb { background: rgba(180, 107, 78, 0.2); border-radius: 2px; }
+        .scroll-body::-webkit-scrollbar-thumb:hover { background: rgba(180, 107, 78, 0.4); }
 
         /* ── Empty state ── */
-        .empty { text-align: center; padding: 3rem 1rem; color: #94a3b8; }
-        .empty h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; color: #64748b; }
+        .empty { text-align: center; padding: 3rem 1rem; color: rgba(43, 42, 40, 0.38); }
+        .empty h3 { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; color: rgba(43, 42, 40, 0.55); }
         .empty p { font-size: 0.875rem; line-height: 1.6; }
 
         /* ── Disclaimer modal ── */
@@ -257,8 +255,8 @@
         }
         .disclaimer-badge {
             display: inline-flex; align-items: center; gap: 0.4rem;
-            background: rgba(99,102,241,0.1); color: #4338ca;
-            border: 1px solid rgba(99,102,241,0.25);
+            background: rgba(180, 107, 78, 0.1); color: #9A5A3E;
+            border: 1px solid rgba(180, 107, 78, 0.25);
             border-radius: 100px; font-size: 0.72rem; font-weight: 700;
             letter-spacing: 0.05em; text-transform: uppercase;
             padding: 0.25rem 0.65rem; margin-bottom: 1rem;
@@ -272,18 +270,18 @@
             display: flex; gap: 0.65rem; align-items: flex-start;
             font-size: 0.88rem; color: #334155; line-height: 1.55;
             padding: 0.5rem 0;
-            border-bottom: 1px solid rgba(226,232,240,0.6);
+            border-bottom: 1px solid rgba(231, 222, 210, 0.6);
         }
         .disclaimer-points li:last-child { border-bottom: none; }
         .disclaimer-points li .dp-icon {
             flex-shrink: 0; margin-top: 0.05rem;
             width: 18px; height: 18px; border-radius: 50%;
-            background: rgba(99,102,241,0.1);
+            background: rgba(180, 107, 78, 0.1);
             display: flex; align-items: center; justify-content: center;
-            font-size: 0.6rem; color: #6366f1; font-weight: 800;
+            font-size: 0.6rem; color: #B46B4E; font-weight: 800;
         }
         .disclaimer-footer {
-            font-size: 0.75rem; color: #94a3b8; line-height: 1.5;
+            font-size: 0.75rem; color: rgba(43, 42, 40, 0.38); line-height: 1.5;
             margin-bottom: 1.5rem;
         }
         .disclaimer-actions { display: flex; gap: 0.75rem; }
@@ -294,18 +292,18 @@
             text-decoration: none; display: inline-block;
         }
         .disc-btn-primary {
-            background: linear-gradient(135deg, #6366f1, #7c3aed);
-            color: #fff; box-shadow: 0 4px 12px rgba(99,102,241,0.35);
+            background: #B46B4E;
+            color: #fff; box-shadow: 0 4px 12px rgba(180, 107, 78, 0.35);
         }
-        .disc-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(99,102,241,0.45); }
-        .disc-btn-secondary { background: #f1f5f9; color: #475569; }
-        .disc-btn-secondary:hover { background: #e2e8f0; }
+        .disc-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(180, 107, 78, 0.45); }
+        .disc-btn-secondary { background: #F7F3EC; color: rgba(43, 42, 40, 0.55); }
+        .disc-btn-secondary:hover { background: #E7DED2; }
 
         /* ── Weighting toggle ── */
         .weight-toggle {
             display: inline-flex;
-            background: rgba(241,245,249,0.9);
-            border: 1px solid rgba(226,232,240,0.8);
+            background: rgba(247, 243, 236, 0.9);
+            border: 1px solid #E7DED2;
             border-radius: 10px;
             padding: 3px;
             gap: 2px;
@@ -315,17 +313,17 @@
             border: none; border-radius: 7px;
             font-size: 0.75rem; font-weight: 600;
             cursor: pointer; transition: all 0.18s;
-            background: transparent; color: #64748b;
+            background: transparent; color: rgba(43, 42, 40, 0.55);
             white-space: nowrap;
         }
         .weight-toggle button.active {
             background: #fff;
-            color: #4338ca;
+            color: #B46B4E;
             box-shadow: 0 1px 4px rgba(0,0,0,0.1);
         }
-        .weight-toggle button:hover:not(.active) { color: #1e293b; }
+        .weight-toggle button:hover:not(.active) { color: #2B2A28; }
         .toggle-label {
-            font-size: 0.7rem; color: #94a3b8; margin-right: 0.5rem;
+            font-size: 0.7rem; color: rgba(43, 42, 40, 0.38); margin-right: 0.5rem;
             white-space: nowrap; align-self: center;
         }
     </style>
@@ -466,7 +464,7 @@
                 <div class="insight-meta">
                     {{ ins.source }} &middot; {{ ins.date }}
                     {% if ins.outlook %}
-                    <span class="insight-outlook" style="background:rgba(99,102,241,0.1);color:#6366f1;">{{ ins.outlook }}</span>
+                    <span class="insight-outlook" style="background:rgba(180,107,78,0.1);color:#B46B4E;">{{ ins.outlook }}</span>
                     {% endif %}
                 </div>
                 {% if ins.why_divergent %}
@@ -490,7 +488,7 @@
                 <div class="insight-meta">
                     {{ ins.source }} &middot; {{ ins.date }}
                     {% if ins.outlook %}
-                    <span class="insight-outlook" style="background:rgba(99,102,241,0.1);color:#6366f1;">{{ ins.outlook }}</span>
+                    <span class="insight-outlook" style="background:rgba(180,107,78,0.1);color:#B46B4E;">{{ ins.outlook }}</span>
                     {% endif %}
                 </div>
             </div>
@@ -526,7 +524,7 @@
                         {% endif %}
                     </div>
                     {% if article.analysis and article.analysis.summary %}
-                    <div style="font-size:0.78rem;color:#64748b;margin-top:0.25rem;line-height:1.4;">
+                    <div style="font-size:0.78rem;color:rgba(43,42,40,0.55);margin-top:0.25rem;line-height:1.4;">
                         {{ article.analysis.summary[:160] }}{{ '...' if article.analysis.summary|length > 160 else '' }}
                     </div>
                     {% endif %}
@@ -561,9 +559,9 @@
     <div class="card" style="text-align:center;padding:4rem 2rem;">
         <div style="font-size:3rem;margin-bottom:1rem;opacity:0.3;">&#128202;</div>
         <h2 style="font-size:1.25rem;font-weight:700;margin-bottom:0.75rem;">No market data yet</h2>
-        <p style="color:#64748b;font-size:0.9rem;max-width:420px;margin:0 auto;line-height:1.6;">
+        <p style="color:rgba(43,42,40,0.55);font-size:0.9rem;max-width:420px;margin:0 auto;line-height:1.6;">
             Add financial commentary sources in the
-            <a href="/market-admin/" style="color:#6366f1;font-weight:500;">admin panel</a>,
+            <a href="/market-admin/" style="color:#B46B4E;font-weight:500;">admin panel</a>,
             then scrape and analyze them to populate this dashboard.
         </p>
     </div>

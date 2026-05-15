@@ -4,17 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meal Planner — The Tiny Tasks</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
-            --green: #10b981;
-            --green-dark: #059669;
-            --green-light: #d1fae5;
-            --slate: #1e293b;
-            --muted: #64748b;
-            --border: #e2e8f0;
-            --bg: #f8fafc;
+            --green: #66725B;
+            --green-dark: #4D5645;
+            --green-light: rgba(102, 114, 91, 0.12);
+            --slate: #2B2A28;
+            --muted: rgba(43, 42, 40, 0.55);
+            --border: #E7DED2;
+            --bg: #F7F3EC;
         }
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--slate); min-height: 100vh; }
 
@@ -28,12 +28,12 @@
         .header .brand { font-size: 0.85rem; font-weight: 600; letter-spacing: -0.01em; }
         .header .brand span { color: var(--green); }
         .header nav { display: flex; gap: 1rem; align-items: center; }
-        .header nav a { font-size: 0.78rem; color: #94a3b8; text-decoration: none; transition: color 0.15s; }
+        .header nav a { font-size: 0.78rem; color: rgba(43, 42, 40, 0.38); text-decoration: none; transition: color 0.15s; }
         .header nav a:hover { color: #fff; }
 
         /* ── Hero text ── */
         .hero { padding: 2.5rem 1.5rem 1.5rem; max-width: 900px; margin: 0 auto; }
-        .hero h1 { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 0.4rem; }
+        .hero h1 { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 0.4rem; font-family: 'Cormorant Garamond', Georgia, serif; }
         .hero h1 span { color: var(--green); }
         .hero p { font-size: 0.9rem; color: var(--muted); }
 
@@ -63,7 +63,7 @@
 
         .day-col { display: flex; flex-direction: column; gap: 0.5rem; }
         .day-label { font-size: 0.72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; padding: 0 0.25rem; }
-        .day-label .date-sub { font-weight: 400; color: #94a3b8; font-size: 0.68rem; text-transform: none; letter-spacing: 0; margin-top: 0.1rem; }
+        .day-label .date-sub { font-weight: 400; color: rgba(43, 42, 40, 0.38); font-size: 0.68rem; text-transform: none; letter-spacing: 0; margin-top: 0.1rem; }
         .day-col.today .day-label { color: var(--green); }
 
         /* ── Flip card ── */
@@ -82,11 +82,11 @@
             overflow: hidden;
         }
         .card-front {
-            background: #fff;
+            background: #FDFAF6;
             display: flex; flex-direction: column; padding: 1.1rem 1rem;
         }
         .card-back {
-            background: #fff;
+            background: #FDFAF6;
             transform: rotateY(180deg);
             display: flex; flex-direction: column;
         }
@@ -99,15 +99,15 @@
         .front-source a:hover { text-decoration: underline; }
         .tags-row { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-bottom: 0.5rem; }
         .tag { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 100px; font-size: 0.65rem; font-weight: 500; }
-        .tag-easy { background: #dcfce7; color: #15803d; }
+        .tag-easy { background: rgba(102,114,91,0.15); color: #4D5645; }
         .tag-medium { background: #fef9c3; color: #854d0e; }
         .tag-hard { background: #fee2e2; color: #991b1b; }
-        .tag-default { background: #f1f5f9; color: #475569; }
-        .prep-time { font-size: 0.7rem; color: #94a3b8; margin-bottom: auto; }
-        .flip-hint { font-size: 0.65rem; color: #cbd5e1; margin-top: 0.75rem; text-align: center; }
+        .tag-default { background: #F7F3EC; color: rgba(43, 42, 40, 0.55); }
+        .prep-time { font-size: 0.7rem; color: rgba(43, 42, 40, 0.38); margin-bottom: auto; }
+        .flip-hint { font-size: 0.65rem; color: #D9CCBD; margin-top: 0.75rem; text-align: center; }
         .today-badge { background: var(--green); color: #fff; font-size: 0.65rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 100px; align-self: flex-start; margin-bottom: 0.5rem; letter-spacing: 0.03em; }
         .tbd-card { align-items: center; justify-content: center; }
-        .tbd-text { font-size: 0.85rem; color: #cbd5e1; font-style: italic; }
+        .tbd-text { font-size: 0.85rem; color: #D9CCBD; font-style: italic; }
 
         /* ── Back face ── */
         .back-header { padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); flex-shrink: 0; }
@@ -136,7 +136,7 @@
         .action-btn {
             display: flex; align-items: center; gap: 0.35rem;
             padding: 0.38rem 0.85rem; border-radius: 7px;
-            border: 1px solid var(--border); background: #fff;
+            border: 1px solid var(--border); background: #FDFAF6;
             font-size: 0.78rem; font-weight: 500; color: var(--slate);
             cursor: pointer; transition: all 0.15s; font-family: inherit;
         }
@@ -144,7 +144,7 @@
         .action-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
 
         .grocery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1.25rem; }
-        .grocery-cat { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.1rem; }
+        .grocery-cat { background: #FDFAF6; border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.1rem; }
         .grocery-cat-title {
             font-size: 0.7rem; font-weight: 600; color: var(--muted);
             text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.65rem;
@@ -160,7 +160,7 @@
         .item-check {
             appearance: none; -webkit-appearance: none;
             width: 13px; height: 13px; flex-shrink: 0;
-            border: 1.5px solid #cbd5e1; border-radius: 3px;
+            border: 1.5px solid #D9CCBD; border-radius: 3px;
             cursor: pointer; position: relative; top: 1px;
             transition: background 0.12s, border-color 0.12s;
         }
@@ -173,10 +173,10 @@
         }
         .item-text { transition: color 0.12s; color: var(--slate); line-height: 1.5; }
         .grocery-item:has(.item-check:checked) .item-text {
-            text-decoration: line-through; color: #94a3b8;
+            text-decoration: line-through; color: rgba(43, 42, 40, 0.38);
         }
 
-        .empty-grocery { color: #94a3b8; font-size: 0.875rem; text-align: center; padding: 3rem 0; }
+        .empty-grocery { color: rgba(43, 42, 40, 0.38); font-size: 0.875rem; text-align: center; padding: 3rem 0; }
         .tab-panel { display: none; }
         .tab-panel.active { display: block; }
 
@@ -202,20 +202,20 @@
             .item-check { display: none; }
             .grocery-item:has(.item-check:checked) { display: none; }
             .grocery-item { gap: 0; }
-            .grocery-item::before { content: '•'; color: #10b981; margin-right: 0.4rem; font-size: 0.7rem; }
+            .grocery-item::before { content: '•'; color: #66725B; margin-right: 0.4rem; font-size: 0.7rem; }
         }
 
         /* ── Recipe include toggle ── */
         .recipe-include {
             display: flex; align-items: center; gap: 0.3rem;
             margin-top: auto; padding-top: 0.4rem;
-            font-size: 0.65rem; color: #94a3b8;
+            font-size: 0.65rem; color: rgba(43, 42, 40, 0.38);
             cursor: pointer; user-select: none;
         }
         .recipe-include-check {
             appearance: none; -webkit-appearance: none;
             width: 12px; height: 12px; flex-shrink: 0;
-            border: 1.5px solid #cbd5e1; border-radius: 2px;
+            border: 1.5px solid #D9CCBD; border-radius: 2px;
             cursor: pointer; position: relative;
             transition: background 0.12s, border-color 0.12s;
         }
@@ -226,10 +226,10 @@
             border-left: 1.5px solid #fff; border-bottom: 1.5px solid #fff;
             transform: rotate(-45deg);
         }
-        .recipe-include:has(.recipe-include-check:not(:checked)) { color: #cbd5e1; }
+        .recipe-include:has(.recipe-include-check:not(:checked)) { color: #D9CCBD; }
 
         /* ── Admin link ── */
-        .admin-link { font-size: 0.72rem; color: #94a3b8; }
+        .admin-link { font-size: 0.72rem; color: rgba(43, 42, 40, 0.38); }
     </style>
 </head>
 <body>
