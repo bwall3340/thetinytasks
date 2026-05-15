@@ -30,18 +30,9 @@ body {
     align-items: center;
     overflow: hidden;
 
-    /*
-     * Replace gradient with real photo:
-     * background-image: url('/assets/hero.jpg');
-     * background-size: cover;
-     * background-position: center 30%;
-     * Suggested: https://images.unsplash.com/photo-1534430480872-3498386e7856?w=1920&q=80
-     */
-    background: linear-gradient(
-        160deg,
-        #8B7355 0%, #7A6B4F 18%, #66725B 38%,
-        #5C6952 52%, #7D6A48 68%, #9E7E5A 82%, #B08D65 100%
-    );
+    background-image: url('/assets/hero.jpg');
+    background-size: cover;
+    background-position: center 30%;
 }
 
 /* Asymmetric overlay — heavier on left where text sits */
@@ -88,7 +79,7 @@ body {
     font-weight: 600;
     letter-spacing: -0.01em;
     line-height: 1.05;
-    color: var(--cream);
+    color: #ffffff;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
 }
@@ -138,7 +129,7 @@ body {
 .scroll-line {
     width: 1px;
     height: 36px;
-    background: rgba(247, 243, 236, 0.45);
+    background: var(--terra);
     transform-origin: top center;
     animation: lineGrow 2.4s ease-in-out infinite;
 }
@@ -149,7 +140,7 @@ body {
     font-weight: 400;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: rgba(247, 243, 236, 0.4);
+    color: var(--terra);
 }
 
 @keyframes lineGrow {
