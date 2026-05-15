@@ -48,6 +48,22 @@ class TinyTasksApp {
         this.comingSoonModal.addEventListener('click', (e) => {
             if (e.target === this.comingSoonModal) this.closeComingSoonModal();
         });
+
+        const toolsNavLink = document.querySelector('.main-nav a[href="#tools"]');
+        if (toolsNavLink) {
+            toolsNavLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                const toolsEl = document.getElementById('tools');
+                if (this.isOnCoverPage) {
+                    this.transitionToMainPage();
+                    setTimeout(() => {
+                        if (toolsEl) this.mainPage.scrollTo({ top: toolsEl.offsetTop, behavior: 'smooth' });
+                    }, 500);
+                } else {
+                    if (toolsEl) this.mainPage.scrollTo({ top: toolsEl.offsetTop, behavior: 'smooth' });
+                }
+            });
+        }
     }
 
     handleInitialLoad() {
