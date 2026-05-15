@@ -14,6 +14,11 @@ venv/
 # Claude Code
 .claude/
 
+# Sanity Studio build artifacts
+sanity/node_modules/
+sanity/dist/
+sanity/.sanity/
+
 # OS
 .DS_Store
 Thumbs.db
