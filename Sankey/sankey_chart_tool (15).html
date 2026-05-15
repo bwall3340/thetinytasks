@@ -7,7 +7,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-sankey/0.12.3/d3-sankey.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -18,8 +18,8 @@
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             line-height: 1.6;
-            color: #1e293b;
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            color: #2B2A28;
+            background: #F7F3EC;
             min-height: 100vh;
             padding: 0;
             padding-top: 80px; /* Space for fixed header */
@@ -34,7 +34,7 @@
             height: 80px;
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+            border-bottom: 1px solid #E7DED2;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -47,11 +47,8 @@
             font-weight: 700;
             letter-spacing: -0.025em;
             text-transform: lowercase;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            color: transparent;
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            color: #B46B4E;
             margin: 0;
         }
 
@@ -68,7 +65,7 @@
         .hamburger-menu span {
             width: 24px;
             height: 2px;
-            background: #1e293b;
+            background: #2B2A28;
             border-radius: 2px;
             transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
@@ -125,7 +122,7 @@
             font-size: 1.5rem;
             font-weight: 700;
             margin-bottom: 2rem;
-            color: #1e293b;
+            color: #2B2A28;
         }
 
         .mobile-menu-content ul {
@@ -137,7 +134,7 @@
         }
 
         .mobile-menu-content a {
-            color: #64748b;
+            color: rgba(43, 42, 40, 0.55);
             text-decoration: none;
             font-weight: 500;
             padding: 0.75rem 0;
@@ -147,8 +144,8 @@
         }
 
         .mobile-menu-content a:hover {
-            color: #6366f1;
-            background: rgba(99, 102, 241, 0.1);
+            color: #B46B4E;
+            background: rgba(180, 107, 78, 0.1);
             padding-left: 1rem;
         }
 
@@ -156,7 +153,7 @@
             max-width: 1400px;
             margin: 2rem auto;
             background: rgba(255, 255, 255, 0.9);
-            border: 1px solid rgba(226, 232, 240, 0.8);
+            border: 1px solid #E7DED2;
             border-radius: 16px;
             backdrop-filter: blur(20px);
             overflow: hidden;
@@ -166,7 +163,7 @@
         .header {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+            border-bottom: 1px solid #E7DED2;
             padding: 2rem;
             text-align: center;
         }
@@ -176,24 +173,21 @@
             font-weight: 700;
             letter-spacing: -0.025em;
             text-transform: lowercase;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            color: transparent;
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            color: #B46B4E;
             margin-bottom: 0.5rem;
         }
 
         .header p {
             font-size: 1rem;
-            color: #64748b;
+            color: rgba(43, 42, 40, 0.55);
             font-weight: 500;
         }
 
         .controls {
             padding: 2rem;
             background: rgba(255, 255, 255, 0.8);
-            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+            border-bottom: 1px solid #E7DED2;
             backdrop-filter: blur(20px);
         }
 
@@ -205,7 +199,7 @@
             display: block;
             margin-bottom: 0.5rem;
             font-weight: 600;
-            color: #1e293b;
+            color: #2B2A28;
             font-size: 0.875rem;
             letter-spacing: 0.025em;
         }
@@ -228,7 +222,7 @@
         .file-input-label {
             display: block;
             padding: 0.8rem 1.5rem;
-            background: linear-gradient(135deg, #6366F1, #8b5cf6);
+            background: #B46B4E;
             color: #ffffff;
             border-radius: 8px;
             text-align: center;
@@ -240,7 +234,7 @@
 
         .file-input:hover .file-input-label {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+            box-shadow: 0 10px 25px rgba(180, 107, 78, 0.4);
         }
 
         .control-row {
@@ -252,7 +246,7 @@
         select, input[type="number"], textarea {
             width: 100%;
             padding: 0.75rem 1rem;
-            border: 1px solid rgba(226, 232, 240, 0.8);
+            border: 1px solid #E7DED2;
             border-radius: 8px;
             font-size: 0.875rem;
             transition: all 0.3s ease;
@@ -262,8 +256,8 @@
 
         select:focus, input[type="number"]:focus, textarea:focus {
             outline: none;
-            border-color: rgba(99, 102, 241, 0.3);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            border-color: rgba(180, 107, 78, 0.3);
+            box-shadow: 0 0 0 3px rgba(180, 107, 78, 0.1);
         }
 
         textarea {
@@ -319,7 +313,7 @@
         }
 
         .fullscreen-btn {
-            background: rgba(99, 102, 241, 0.9);
+            background: rgba(180, 107, 78, 0.9);
             color: white;
             border: none;
             padding: 0.5rem;
@@ -332,9 +326,9 @@
         }
 
         .fullscreen-btn:hover {
-            background: rgba(99, 102, 241, 1);
+            background: rgba(180, 107, 78, 1);
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+            box-shadow: 0 4px 12px rgba(180, 107, 78, 0.4);
         }
 
         /* Fullscreen overlay */
@@ -391,7 +385,7 @@
         }
 
         .zoom-btn {
-            background: rgba(99, 102, 241, 0.9);
+            background: rgba(180, 107, 78, 0.9);
             color: white;
             border: none;
             padding: 0.5rem 0.75rem;
@@ -404,9 +398,9 @@
         }
 
         .zoom-btn:hover {
-            background: rgba(99, 102, 241, 1);
+            background: rgba(180, 107, 78, 1);
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+            box-shadow: 0 4px 12px rgba(180, 107, 78, 0.4);
         }
 
         #chart {
@@ -450,14 +444,14 @@
         }
 
         .status.info {
-            background: rgba(99, 102, 241, 0.1);
+            background: rgba(180, 107, 78, 0.1);
             color: #3730a3;
-            border: 1px solid rgba(99, 102, 241, 0.3);
+            border: 1px solid rgba(180, 107, 78, 0.3);
         }
 
         .sample-data {
-            background: rgba(99, 102, 241, 0.05);
-            border: 1px solid rgba(99, 102, 241, 0.2);
+            background: rgba(180, 107, 78, 0.05);
+            border: 1px solid rgba(180, 107, 78, 0.2);
             border-radius: 8px;
             padding: 1.5rem;
             margin-top: 1.5rem;
@@ -471,12 +465,12 @@
         }
 
         .sample-data pre {
-            background: rgba(99, 102, 241, 0.1);
+            background: rgba(180, 107, 78, 0.1);
             padding: 1rem;
             border-radius: 6px;
             overflow-x: auto;
             font-size: 0.875rem;
-            color: #1e293b;
+            color: #2B2A28;
             font-family: 'Inter', monospace;
         }
 
@@ -495,7 +489,7 @@
 
         .simple-path-controls label {
             font-weight: 500;
-            color: #1e293b;
+            color: #2B2A28;
         }
 
         .simple-path-controls select {
@@ -554,8 +548,8 @@
             align-items: center;
             gap: 20px;
             padding: 10px;
-            background: rgba(99, 102, 241, 0.05);
-            border: 1px solid rgba(99, 102, 241, 0.2);
+            background: rgba(180, 107, 78, 0.05);
+            border: 1px solid rgba(180, 107, 78, 0.2);
             border-radius: 6px;
             margin: 15px 0;
             font-size: 14px;
@@ -569,14 +563,14 @@
 
         .sizing-control-group label {
             font-weight: 500;
-            color: #1e293b;
+            color: #2B2A28;
             min-width: 90px;
         }
 
         .size-btn {
             width: 28px;
             height: 28px;
-            background: #6366f1;
+            background: #B46B4E;
             color: white;
             border: none;
             border-radius: 4px;
@@ -589,20 +583,20 @@
         }
 
         .size-btn:hover {
-            background: #5856eb;
+            background: #A05A3E;
         }
 
         .sizing-control-group span {
             min-width: 40px;
             text-align: center;
             font-weight: 600;
-            color: #6366f1;
+            color: #B46B4E;
         }
 
         .sizing-info {
             margin-left: auto;
             font-size: 12px;
-            color: #64748b;
+            color: rgba(43, 42, 40, 0.55);
             font-style: italic;
         }
 
