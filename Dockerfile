@@ -16,12 +16,14 @@ COPY WSR/ .
 # Copy root-level static site files for the home page and other tools
 COPY index.html /app/site/index.html
 COPY styles.css /app/site/styles.css
+COPY shared.css /app/site/shared.css
 COPY script.js /app/site/script.js
 COPY background-remover.html /app/site/background-remover.html
 COPY return-stream.html /app/site/return-stream.html
 COPY data-finder.html /app/site/data-finder.html
 COPY about.html /app/site/about.html
 COPY bigger-projects.html /app/site/bigger-projects.html
+COPY assets/ /app/site/assets/
 COPY Sankey/ /app/site/Sankey/
 COPY WhiteBackgroundRemover/ /app/site/WhiteBackgroundRemover/
 

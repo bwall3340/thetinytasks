@@ -295,6 +295,16 @@ def bigger_projects():
     return send_from_directory(SITE_DIR, 'bigger-projects.html')
 
 
+@app.route('/shared.css')
+def shared_styles():
+    return send_from_directory(SITE_DIR, 'shared.css')
+
+
+@app.route('/assets/<path:filename>')
+def assets(filename):
+    return send_from_directory(os.path.join(SITE_DIR, 'assets'), filename)
+
+
 @app.route('/Sankey/<path:filename>')
 def sankey_files(filename):
     return send_from_directory(os.path.join(SITE_DIR, 'Sankey'), filename)
