@@ -79,6 +79,11 @@ class TinyTasksApp {
         this.coverPage.addEventListener('click', () => {
             this.transitionToMainPage();
         });
+
+        const img = new Image();
+        img.onload = () => this.coverPage.classList.add('ready');
+        img.onerror = () => this.coverPage.classList.add('ready');
+        img.src = '/assets/hero.jpg';
     }
 
     handleScroll(e) {

@@ -24,15 +24,20 @@ body {
     width: 100vw;
     height: 100vh;
     z-index: 1000;
-    transition: transform 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    transition: transform 1s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.6s ease;
     transform: translateY(0);
     display: flex;
     align-items: center;
     overflow: hidden;
+    opacity: 0;
 
     background-image: url('/assets/hero.jpg');
     background-size: cover;
     background-position: center 30%;
+}
+
+.cover-page.ready {
+    opacity: 1;
 }
 
 /* Asymmetric overlay — heavier on left where text sits */
