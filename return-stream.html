@@ -11,44 +11,51 @@
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-            --bg: #1C1B19;
-            --surface: rgba(255,255,255,0.04);
-            --surface-hover: rgba(255,255,255,0.07);
-            --border: rgba(255,255,255,0.09);
-            --border-strong: rgba(255,255,255,0.16);
-            --text: #e2e8f0;
-            --text-muted: #64748b;
+            --bg: #F7F3EC;
+            --surface: rgba(43,42,40,0.04);
+            --surface-hover: rgba(43,42,40,0.07);
+            --border: #E7DED2;
+            --border-strong: #D9CCBD;
+            --text: #2B2A28;
+            --text-muted: rgba(43,42,40,0.55);
             --accent: #B46B4E;
-            --accent-light: #CC8B6E;
+            --accent-light: #9A5A3E;
             --green: #66725B;
-            --green-light: #8A9A7E;
-            --red: #ef4444;
-            --red-light: #f87171;
-            --amber: #f59e0b;
+            --green-light: #4D5645;
+            --red: #c0392b;
+            --red-light: #e74c3c;
+            --amber: #c47d11;
             --radius: 12px;
             --radius-sm: 8px;
         }
 
         html, body { height: 100%; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); }
 
-        /* ── Header ── */
-        .tool-header {
-            display: flex; align-items: center; gap: 16px;
-            padding: 16px 24px; border-bottom: 1px solid var(--border);
-            background: rgba(28, 27, 25, 0.9); backdrop-filter: blur(12px);
-            position: sticky; top: 0; z-index: 100;
+        /* ── Header — matches main dashboard ── */
+        .main-header {
+            height: 72px; flex-shrink: 0;
+            background: var(--bg); border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 2.5rem; position: sticky; top: 0; z-index: 100;
         }
-        .back-btn {
-            color: var(--text-muted); text-decoration: none; font-size: 13px;
-            font-weight: 500; transition: color 0.2s; white-space: nowrap;
+        .logo h2 {
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-size: 1.4rem; font-weight: 600; font-style: italic;
+            letter-spacing: 0.01em; text-transform: lowercase; color: var(--text);
         }
-        .back-btn:hover { color: var(--accent-light); }
-        .tool-header h1 { font-size: 18px; font-weight: 700; flex: 1; }
+        .main-nav { display: flex; gap: 2rem; align-items: center; }
+        .main-nav a {
+            font-family: 'Inter', sans-serif; font-size: 0.72rem; font-weight: 500;
+            letter-spacing: 0.1em; text-transform: uppercase;
+            color: var(--text); text-decoration: none; opacity: 0.45;
+            transition: opacity 0.3s ease;
+        }
+        .main-nav a:hover { opacity: 1; }
         .badge {
             font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
             padding: 3px 8px; border-radius: 99px; text-transform: uppercase;
         }
-        .badge-beta { background: rgba(245,158,11,0.15); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
+        .badge-beta { background: rgba(180,107,78,0.12); color: var(--accent); border: 1px solid rgba(180,107,78,0.25); }
 
         /* ── Layout ── */
         main { display: flex; flex-direction: column; min-height: calc(100vh - 57px); }
@@ -87,7 +94,7 @@
         .format-tag {
             font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
             padding: 4px 10px; border-radius: 99px;
-            background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+            background: var(--surface); border: 1px solid var(--border);
             color: var(--text-muted); text-transform: uppercase;
         }
 
@@ -100,7 +107,7 @@
         }
         #pdf-page-bar label { font-size: 13px; color: var(--text-muted); }
         #pdf-page-bar input[type="number"] {
-            width: 60px; background: rgba(255,255,255,0.06);
+            width: 60px; background: rgba(43,42,40,0.04);
             border: 1px solid var(--border); border-radius: 6px;
             color: var(--text); padding: 4px 8px; font-size: 13px; font-family: inherit;
         }
@@ -125,7 +132,7 @@
         .chart-panel {
             display: flex; flex-direction: column;
             border-right: 1px solid var(--border);
-            background: #0a0a12; overflow: hidden;
+            background: #2B2A28; overflow: hidden;
         }
         .chart-panel-toolbar {
             display: flex; align-items: center; gap: 8px;
@@ -177,7 +184,7 @@
 
         input[type="text"], input[type="date"], input[type="number"], select {
             width: 100%; padding: 7px 10px; border-radius: 7px;
-            background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+            background: rgba(43,42,40,0.04); border: 1px solid var(--border);
             color: var(--text); font-size: 13px; font-family: inherit;
             transition: border-color 0.15s; outline: none;
             -webkit-appearance: none;
@@ -186,8 +193,7 @@
         input[type="number"]:focus, select:focus {
             border-color: var(--accent);
         }
-        select option { background: #1e1e2e; color: var(--text); }
-        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); }
+        select option { background: var(--bg); color: var(--text); }
         input[type="number"] { -moz-appearance: textfield; }
 
         /* ── Color Picker ── */
@@ -284,7 +290,7 @@
         }
         .data-table-wrap table { width: 100%; border-collapse: collapse; }
         .data-table-wrap th {
-            position: sticky; top: 0; background: #0f0f1e;
+            position: sticky; top: 0; background: var(--bg);
             padding: 6px 10px; text-align: left; font-size: 11px;
             color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border);
         }
@@ -326,14 +332,14 @@
         .tooltip-wrap { position: relative; display: inline-flex; }
         .tooltip-icon {
             width: 15px; height: 15px; border-radius: 50%;
-            background: rgba(255,255,255,0.08); border: 1px solid var(--border);
+            background: var(--surface); border: 1px solid var(--border);
             color: var(--text-muted); font-size: 9px; font-weight: 700;
             display: inline-flex; align-items: center; justify-content: center;
             cursor: default; margin-left: 4px;
         }
         .tooltip-text {
             display: none; position: absolute; bottom: calc(100% + 6px); left: 50%;
-            transform: translateX(-50%); background: #1e1e2e;
+            transform: translateX(-50%); background: var(--bg);
             border: 1px solid var(--border); border-radius: 6px;
             padding: 6px 10px; font-size: 11px; white-space: nowrap;
             color: var(--text); z-index: 200; pointer-events: none;
@@ -378,9 +384,13 @@
 </head>
 <body>
 
-<header class="tool-header">
-    <a href="/" class="back-btn">← the tiny tasks</a>
-    <h1>Return Stream Digitizer</h1>
+<header class="main-header">
+    <div class="logo"><h2>the tiny tasks</h2></div>
+    <nav class="main-nav">
+        <a href="/">Tools</a>
+        <a href="/bigger-projects.html">Work</a>
+        <a href="/about.html">About</a>
+    </nav>
     <span class="badge badge-beta">Beta</span>
 </header>
 
