@@ -797,11 +797,13 @@ def auto_pick_recipe(target_date, recipes, preferences, recent_entries) -> int |
 AVAILABLE RECIPES:
 {recipe_lines}
 
-PREFERENCE RULES (must follow):
+PREFERENCE RULES (treat as guidelines — always pick a recipe even if rules cannot be fully satisfied):
 {rules_text}
 
-RECENTLY SERVED (avoid repeating too soon):
+RECENTLY SERVED (avoid repeating if possible, but repeating is acceptable when necessary):
 {history_lines}
+
+You MUST return a recipe_id. If no recipe perfectly satisfies every rule, pick the best available option anyway — an imperfect assignment is always better than leaving the day empty. Never return null or skip.
 
 Return ONLY valid JSON: {{"recipe_id": <integer>, "reason": "<one sentence>"}}"""
 
