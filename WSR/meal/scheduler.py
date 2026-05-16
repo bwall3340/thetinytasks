@@ -23,7 +23,7 @@ def run_meal_auto_fill(app):
 
         today = date.today()
 
-        for i in range(1, 8):
+        for i in range(8):  # today through 7 days out — covers the full rolling window plus buffer
             target = today + timedelta(days=i)
             entry = PlanEntry.query.filter_by(date=target).first()
 
