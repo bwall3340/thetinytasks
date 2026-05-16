@@ -4,146 +4,131 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bigger Projects — The Tiny Tasks</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="shared.css">
     <style>
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background:
-                radial-gradient(ellipse 70% 55% at 10% 20%, rgba(99, 102, 241, 0.12) 0%, transparent 100%),
-                radial-gradient(ellipse 60% 70% at 90% 80%, rgba(168, 85, 247, 0.1) 0%, transparent 100%),
-                linear-gradient(135deg, #f0f4ff 0%, #faf5ff 100%);
+            background: var(--cream);
             min-height: 100vh;
-            color: #1e293b;
+            color: var(--ink);
         }
 
-        /* ── Header ── */
-        header {
-            position: sticky;
-            top: 0;
-            z-index: 100;
+        /* ── Header (matches main dashboard exactly) ── */
+        .main-header {
+            position: fixed;
+            top: 0; left: 0; right: 0;
             height: 72px;
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+            background: var(--cream);
+            border-bottom: 1px solid var(--border);
             display: flex;
-            align-items: center;
             justify-content: space-between;
-            padding: 0 2rem;
-        }
-
-        .header-logo {
-            font-size: 1.25rem;
-            font-weight: 700;
-            letter-spacing: -0.025em;
-            text-transform: lowercase;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            color: transparent;
-            text-decoration: none;
-        }
-
-        .header-back {
-            display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 0.875rem;
+            padding: 0 2.5rem;
+            z-index: 100;
+        }
+
+        .logo a { text-decoration: none; }
+
+        .logo h2 {
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-size: 1.4rem;
+            font-weight: 600;
+            font-style: italic;
+            letter-spacing: 0.01em;
+            text-transform: lowercase;
+            color: var(--ink);
+        }
+
+        .main-nav {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .main-nav a {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.72rem;
             font-weight: 500;
-            color: #64748b;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--ink);
             text-decoration: none;
-            padding: 6px 12px;
-            border-radius: 8px;
-            transition: all 0.2s ease;
+            opacity: 0.45;
+            transition: opacity 0.3s ease;
         }
 
-        .header-back:hover {
-            color: #6366f1;
-            background: rgba(99, 102, 241, 0.08);
-        }
-
-        .header-back svg { width: 16px; height: 16px; }
+        .main-nav a:hover { opacity: 1; }
+        .main-nav a.active { opacity: 1; }
 
         /* ── Page layout ── */
         .page-content {
             max-width: 1100px;
             margin: 0 auto;
-            padding: 4rem 2rem 6rem;
+            padding: 6rem 2.5rem 6rem;
         }
 
         .page-header {
             margin-bottom: 3rem;
         }
 
+        .section-label {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.62rem;
+            font-weight: 600;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: var(--terra);
+            display: block;
+            margin-bottom: 0.75rem;
+        }
+
         .page-header h1 {
-            font-size: clamp(2rem, 5vw, 3rem);
-            font-weight: 800;
-            letter-spacing: -0.04em;
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-size: clamp(2.25rem, 5vw, 3.5rem);
+            font-weight: 600;
+            letter-spacing: -0.01em;
             line-height: 1.1;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            color: transparent;
+            color: var(--ink);
             margin-bottom: 0.5rem;
         }
 
         .page-header p {
-            font-size: 1rem;
-            color: #94a3b8;
+            font-size: 0.9rem;
+            color: var(--ink);
+            opacity: 0.5;
+            line-height: 1.6;
         }
 
         /* ── Projects grid ── */
         .projects-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 2rem;
+            gap: 1.75rem;
         }
 
         /* ── Project card ── */
         .project-card {
-            background: rgba(255, 255, 255, 0.28);
-            backdrop-filter: blur(40px) saturate(180%);
-            -webkit-backdrop-filter: blur(40px) saturate(180%);
-            border-radius: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.55);
-            box-shadow:
-                0 2px 8px rgba(0, 0, 0, 0.06),
-                0 8px 32px rgba(0, 0, 0, 0.08),
-                inset 0 1px 0 rgba(255, 255, 255, 0.9);
+            background: #FDFAF6;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(43, 42, 40, 0.05);
             overflow: hidden;
-            transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            position: relative;
-        }
-
-        .project-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 8%;
-            right: 8%;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.85) 50%, transparent);
-            z-index: 2;
-            pointer-events: none;
+            transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                        box-shadow 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
         .project-card:hover {
-            transform: translateY(-5px);
-            box-shadow:
-                0 4px 16px rgba(0, 0, 0, 0.08),
-                0 20px 52px rgba(99, 102, 241, 0.14),
-                inset 0 1px 0 rgba(255, 255, 255, 1);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 32px rgba(43, 42, 40, 0.1);
         }
 
         /* ── Media area ── */
         .project-media {
             width: 100%;
             aspect-ratio: 16 / 9;
-            background: linear-gradient(135deg, #e0e7ff 0%, #ede9fe 100%);
+            background: var(--stone);
             overflow: hidden;
             position: relative;
         }
@@ -154,11 +139,15 @@
             height: 100%;
             object-fit: cover;
             display: block;
+            transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
-        .project-media video {
-            cursor: pointer;
+        .project-card:hover .project-media img,
+        .project-card:hover .project-media video {
+            transform: scale(1.03);
         }
+
+        .project-media video { cursor: pointer; }
 
         /* ── Card body ── */
         .project-body {
@@ -173,28 +162,31 @@
         }
 
         .project-tag {
-            font-size: 0.7rem;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.62rem;
             font-weight: 600;
-            letter-spacing: 0.06em;
+            letter-spacing: 0.08em;
             text-transform: uppercase;
-            padding: 3px 8px;
-            border-radius: 999px;
-            background: rgba(99, 102, 241, 0.1);
-            color: #6366f1;
+            padding: 0.3em 0.7em;
+            border-radius: 100px;
+            background: var(--stone);
+            color: var(--olive-dark);
         }
 
         .project-title {
-            font-size: 1.2rem;
-            font-weight: 700;
-            letter-spacing: -0.02em;
-            color: #1e293b;
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-size: 1.35rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            color: var(--ink);
             margin-bottom: 0.5rem;
-            line-height: 1.3;
+            line-height: 1.25;
         }
 
         .project-description {
             font-size: 0.875rem;
-            color: #64748b;
+            color: var(--ink);
+            opacity: 0.6;
             line-height: 1.65;
             margin-bottom: 1.25rem;
         }
@@ -203,21 +195,18 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: #6366f1;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.78rem;
+            font-weight: 500;
+            letter-spacing: 0.04em;
+            color: var(--terra);
             text-decoration: none;
-            padding: 8px 16px;
-            border-radius: 10px;
-            background: rgba(99, 102, 241, 0.08);
-            border: 1px solid rgba(99, 102, 241, 0.2);
-            transition: all 0.2s ease;
+            transition: gap 0.2s ease, opacity 0.2s ease;
         }
 
         .project-link:hover {
-            background: rgba(99, 102, 241, 0.15);
-            border-color: rgba(99, 102, 241, 0.4);
-            gap: 8px;
+            gap: 9px;
+            opacity: 0.75;
         }
 
         .project-link svg { width: 13px; height: 13px; }
@@ -229,22 +218,24 @@
         }
 
         .state-icon {
-            width: 56px;
-            height: 56px;
+            width: 48px;
+            height: 48px;
             margin: 0 auto 1.25rem;
-            opacity: 0.35;
+            opacity: 0.3;
         }
 
         .state-title {
-            font-size: 1.1rem;
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-size: 1.25rem;
             font-weight: 600;
-            color: #475569;
+            color: var(--ink);
             margin-bottom: 0.5rem;
         }
 
         .state-body {
             font-size: 0.875rem;
-            color: #94a3b8;
+            color: var(--ink);
+            opacity: 0.5;
             max-width: 360px;
             margin: 0 auto;
             line-height: 1.6;
@@ -254,20 +245,20 @@
         .skeleton-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 2rem;
+            gap: 1.75rem;
         }
 
         .skeleton-card {
-            background: rgba(255, 255, 255, 0.28);
-            border-radius: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.55);
+            background: #FDFAF6;
+            border-radius: 16px;
+            border: 1px solid var(--border);
             overflow: hidden;
         }
 
         .skeleton-media {
             width: 100%;
             aspect-ratio: 16 / 9;
-            background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+            background: linear-gradient(90deg, var(--border) 25%, var(--stone) 50%, var(--border) 75%);
             background-size: 200% 100%;
             animation: shimmer 1.6s infinite;
         }
@@ -275,44 +266,49 @@
         .skeleton-body { padding: 1.5rem; }
 
         .skeleton-line {
-            height: 12px;
+            height: 10px;
             border-radius: 6px;
-            background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+            background: linear-gradient(90deg, var(--border) 25%, var(--stone) 50%, var(--border) 75%);
             background-size: 200% 100%;
             animation: shimmer 1.6s infinite;
             margin-bottom: 10px;
         }
 
-        .skeleton-line.short { width: 40%; }
-        .skeleton-line.medium { width: 70%; }
-        .skeleton-line.long { width: 90%; }
-        .skeleton-line.title { height: 20px; width: 80%; margin-bottom: 14px; }
+        .skeleton-line.short  { width: 35%; }
+        .skeleton-line.medium { width: 65%; }
+        .skeleton-line.long   { width: 90%; }
+        .skeleton-line.title  { height: 18px; width: 75%; margin-bottom: 14px; }
 
         @keyframes shimmer {
-            0% { background-position: 200% 0; }
+            0%   { background-position: 200% 0; }
             100% { background-position: -200% 0; }
         }
 
         @media (max-width: 768px) {
-            .page-content { padding: 2rem 1rem 4rem; }
+            .main-header { padding: 0 1.25rem; }
+            .main-nav { display: none; }
+            .page-content { padding: 5rem 1.25rem 4rem; }
             .projects-grid { grid-template-columns: 1fr; }
             .skeleton-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
-    <header>
-        <a href="./index.html" class="header-logo">the tiny tasks</a>
-        <a href="./index.html" class="header-back">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M10 12L6 8l4-4"/>
-            </svg>
-            Back
-        </a>
+
+    <header class="main-header">
+        <div class="logo">
+            <a href="./index.html"><h2>the tiny tasks</h2></a>
+        </div>
+        <nav class="main-nav">
+            <a href="./index.html#tools">Tools</a>
+            <a href="./bigger-projects.html" class="active">Work</a>
+            <a href="./about.html">About</a>
+        </nav>
     </header>
 
     <main class="page-content">
         <div class="page-header">
+            <span class="section-label">Portfolio</span>
             <h1>Bigger Projects</h1>
             <p>Full-scale work beyond the task toolkit</p>
         </div>
@@ -321,12 +317,9 @@
     </main>
 
     <script>
-        // ── Sanity config ────────────────────────────────────────────────────
-        // Replace these with your Sanity project ID and dataset name
         const SANITY_PROJECT_ID = 'mcp0g14m';
         const SANITY_DATASET    = 'production';
         const SANITY_API_VER    = '2024-01-01';
-        // ────────────────────────────────────────────────────────────────────
 
         const GROQ_QUERY = encodeURIComponent(`
             *[_type == "project"] | order(order asc, _createdAt desc) {
@@ -365,7 +358,7 @@
         function renderEmpty() {
             return `
                 <div class="state-container">
-                    <svg class="state-icon" viewBox="0 0 56 56" fill="none" stroke="#94a3b8" stroke-width="1.5">
+                    <svg class="state-icon" viewBox="0 0 56 56" fill="none" stroke="#2B2A28" stroke-width="1.5">
                         <rect x="8" y="8" width="40" height="40" rx="8"/>
                         <path d="M18 28h20M18 20h20M18 36h12"/>
                     </svg>
@@ -377,7 +370,7 @@
         function renderError(message) {
             return `
                 <div class="state-container">
-                    <svg class="state-icon" viewBox="0 0 56 56" fill="none" stroke="#f87171" stroke-width="1.5">
+                    <svg class="state-icon" viewBox="0 0 56 56" fill="none" stroke="#B46B4E" stroke-width="1.5">
                         <circle cx="28" cy="28" r="20"/>
                         <path d="M28 18v12M28 34v2"/>
                     </svg>
@@ -429,10 +422,8 @@
         }
 
         async function loadProjects() {
-            // Show skeleton while loading
             root.appendChild(renderSkeletons(3));
 
-            // Guard: placeholder project ID means Sanity isn't configured yet
             if (SANITY_PROJECT_ID === 'YOUR_PROJECT_ID') {
                 root.innerHTML = renderEmpty();
                 return;
