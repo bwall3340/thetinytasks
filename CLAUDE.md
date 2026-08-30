@@ -203,6 +203,11 @@ thetinytasks/
 ├── WhiteBackgroundRemover/ # Simple client-side white bg remover
 ├── WSR/                    # Flask backend (vectorizer / background remover)
 │   ├── app.py              # Flask app, all routes defined here
+│   ├── common/             # Shared admin auth (Google OAuth + ADMIN_EMAILS)
+│   ├── site_admin/         # Site image manager — /admin
+│   │   ├── slots.py        # Image slot registry (source of truth)
+│   │   ├── sanity_client.py# Sanity upload / query / cache
+│   │   └── assets.py       # /assets resolution + fallback chain
 │   ├── vectorizer_engine.py
 │   ├── detailed_vectorizer.py
 │   ├── extreme_vectorizer.py
@@ -235,6 +240,27 @@ thetinytasks/
 | `/process_test` | POST | Vectorize with advanced smoothing (test mode) |
 | `/process_upscale` | POST | Upscale image with edge preservation |
 | `/return-stream.html` | GET | Serve the Return Stream Digitizer static page |
+| `/assets/<filename>` | GET | Serve a site image — Sanity CDN if uploaded, else the committed file |
+
+### Admin routes — one pattern for every module
+
+Every module admin lives at `/<module>/admin`. Authentication is shared: one
+Google OAuth flow, one session, one `ADMIN_EMAILS` whitelist (`WSR/common/auth.py`).
+Logging in once grants access to all of them.
+
+| Route | Description |
+|-------|-------------|
+| `/admin` | Site admin — drag-and-drop image manager for the public pages |
+| `/admin/login` · `/admin/auth` · `/admin/auth/callback` · `/admin/logout` | Shared auth for every module admin |
+| `/admin/images/<slot>` | POST — upload/replace a slot image |
+| `/admin/images/<slot>/reset` | POST — revert a slot to its committed image |
+| `/market/admin` | Market Outlook — source and article management |
+| `/meal-planner/admin` | Meal Planner — recipes, plan, preferences |
+| `/market-admin/*` | 302 → `/market/admin/*` (compatibility shim for old bookmarks) |
+
+**Adding a module admin:** mount the blueprint at `/<module>/admin`, decorate
+routes with `@require_admin` from `common.auth`, and do not add another OAuth
+flow — the shared callback is already registered with Google.
 
 ---
 
@@ -243,6 +269,8 @@ thetinytasks/
 Used by the Impact Sweep (Rule 1). Update this list when modules are added.
 
 - [ ] Home Page / Tool Cards (`index.html`, `styles.css`, `script.js`)
+- [ ] Site Admin / Image Manager (`WSR/site_admin/` — `/admin`)
+- [ ] Shared Admin Auth (`WSR/common/auth.py`)
 - [ ] DataFinder Agent UI (`data-finder.html`)
 - [ ] DataFinder Agent Backend (`DataFinderAgent/` — FastAPI + agent orchestrator)
 - [ ] Background Remover Pro UI (`background-remover.html`)
@@ -290,6 +318,21 @@ def call_with_retry(fn, attempts=3):
 
 - Use `claude-sonnet-4-6` for standard agent runs
 - Always set `max_tokens` explicitly
+
+### Uploads never touch the container filesystem
+
+Railway's filesystem is ephemeral and `assets/` is baked into the image at
+build time, so anything written to disk at runtime silently reverts on the next
+deploy. User-supplied files go to Sanity (`site_admin/sanity_client.py`); the
+committed files in `assets/` are fallbacks only.
+
+### Site images — add a slot, not a hardcoded path
+
+`WSR/site_admin/slots.py` is the single source of truth for every managed
+image. To add one: register a `Slot`, reference its `filename` under `/assets/`
+in the markup, and it appears in `/admin` automatically. Never point markup at
+a Sanity URL directly — the `/assets/<filename>` route handles resolution so
+images can be swapped or reverted without a deploy.
 
 ### Flask — validate inputs at the route boundary
 
@@ -354,7 +397,23 @@ SEARCH_PROVIDER=       # brave | serpapi | tavily
 
 # Flask / WSR (Railway injects PORT automatically)
 PORT=5000              # Overridden by Railway at deploy time
+
+# Admin (shared by every /<module>/admin surface)
+SECRET_KEY=            # Flask session signing — must be set in production
+ADMIN_EMAILS=          # Comma-separated Google accounts allowed into any admin
+GOOGLE_CLIENT_ID=      # Google OAuth client
+GOOGLE_CLIENT_SECRET=
+
+# Site images (Sanity CDN)
+SANITY_API_TOKEN=      # Editor token — REQUIRED for uploads from /admin
+SANITY_PROJECT_ID=     # Defaults to mcp0g14m
+SANITY_DATASET=        # Defaults to production
 ```
+
+**Google OAuth redirect URI** — the authorised redirect URI in Google Cloud
+Console must be `https://www.thetinytasks.com/admin/auth/callback`. There is
+only one, shared by every module admin, so adding a module never requires a
+console change.
 
 ---
 
@@ -362,7 +421,8 @@ PORT=5000              # Overridden by Railway at deploy time
 
 | Feature | Status | Modules Affected | Notes |
 |---------|--------|-----------------|-------|
-| (none yet) | — | — | — |
+| Unified `/<module>/admin` routes | needs review | Market, Meal, Site Admin, Shared Auth | Market moved from `/market-admin`; shared Google OAuth replaces two duplicate flows |
+| Site image manager | needs review | Site Admin, Home Page, About, Docker | Drag-and-drop uploads to Sanity CDN; `/assets` resolves Sanity → committed file → transparent pixel |
 
 Status: `scoping` → `in progress` → `needs review` → `done`
 

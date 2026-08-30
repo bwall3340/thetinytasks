@@ -1,16 +1,15 @@
 """
-Meal planner admin — Google OAuth login + chat + management routes.
-All routes under /meal-planner/admin require meal_admin session key.
+Meal planner admin — chat + recipe/plan management routes.
+
+Mounted at /meal-planner/admin.  Authentication is handled centrally by
+common.auth, so every route here simply carries @require_admin.
 """
 import logging
-import os
 from datetime import date, timedelta
-from functools import wraps
 
-from flask import (Blueprint, flash, jsonify, redirect,
-                   render_template, request, session, url_for)
+from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 
-from market.admin import _oauth
+from common.auth import current_admin, require_admin
 from market.models import db
 from .models import Recipe, PlanEntry, Preference, OrderHistory
 
@@ -19,72 +18,16 @@ logger = logging.getLogger(__name__)
 meal_admin_bp = Blueprint('meal_admin', __name__, url_prefix='/meal-planner/admin')
 
 
-def _admin_emails():
-    raw = os.environ.get('ADMIN_EMAILS', '')
-    return {e.strip().lower() for e in raw.split(',') if e.strip()}
-
-
-def require_meal_auth(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if 'meal_admin_user' not in session:
-            return redirect(url_for('meal_admin.login'))
-        return f(*args, **kwargs)
-    return decorated
-
-
-# ── Auth ──────────────────────────────────────────────────────────────────────
-
 @meal_admin_bp.route('/')
+@require_admin
 def index():
-    if 'meal_admin_user' in session:
-        return redirect(url_for('meal_admin.dashboard'))
-    return redirect(url_for('meal_admin.login'))
-
-
-@meal_admin_bp.route('/login')
-def login():
-    if 'meal_admin_user' in session:
-        return redirect(url_for('meal_admin.dashboard'))
-    return render_template('meal_admin/login.html')
-
-
-@meal_admin_bp.route('/auth')
-def auth():
-    redirect_uri = url_for('meal_admin.auth_callback', _external=True)
-    return _oauth.google.authorize_redirect(redirect_uri)
-
-
-@meal_admin_bp.route('/callback')
-def auth_callback():
-    try:
-        token = _oauth.google.authorize_access_token()
-        user_info = token.get('userinfo') or {}
-        email = (user_info.get('email') or '').lower()
-
-        if email not in _admin_emails():
-            flash('Access denied: your email is not authorized.', 'error')
-            return redirect(url_for('meal_admin.login'))
-
-        session.permanent = True
-        session['meal_admin_user'] = {'email': email, 'name': user_info.get('name', email)}
-        return redirect(url_for('meal_admin.dashboard'))
-    except Exception as e:
-        logger.error('Meal admin OAuth callback error: %s', e)
-        flash('Authentication failed. Please try again.', 'error')
-        return redirect(url_for('meal_admin.login'))
-
-
-@meal_admin_bp.route('/logout')
-def logout():
-    session.pop('meal_admin_user', None)
-    return redirect(url_for('meal_admin.login'))
+    return redirect(url_for('meal_admin.dashboard'))
 
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
 @meal_admin_bp.route('/dashboard')
-@require_meal_auth
+@require_admin
 def dashboard():
     today = date.today()
     recipes = Recipe.query.filter_by(active=True).order_by(Recipe.name).all()
@@ -107,7 +50,7 @@ def dashboard():
 
     return render_template(
         'meal_admin/dashboard.html',
-        admin_user=session['meal_admin_user'],
+        admin_user=current_admin(),
         recipes=recipes,
         preferences=preferences,
         plan_days=plan_days,
@@ -121,7 +64,7 @@ def dashboard():
 # ── Chat API ──────────────────────────────────────────────────────────────────
 
 @meal_admin_bp.route('/chat', methods=['POST'])
-@require_meal_auth
+@require_admin
 def chat():
     from .claude import chat_handler
 
@@ -173,7 +116,7 @@ def chat():
 # ── Recipe CRUD (direct form submissions from Recipes tab) ────────────────────
 
 @meal_admin_bp.route('/recipes/<int:recipe_id>/delete', methods=['POST'])
-@require_meal_auth
+@require_admin
 def delete_recipe(recipe_id):
     recipe = db.session.get(Recipe, recipe_id)
     if recipe:
@@ -185,7 +128,7 @@ def delete_recipe(recipe_id):
 # ── Plan management ────────────────────────────────────────────────────────────
 
 @meal_admin_bp.route('/plan/clear', methods=['POST'])
-@require_meal_auth
+@require_admin
 def clear_plan_entry():
     data = request.get_json() or {}
     date_str = data.get('date')
@@ -205,7 +148,7 @@ def clear_plan_entry():
 # ── Preference management ──────────────────────────────────────────────────────
 
 @meal_admin_bp.route('/preferences/<int:pref_id>/delete', methods=['POST'])
-@require_meal_auth
+@require_admin
 def delete_preference(pref_id):
     pref = db.session.get(Preference, pref_id)
     if pref:
@@ -217,7 +160,7 @@ def delete_preference(pref_id):
 # ── Invoice upload (PDF → text extraction only, no Claude) ────────────────────
 
 @meal_admin_bp.route('/invoice/upload', methods=['POST'])
-@require_meal_auth
+@require_admin
 def invoice_upload():
     import pdfplumber
     import io
@@ -252,7 +195,7 @@ def invoice_upload():
 # ── Order history management ───────────────────────────────────────────────────
 
 @meal_admin_bp.route('/orders/<int:order_id>/delete', methods=['POST'])
-@require_meal_auth
+@require_admin
 def delete_order(order_id):
     order = db.session.get(OrderHistory, order_id)
     if order:

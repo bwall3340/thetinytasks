@@ -2,6 +2,7 @@ import { defineConfig } from 'sanity'
 import { structureTool } from 'sanity/structure'
 import { visionTool } from '@sanity/vision'
 import project from './schemas/project'
+import siteImage from './schemas/siteImage'
 
 export default defineConfig({
     name: 'thetinytasks',
@@ -10,6 +11,6 @@ export default defineConfig({
     dataset: 'production',
     plugins: [structureTool(), visionTool()],
     schema: {
-        types: [project],
+        types: [project, siteImage],
     },
 })

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Admin — The Tiny Tasks</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --cream: #F7F3EC; --olive: #66725B; --olive-dark: #4D5645;
+            --terra: #B46B4E; --stone: #D9CCBD; --ink: #2B2A28; --border: #E7DED2;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--cream);
+            color: var(--ink);
+            padding: 2rem;
+        }
+        .login-box {
+            background: #FDFAF6;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(43, 42, 40, 0.05);
+            padding: 3rem 2.5rem;
+            width: 400px; max-width: 100%;
+            text-align: center;
+        }
+        .brand {
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-style: italic;
+            font-size: 1.25rem;
+            color: var(--terra);
+            margin-bottom: 2rem;
+        }
+        h1 {
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-size: 1.75rem; font-weight: 600;
+            letter-spacing: -0.01em;
+            margin-bottom: 0.5rem;
+        }
+        .sub {
+            font-size: 0.875rem; color: rgba(43, 42, 40, 0.55);
+            line-height: 1.6; margin-bottom: 2rem;
+        }
+        .google-btn {
+            display: flex; align-items: center; justify-content: center; gap: 0.75rem;
+            width: 100%; padding: 14px 22px;
+            background: var(--terra); color: var(--cream);
+            border: none; border-radius: 999px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem; font-weight: 500;
+            text-decoration: none; cursor: pointer;
+            transition: background 0.3s ease, transform 0.3s ease;
+        }
+        .google-btn:hover { background: var(--olive); transform: translateY(-1px); }
+        .google-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+        .flash {
+            padding: 0.75rem 1rem; border-radius: 10px;
+            font-size: 0.8rem; margin-bottom: 1.25rem;
+            background: rgba(180, 107, 78, 0.08);
+            border: 1px solid rgba(180, 107, 78, 0.25);
+            color: var(--terra); text-align: left; line-height: 1.5;
+        }
+        .foot {
+            margin-top: 2rem; padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.75rem; color: rgba(43, 42, 40, 0.38);
+        }
+        .foot a { color: rgba(43, 42, 40, 0.55); text-decoration: none; }
+        .foot a:hover { color: var(--terra); }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <div class="brand">the tiny tasks</div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="flash">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <h1>Maintenance</h1>
+        <p class="sub">This area is restricted. Sign in with an authorised Google account to continue.</p>
+
+        <a href="{{ url_for('admin_auth.auth') }}" class="google-btn">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path fill="#fff" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1Z" opacity=".9"/>
+                <path fill="#fff" d="M12 23c2.97 0 5.46-.98 7.28-2.65l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23Z" opacity=".75"/>
+                <path fill="#fff" d="M5.84 14.11a6.6 6.6 0 0 1 0-4.22V7.05H2.18a11 11 0 0 0 0 9.9l3.66-2.84Z" opacity=".6"/>
+                <path fill="#fff" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1a11 11 0 0 0-9.82 6.05l3.66 2.84c.87-2.6 3.3-4.51 6.16-4.51Z"/>
+            </svg>
+            Continue with Google
+        </a>
+
+        <div class="foot">
+            <a href="/">&larr; Back to the site</a>
+        </div>
+    </div>
+</body>
+</html>

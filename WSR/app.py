@@ -3,7 +3,7 @@
 Flask web application for Logo Vectorizer Tool
 """
 
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify, redirect, send_from_directory
 import os
 import cv2
 import numpy as np
@@ -43,17 +43,31 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_pre_ping': True,    # test connections before use — prevents stale SSL errors
     'pool_recycle': 300,      # recycle connections every 5 min
 }
+# Session cookie hardening. SameSite=Lax blocks cross-site POSTs from carrying
+# the admin session (CORS does not stop form submissions), while still allowing
+# the top-level GET navigation that the Google OAuth callback relies on.
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+# HTTPS-only in production; left off locally so http://localhost dev still works.
+app.config['SESSION_COOKIE_SECURE'] = bool(os.environ.get('RAILWAY_ENVIRONMENT'))
+
 app.config['GOOGLE_CLIENT_ID'] = os.environ.get('GOOGLE_CLIENT_ID')
 app.config['GOOGLE_CLIENT_SECRET'] = os.environ.get('GOOGLE_CLIENT_SECRET')
 
+from common.auth import auth_bp, init_oauth
 from market.models import db
-from market.admin import admin_bp, init_oauth
+from market.admin import admin_bp
 from market.routes import market_bp
 from meal.admin import meal_admin_bp
 from meal.routes import meal_bp
+from site_admin.admin import site_admin_bp
+from site_admin.assets import resolve as resolve_asset
 
 db.init_app(app)
 init_oauth(app)
+# Shared admin auth first — every module admin redirects into it.
+app.register_blueprint(auth_bp)
+app.register_blueprint(site_admin_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(market_bp)
 app.register_blueprint(meal_admin_bp)
@@ -302,7 +316,19 @@ def shared_styles():
 
 @app.route('/assets/<path:filename>')
 def assets(filename):
-    return send_from_directory(os.path.join(SITE_DIR, 'assets'), filename)
+    """
+    Managed images resolve to Sanity when one has been uploaded via /admin,
+    and fall back to the committed file otherwise. See site_admin/assets.py.
+    """
+    return resolve_asset(os.path.join(SITE_DIR, 'assets'), filename)
+
+
+# Compatibility shim: the market admin moved from /market-admin to /market/admin
+# so every module now follows the same /<module>/admin pattern.
+@app.route('/market-admin/')
+@app.route('/market-admin/<path:subpath>')
+def legacy_market_admin(subpath=''):
+    return redirect('/market/admin/' + subpath, code=302)
 
 
 @app.route('/Sankey/<path:filename>')
