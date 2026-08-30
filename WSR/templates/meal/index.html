@@ -167,9 +167,16 @@
         .grocery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1.25rem; }
         .grocery-cat { background: #FDFAF6; border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.1rem; }
         .grocery-cat-title {
+            display: flex; align-items: center; gap: 0.45rem;
             font-size: 0.7rem; font-weight: 600; color: var(--muted);
             text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.65rem;
             padding-bottom: 0.5rem; border-bottom: 1px solid var(--border);
+            cursor: pointer; user-select: none;
+        }
+        .grocery-cat-title:hover .cat-check { border-color: var(--green); }
+        .cat-title-text { transition: color 0.12s; }
+        .grocery-cat-title:has(.cat-check:checked) .cat-title-text {
+            color: rgba(43, 42, 40, 0.38); text-decoration: line-through;
         }
         .grocery-list { list-style: none; display: flex; flex-direction: column; gap: 0.35rem; }
         .grocery-list li { font-size: 0.82rem; }
@@ -178,19 +185,26 @@
             display: flex; align-items: baseline; gap: 0.45rem;
             cursor: pointer; user-select: none; width: 100%;
         }
-        .item-check {
+        .item-check, .cat-check {
             appearance: none; -webkit-appearance: none;
             width: 13px; height: 13px; flex-shrink: 0;
             border: 1.5px solid #D9CCBD; border-radius: 3px;
             cursor: pointer; position: relative; top: 1px;
             transition: background 0.12s, border-color 0.12s;
         }
-        .item-check:checked { background: var(--green); border-color: var(--green); }
-        .item-check:checked::after {
+        .item-check:checked, .cat-check:checked { background: var(--green); border-color: var(--green); }
+        .item-check:checked::after, .cat-check:checked::after {
             content: ''; position: absolute;
             left: 2px; top: 0px; width: 7px; height: 4px;
             border-left: 1.5px solid #fff; border-bottom: 1.5px solid #fff;
             transform: rotate(-45deg);
+        }
+        .cat-check { top: 0; }
+        .cat-check:indeterminate { background: var(--green); border-color: var(--green); }
+        .cat-check:indeterminate::after {
+            content: ''; position: absolute;
+            left: 1.5px; top: 4px; width: 6px; height: 0;
+            border-bottom: 1.5px solid #fff;
         }
         .item-text { transition: color 0.12s; color: var(--slate); line-height: 1.5; }
         .grocery-item:has(.item-check:checked) .item-text {
@@ -220,8 +234,9 @@
             .page-content { padding: 0; }
             .grocery-grid { grid-template-columns: repeat(3, 1fr); }
             .grocery-cat { box-shadow: none; }
-            .item-check { display: none; }
+            .item-check, .cat-check { display: none; }
             .grocery-item:has(.item-check:checked) { display: none; }
+            .grocery-cat:not(:has(.item-check:not(:checked))) { display: none; }
             .grocery-item { gap: 0; }
             .grocery-item::before { content: '•'; color: #66725B; margin-right: 0.4rem; font-size: 0.7rem; }
         }
@@ -387,7 +402,10 @@
         <div class="grocery-grid" id="grocery-grid">
             {% for category, items in grocery.items() %}
             <div class="grocery-cat">
-                <div class="grocery-cat-title">{{ category | capitalize }}</div>
+                <label class="grocery-cat-title">
+                    <input type="checkbox" class="cat-check" aria-label="Cross off all {{ category }}">
+                    <span class="cat-title-text">{{ category | capitalize }}</span>
+                </label>
                 <ul class="grocery-list">
                     {% for item in items %}
                     <li>
@@ -478,12 +496,12 @@ function rebuildGroceryTab(grocery) {
         const rows = grocery[cat].map(item =>
             `<li><label class="grocery-item"><input type="checkbox" class="item-check"><span class="item-text">${escapeHtml(item.combined)}</span></label></li>`
         ).join('');
-        return `<div class="grocery-cat"><div class="grocery-cat-title">${title}</div><ul class="grocery-list">${rows}</ul></div>`;
+        const head = `<label class="grocery-cat-title">`
+            + `<input type="checkbox" class="cat-check" aria-label="Cross off all ${title}">`
+            + `<span class="cat-title-text">${title}</span></label>`;
+        return `<div class="grocery-cat">${head}<ul class="grocery-list">${rows}</ul></div>`;
     }).join('');
 
-    document.querySelectorAll('.item-check').forEach(cb => {
-        cb.addEventListener('change', updateGroceryCount);
-    });
     updateGroceryCount();
 }
 
@@ -495,11 +513,38 @@ function updateGroceryCount() {
     const remainEl = document.getElementById('item-remaining');
     if (totalEl) totalEl.textContent = all.length;
     if (remainEl) remainEl.textContent = all.length - checked.length;
+    syncCategoryChecks();
 }
 
-document.querySelectorAll('.item-check').forEach(cb => {
-    cb.addEventListener('change', updateGroceryCount);
-});
+// Cross off (or restore) every item in one section.
+function setCategoryChecked(cat, checked) {
+    cat.querySelectorAll('.item-check').forEach(cb => { cb.checked = checked; });
+}
+
+// Section box reflects its items: checked, unchecked, or a dash when partly done.
+function syncCategoryChecks() {
+    document.querySelectorAll('.grocery-cat').forEach(cat => {
+        const box = cat.querySelector('.cat-check');
+        if (!box) return;
+        const items = cat.querySelectorAll('.item-check');
+        const checked = cat.querySelectorAll('.item-check:checked').length;
+        box.checked = items.length > 0 && checked === items.length;
+        box.indeterminate = checked > 0 && checked < items.length;
+    });
+}
+
+// Delegated so it survives the grid being re-rendered by the recipe toggles.
+const groceryGrid = document.getElementById('grocery-grid');
+if (groceryGrid) {
+    groceryGrid.addEventListener('change', e => {
+        if (e.target.classList.contains('cat-check')) {
+            setCategoryChecked(e.target.closest('.grocery-cat'), e.target.checked);
+            updateGroceryCount();
+        } else if (e.target.classList.contains('item-check')) {
+            updateGroceryCount();
+        }
+    });
+}
 updateGroceryCount();
 
 function copyGroceryList() {
