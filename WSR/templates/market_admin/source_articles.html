@@ -181,7 +181,7 @@ function setDate(articleId, btn) {
     btn.disabled = true;
     btn.textContent = 'Saving…';
     savedEl.style.display = 'none';
-    fetch(`/market-admin/articles/${articleId}/set-date`, {
+    fetch(`/market/admin/articles/${articleId}/set-date`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ published_at: input.value || null }),
@@ -210,7 +210,7 @@ function deleteArticle(articleId, btn) {
     if (!confirm('Delete this article and its analysis? This cannot be undone.')) return;
     btn.disabled = true;
     btn.textContent = 'Deleting…';
-    fetch(`/market-admin/articles/${articleId}/delete`, { method: 'POST' })
+    fetch(`/market/admin/articles/${articleId}/delete`, { method: 'POST' })
         .then(r => r.json())
         .then(data => {
             if (data.success) {

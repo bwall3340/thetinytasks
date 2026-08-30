@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Images — Site Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --cream: #F7F3EC; --olive: #66725B; --olive-dark: #4D5645;
+            --terra: #B46B4E; --stone: #D9CCBD; --ink: #2B2A28; --border: #E7DED2;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--cream); color: var(--ink);
+            line-height: 1.6; padding-bottom: 5rem;
+        }
+
+        /* ── Header ── */
+        header {
+            position: sticky; top: 0; z-index: 50;
+            height: 64px; background: var(--cream);
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 2rem;
+        }
+        .logo {
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-style: italic; font-size: 1.25rem; font-weight: 600;
+            color: var(--ink); text-decoration: none;
+        }
+        .header-right { display: flex; align-items: center; gap: 1.25rem; font-size: 0.8rem; }
+        .header-right a { color: rgba(43,42,40,0.55); text-decoration: none; transition: color 0.3s ease; }
+        .header-right a:hover { color: var(--terra); }
+        .who { color: rgba(43,42,40,0.38); }
+
+        /* ── Page ── */
+        .wrap { max-width: 1180px; margin: 0 auto; padding: 3.5rem 2rem 0; }
+        .page-head { margin-bottom: 2.5rem; }
+        .eyebrow {
+            font-size: 0.68rem; font-weight: 500; letter-spacing: 0.14em;
+            text-transform: uppercase; color: var(--terra); display: block;
+            margin-bottom: 0.6rem;
+        }
+        h1 {
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-size: 2.6rem; font-weight: 600; letter-spacing: -0.02em;
+            line-height: 1.1; margin-bottom: 0.5rem;
+        }
+        .lede { color: rgba(43,42,40,0.55); font-size: 0.95rem; max-width: 60ch; }
+        .count { font-size: 0.8rem; color: rgba(43,42,40,0.38); margin-top: 0.75rem; }
+
+        /* ── Banner ── */
+        .banner {
+            border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 2.5rem;
+            font-size: 0.85rem; line-height: 1.6;
+            background: rgba(180,107,78,0.07);
+            border: 1px solid rgba(180,107,78,0.25);
+            color: var(--ink);
+        }
+        .banner strong { color: var(--terra); }
+        .banner code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 0.8em; background: rgba(43,42,40,0.06);
+            padding: 1px 5px; border-radius: 4px;
+        }
+
+        /* ── Groups ── */
+        .group { margin-bottom: 3rem; }
+        .group-head {
+            display: flex; align-items: baseline; gap: 0.9rem;
+            margin-bottom: 1.25rem; padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .group-head h2 {
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-size: 1.45rem; font-weight: 600; letter-spacing: -0.01em;
+        }
+        .group-head span { font-size: 0.75rem; color: rgba(43,42,40,0.38); }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* ── Slot card ── */
+        .slot {
+            background: #FDFAF6; border: 1px solid var(--border);
+            border-radius: 14px; overflow: hidden;
+            box-shadow: 0 2px 12px rgba(43,42,40,0.04);
+            display: flex; flex-direction: column;
+            transition: box-shadow 0.35s ease, border-color 0.35s ease;
+        }
+        .slot.is-drag { border-color: var(--terra); box-shadow: 0 0 0 3px rgba(180,107,78,0.12); }
+        .slot.is-busy { opacity: 0.65; pointer-events: none; }
+
+        .drop {
+            position: relative; width: 100%;
+            background: linear-gradient(135deg, var(--stone) 0%, #B5A898 35%, #9A9080 65%, var(--olive) 100%);
+            cursor: pointer; overflow: hidden; display: block; border: none; padding: 0;
+        }
+        .drop img {
+            width: 100%; height: 100%; object-fit: cover; display: block;
+        }
+        .drop-hint {
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 0.4rem; text-align: center; padding: 1rem;
+            background: rgba(43,42,40,0.55); color: var(--cream);
+            opacity: 0; transition: opacity 0.35s ease;
+            font-size: 0.78rem; font-weight: 500; letter-spacing: 0.02em;
+        }
+        .drop:hover .drop-hint, .slot.is-drag .drop-hint { opacity: 1; }
+        .drop-hint svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.5; }
+        .slot.is-empty .drop-hint { opacity: 1; background: rgba(43,42,40,0.35); }
+
+        .badge {
+            position: absolute; top: 10px; right: 10px;
+            font-size: 0.6rem; font-weight: 600; letter-spacing: 0.08em;
+            text-transform: uppercase; padding: 4px 9px; border-radius: 100px;
+            background: rgba(247,243,236,0.92); color: var(--olive-dark);
+        }
+        .badge.live { color: var(--terra); }
+
+        .slot-body { padding: 1.1rem 1.25rem 1.25rem; flex: 1; display: flex; flex-direction: column; }
+        .slot-title {
+            font-size: 0.95rem; font-weight: 600; margin-bottom: 0.3rem;
+            display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem;
+        }
+        .slot-ar { font-size: 0.68rem; color: rgba(43,42,40,0.38); font-weight: 400; white-space: nowrap; }
+        .slot-hint { font-size: 0.78rem; color: rgba(43,42,40,0.5); line-height: 1.55; margin-bottom: 0.9rem; }
+        .slot-meta {
+            font-size: 0.7rem; color: rgba(43,42,40,0.38);
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            margin-bottom: 0.9rem; word-break: break-all;
+        }
+        .slot-actions { margin-top: auto; display: flex; gap: 0.5rem; align-items: center; }
+        .btn {
+            font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 500;
+            padding: 8px 16px; border-radius: 999px; border: 1px solid var(--border);
+            background: transparent; color: rgba(43,42,40,0.65); cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .btn:hover { border-color: var(--terra); color: var(--terra); }
+        .btn-primary { background: var(--terra); border-color: var(--terra); color: var(--cream); }
+        .btn-primary:hover { background: var(--olive); border-color: var(--olive); color: var(--cream); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .status { font-size: 0.75rem; margin-top: 0.75rem; line-height: 1.5; display: none; }
+        .status.show { display: block; }
+        .status.err { color: var(--terra); }
+        .status.ok { color: var(--olive); }
+        .status.busy { color: rgba(43,42,40,0.5); }
+
+        .bar { height: 2px; background: var(--border); border-radius: 2px; overflow: hidden; margin-top: 0.6rem; display: none; }
+        .bar.show { display: block; }
+        .bar span { display: block; height: 100%; width: 0; background: var(--terra); transition: width 0.25s ease; }
+
+        input[type=file] { display: none; }
+
+        @media (max-width: 768px) {
+            header { padding: 0 1.25rem; }
+            .wrap { padding: 2.5rem 1.25rem 0; }
+            h1 { font-size: 2rem; }
+            .grid { grid-template-columns: 1fr; }
+            .header-right .who { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="/" class="logo">the tiny tasks</a>
+        <div class="header-right">
+            <a href="/market/admin">Market</a>
+            <a href="/meal-planner/admin">Meals</a>
+            <span class="who">{{ admin_user.email if admin_user else '' }}</span>
+            <a href="{{ url_for('admin_auth.logout') }}">Sign out</a>
+        </div>
+    </header>
+
+    <div class="wrap">
+        <div class="page-head">
+            <span class="eyebrow">Site maintenance</span>
+            <h1>Images</h1>
+            <p class="lede">
+                Drag a file onto any slot, or click it to browse. Uploads go straight to the
+                Sanity CDN and appear on the live site within a few minutes — no deploy needed.
+            </p>
+            <p class="count">{{ filled_count }} of {{ total_count }} slots have a custom image.</p>
+        </div>
+
+        {% if not sanity_ready %}
+        <div class="banner">
+            <strong>Uploads are disabled.</strong>
+            <code>SANITY_API_TOKEN</code> is not set on this service. Create an Editor token at
+            sanity.io &rarr; Project &rarr; API &rarr; Tokens, then add it as a Railway variable.
+            Existing images still display normally.
+        </div>
+        {% endif %}
+
+        {% for group_name, group_slots in grouped_slots.items() %}
+        <section class="group">
+            <div class="group-head">
+                <h2>{{ group_name }}</h2>
+                <span>{{ group_slots|length }} image{{ '' if group_slots|length == 1 else 's' }}</span>
+            </div>
+            <div class="grid">
+                {% for slot in group_slots %}
+                {% set info = current.get(slot.id) %}
+                <article class="slot {{ 'is-empty' if not info else '' }}" data-slot="{{ slot.id }}">
+                    <div class="drop" role="button" tabindex="0"
+                         aria-label="Upload image for {{ slot.label }}"
+                         style="aspect-ratio: {{ slot.aspect }};">
+                        <img src="{{ info.delivery_url if info else slot.public_url }}"
+                             alt="" data-preview
+                             onerror="this.style.visibility='hidden'">
+                        <span class="badge {{ 'live' if info else '' }}" data-badge>
+                            {{ 'Custom' if info else 'Built-in' }}
+                        </span>
+                        <div class="drop-hint">
+                            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 16V4m0 0L8 8m4-4 4 4"/>
+                                <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+                            </svg>
+                            <span>Drop an image, or click to browse</span>
+                        </div>
+                    </div>
+
+                    <div class="slot-body">
+                        <div class="slot-title">
+                            <span>{{ slot.label }}</span>
+                            <span class="slot-ar">{{ slot.aspect }}</span>
+                        </div>
+                        <p class="slot-hint">{{ slot.hint }}</p>
+                        <p class="slot-meta" data-meta>
+                            {%- if info -%}
+                                {{ info.width }}&times;{{ info.height }} &middot; {{ (info.size / 1024)|round|int }}KB
+                            {%- else -%}
+                                {{ slot.filename }}
+                            {%- endif -%}
+                        </p>
+
+                        <div class="slot-actions">
+                            <button class="btn btn-primary" data-browse>
+                                {{ 'Replace' if info else 'Upload' }}
+                            </button>
+                            <button class="btn" data-reset {{ 'disabled' if not info else '' }}>Reset</button>
+                        </div>
+
+                        <div class="bar" data-bar><span></span></div>
+                        <p class="status" data-status></p>
+                    </div>
+
+                    <input type="file" accept="image/jpeg,image/png,image/webp" data-input>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+        {% endfor %}
+    </div>
+
+    <script>
+        const MAX_MB = {{ max_mb }};
+
+        document.querySelectorAll('.slot').forEach(setupSlot);
+
+        function setupSlot(card) {
+            const slotId  = card.dataset.slot;
+            const drop    = card.querySelector('.drop');
+            const input   = card.querySelector('[data-input]');
+            const preview = card.querySelector('[data-preview]');
+            const badge   = card.querySelector('[data-badge]');
+            const meta    = card.querySelector('[data-meta]');
+            const status  = card.querySelector('[data-status]');
+            const bar     = card.querySelector('[data-bar]');
+            const fill    = bar.querySelector('span');
+            const browse  = card.querySelector('[data-browse]');
+            const reset   = card.querySelector('[data-reset]');
+
+            function say(msg, kind) {
+                status.textContent = msg;
+                status.className = 'status show ' + (kind || '');
+            }
+            function clearSay() { status.className = 'status'; }
+
+            drop.addEventListener('click', () => input.click());
+            drop.addEventListener('keydown', e => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); }
+            });
+            browse.addEventListener('click', () => input.click());
+            input.addEventListener('change', () => {
+                if (input.files.length) upload(input.files[0]);
+                input.value = '';
+            });
+
+            ['dragenter', 'dragover'].forEach(evt =>
+                drop.addEventListener(evt, e => {
+                    e.preventDefault(); e.stopPropagation();
+                    card.classList.add('is-drag');
+                }));
+            ['dragleave', 'drop'].forEach(evt =>
+                drop.addEventListener(evt, e => {
+                    e.preventDefault(); e.stopPropagation();
+                    card.classList.remove('is-drag');
+                }));
+            drop.addEventListener('drop', e => {
+                const file = e.dataTransfer.files && e.dataTransfer.files[0];
+                if (file) upload(file);
+            });
+
+            function upload(file) {
+                if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+                    return say('That file type is not supported — use JPEG, PNG or WebP.', 'err');
+                }
+                if (file.size > MAX_MB * 1024 * 1024) {
+                    return say(`That image is ${(file.size / 1048576).toFixed(1)}MB — the limit is ${MAX_MB}MB.`, 'err');
+                }
+
+                const body = new FormData();
+                body.append('file', file);
+
+                card.classList.add('is-busy');
+                bar.classList.add('show');
+                fill.style.width = '0%';
+                say('Uploading…', 'busy');
+
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', `/admin/images/${slotId}`);
+                xhr.upload.addEventListener('progress', e => {
+                    if (e.lengthComputable) fill.style.width = (e.loaded / e.total * 92) + '%';
+                });
+                xhr.addEventListener('load', () => {
+                    fill.style.width = '100%';
+                    card.classList.remove('is-busy');
+                    let data = {};
+                    try { data = JSON.parse(xhr.responseText); }
+                    catch (_) { return fail('The server returned an unreadable response.'); }
+
+                    if (!data.success) return fail(data.error || 'Upload failed.');
+
+                    // Cache-bust so the new image shows immediately.
+                    preview.src = data.preview_url + '&t=' + Date.now();
+                    preview.style.visibility = 'visible';
+                    card.classList.remove('is-empty');
+                    badge.textContent = 'Custom';
+                    badge.classList.add('live');
+                    browse.textContent = 'Replace';
+                    reset.disabled = false;
+                    if (data.width) {
+                        meta.innerHTML = `${data.width}&times;${data.height} &middot; ${Math.round(data.size / 1024)}KB`;
+                    }
+                    say(data.message || 'Updated.', 'ok');
+                    setTimeout(() => { bar.classList.remove('show'); clearSay(); }, 4000);
+                });
+                xhr.addEventListener('error', () => fail('Network error — the upload did not complete.'));
+                xhr.addEventListener('timeout', () => fail('The upload timed out.'));
+                xhr.send(body);
+
+                function fail(msg) {
+                    card.classList.remove('is-busy');
+                    bar.classList.remove('show');
+                    say(msg, 'err');
+                }
+            }
+
+            reset.addEventListener('click', () => {
+                if (!confirm('Revert this slot to the built-in image?')) return;
+                card.classList.add('is-busy');
+                say('Reverting…', 'busy');
+
+                fetch(`/admin/images/${slotId}/reset`, { method: 'POST' })
+                    .then(r => r.json())
+                    .then(data => {
+                        card.classList.remove('is-busy');
+                        if (!data.success) return say(data.error || 'Reset failed.', 'err');
+                        say(data.message + ' Reloading…', 'ok');
+                        setTimeout(() => window.location.reload(), 900);
+                    })
+                    .catch(err => {
+                        card.classList.remove('is-busy');
+                        say('Network error — ' + err.message, 'err');
+                    });
+            });
+        }
+    </script>
+</body>
+</html>

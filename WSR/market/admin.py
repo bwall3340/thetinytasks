@@ -1,17 +1,18 @@
 """
-Admin Blueprint — Google OAuth login + source/article management.
-All routes under /market-admin require the admin_user session key.
+Market admin — source and article management.
+
+Mounted at /market/admin.  Authentication is handled centrally by
+common.auth, so every route here simply carries @require_admin.
 """
 import logging
-import os
 import time
 import traceback
 from datetime import datetime
-from functools import wraps
 
-from authlib.integrations.flask_client import OAuth
 from flask import (Blueprint, flash, jsonify, redirect, render_template,
-                   request, session, url_for)
+                   request, url_for)
+
+from common.auth import current_admin, require_admin
 
 from .models import Analysis, Article, Source, ConsensusInsight, db
 from .scraper import scrape_source, validate_scrape, discover_links
@@ -19,81 +20,13 @@ from .analyzer import analyze_article, run_consensus_insights, compute_consensus
 
 logger = logging.getLogger(__name__)
 
-admin_bp = Blueprint('market_admin', __name__, url_prefix='/market-admin')
-_oauth = OAuth()
+admin_bp = Blueprint('market_admin', __name__, url_prefix='/market/admin')
 
-
-def init_oauth(app):
-    _oauth.init_app(app)
-    _oauth.register(
-        name='google',
-        client_id=app.config.get('GOOGLE_CLIENT_ID'),
-        client_secret=app.config.get('GOOGLE_CLIENT_SECRET'),
-        server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-        client_kwargs={'scope': 'openid email profile'},
-    )
-
-
-def _admin_emails():
-    raw = os.environ.get('ADMIN_EMAILS', '')
-    return {e.strip().lower() for e in raw.split(',') if e.strip()}
-
-
-def require_admin(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if 'admin_user' not in session:
-            return redirect(url_for('market_admin.login'))
-        return f(*args, **kwargs)
-    return decorated
-
-
-# ── Auth ──────────────────────────────────────────────────────────────────────
 
 @admin_bp.route('/')
+@require_admin
 def index():
-    if 'admin_user' in session:
-        return redirect(url_for('market_admin.dashboard'))
-    return redirect(url_for('market_admin.login'))
-
-
-@admin_bp.route('/login')
-def login():
-    if 'admin_user' in session:
-        return redirect(url_for('market_admin.dashboard'))
-    return render_template('market_admin/login.html')
-
-
-@admin_bp.route('/auth')
-def auth():
-    redirect_uri = url_for('market_admin.auth_callback', _external=True)
-    return _oauth.google.authorize_redirect(redirect_uri)
-
-
-@admin_bp.route('/callback')
-def auth_callback():
-    try:
-        token = _oauth.google.authorize_access_token()
-        user_info = token.get('userinfo') or {}
-        email = (user_info.get('email') or '').lower()
-
-        if email not in _admin_emails():
-            flash('Access denied: your email is not authorized.', 'error')
-            return redirect(url_for('market_admin.login'))
-
-        session.permanent = True
-        session['admin_user'] = {'email': email, 'name': user_info.get('name', email)}
-        return redirect(url_for('market_admin.dashboard'))
-    except Exception as e:
-        logger.error('OAuth callback error: %s', e)
-        flash('Authentication failed. Please try again.', 'error')
-        return redirect(url_for('market_admin.login'))
-
-
-@admin_bp.route('/logout')
-def logout():
-    session.pop('admin_user', None)
-    return redirect(url_for('market_admin.login'))
+    return redirect(url_for('market_admin.dashboard'))
 
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
@@ -108,7 +41,7 @@ def dashboard():
         total_articles=Article.query.count(),
         total_analyses=Analysis.query.count(),
         pending_analysis=Article.query.filter(~Article.analysis.has()).count(),
-        admin_user=session['admin_user'],
+        admin_user=current_admin(),
     )
 
 
@@ -134,7 +67,7 @@ def new_source():
         flash(f'Source "{source.name}" added.', 'success')
         return redirect(url_for('market_admin.dashboard'))
     return render_template('market_admin/source_form.html',
-                           source=None, admin_user=session['admin_user'])
+                           source=None, admin_user=current_admin())
 
 
 @admin_bp.route('/sources/<int:source_id>/edit', methods=['GET', 'POST'])
@@ -159,7 +92,7 @@ def edit_source(source_id):
         flash(f'Source "{source.name}" updated.', 'success')
         return redirect(url_for('market_admin.dashboard'))
     return render_template('market_admin/source_form.html',
-                           source=source, admin_user=session['admin_user'])
+                           source=source, admin_user=current_admin())
 
 
 @admin_bp.route('/sources/<int:source_id>/delete', methods=['POST'])
@@ -483,7 +416,7 @@ def source_articles(source_id):
                 .limit(30).all())
     return render_template('market_admin/source_articles.html',
                            source=source, articles=articles,
-                           admin_user=session['admin_user'])
+                           admin_user=current_admin())
 
 
 @admin_bp.route('/analyze-all', methods=['POST'])

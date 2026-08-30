@@ -510,6 +510,13 @@ body {
         0 16px 56px rgba(43, 42, 40, 0.28);
 }
 
+.philosophy-panel img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
 .philosophy-panel::after {
     content: '';
     position: absolute;

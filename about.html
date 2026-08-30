@@ -75,6 +75,17 @@
             margin-bottom: 3rem;
         }
 
+        .portrait {
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+            object-fit: cover;
+            display: block;
+            margin-bottom: 1.25rem;
+            border: 1px solid #E7DED2;
+            box-shadow: 0 2px 12px rgba(43, 42, 40, 0.08);
+        }
+
         .page-header h1 {
             font-size: clamp(2rem, 5vw, 3rem);
             font-weight: 800;
@@ -252,6 +263,7 @@
 
     <main class="page-content">
         <div class="page-header">
+            <img src="/assets/portrait.jpg" alt="Brandon Wallace" class="portrait" decoding="async">
             <h1>Brandon Wallace</h1>
             <p class="byline">Solutions Engineer &amp; AI Builder</p>
         </div>

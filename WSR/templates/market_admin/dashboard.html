@@ -212,7 +212,7 @@
     <nav>
         <a href="/market" target="_blank">View public page &#8599;</a>
         <span class="user-badge">{{ admin_user.name }}</span>
-        <a href="{{ url_for('market_admin.logout') }}">Sign out</a>
+        <a href="{{ url_for('admin_auth.logout') }}">Sign out</a>
     </nav>
 </header>
 
@@ -407,7 +407,7 @@ async function safeJson(response) {
 
 async function scrapeSource(id, name) {
     showToast(`Scraping ${name}…`);
-    const r = await fetch(`/market-admin/sources/${id}/scrape`, {method:'POST'});
+    const r = await fetch(`/market/admin/sources/${id}/scrape`, {method:'POST'});
     const d = await safeJson(r);
     if (d.success) {
         setRowStatus(id, d.duplicate ? 'duplicate' : 'success');
@@ -437,7 +437,7 @@ async function scrapeSource(id, name) {
                             style="background:#6366f1;color:#fff;border:none;border-radius:6px;padding:0.4rem 0.85rem;font-size:0.78rem;font-weight:600;cursor:pointer;">
                             Force Rescrape (delete old &amp; re-fetch)
                         </button>
-                        <a href="/market-admin/sources/${id}/articles"
+                        <a href="/market/admin/sources/${id}/articles"
                             style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;border-radius:6px;padding:0.4rem 0.85rem;font-size:0.78rem;font-weight:600;text-decoration:none;">
                             View Articles
                         </a>
@@ -457,7 +457,7 @@ async function scrapeSource(id, name) {
 async function forceRescrape(id, name, articleIds) {
     document.getElementById('modal-overlay').classList.remove('open');
     showToast(`Force-scraping ${name}…`);
-    const r = await fetch(`/market-admin/sources/${id}/force-scrape`, {
+    const r = await fetch(`/market/admin/sources/${id}/force-scrape`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({article_ids: articleIds}),
@@ -475,7 +475,7 @@ async function forceRescrape(id, name, articleIds) {
 
 async function analyzeSource(id, name) {
     showToast(`Analyzing ${name} with Claude…`);
-    const r = await fetch(`/market-admin/sources/${id}/analyze`, {method:'POST'});
+    const r = await fetch(`/market/admin/sources/${id}/analyze`, {method:'POST'});
     const d = await safeJson(r);
     if (d.success) {
         showToast(d.message, 'success');
@@ -487,7 +487,7 @@ async function analyzeSource(id, name) {
 
 async function validateSource(id, name) {
     showToast(`Validating ${name}…`);
-    const r = await fetch(`/market-admin/sources/${id}/validate`, {method:'POST'});
+    const r = await fetch(`/market/admin/sources/${id}/validate`, {method:'POST'});
     const d = await safeJson(r);
 
     document.getElementById('modal-title').textContent = `Validate: ${name}`;
@@ -538,7 +538,7 @@ async function discoverLinks(id, name) {
     document.getElementById('discover-body').innerHTML = '<div class="discover-loading">Scanning page for links…</div>';
     document.getElementById('discover-overlay').classList.add('open');
 
-    const r = await fetch(`/market-admin/sources/${id}/discover-links`, {method:'POST'});
+    const r = await fetch(`/market/admin/sources/${id}/discover-links`, {method:'POST'});
     const d = await safeJson(r);
 
     if (!d.success) {
@@ -608,7 +608,7 @@ async function applySelector(id, selector, text_filter, btn) {
     const origText = btn.textContent;
     btn.textContent = 'Saving…';
     btn.disabled = true;
-    const r = await fetch(`/market-admin/sources/${id}/set-selector`, {
+    const r = await fetch(`/market/admin/sources/${id}/set-selector`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({selector, text_filter: text_filter || ''}),
@@ -638,7 +638,7 @@ function closeDiscover(e) {
 
 async function analyzeAll() {
     showToast('Analyzing all pending articles…');
-    const r = await fetch('/market-admin/analyze-all', {method:'POST'});
+    const r = await fetch('/market/admin/analyze-all', {method:'POST'});
     const d = await safeJson(r);
     if (d.success) {
         showToast(`Analyzed ${d.analyzed} article(s).`, 'success');
@@ -650,7 +650,7 @@ async function analyzeAll() {
 
 async function runConsensusInsights() {
     showToast('Running insight cross-validation (this may take ~30s)…');
-    const r = await fetch('/market-admin/run-consensus-insights', {method:'POST'});
+    const r = await fetch('/market/admin/run-consensus-insights', {method:'POST'});
     const d = await safeJson(r);
     if (d.success) {
         showToast(`Done — ${d.divergent_count} genuinely divergent insight(s) identified.`, 'success');
