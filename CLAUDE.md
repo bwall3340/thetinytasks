@@ -405,7 +405,8 @@ GOOGLE_CLIENT_ID=      # Google OAuth client
 GOOGLE_CLIENT_SECRET=
 
 # Site images (Sanity CDN)
-SANITY_API_TOKEN=      # Editor token — REQUIRED for uploads from /admin
+SANITY_API_TOKEN=      # REQUIRED for uploads from /admin — must be Editor role;
+                       # a Viewer token can read images but cannot upload them
 SANITY_PROJECT_ID=     # Defaults to mcp0g14m
 SANITY_DATASET=        # Defaults to production
 ```
@@ -429,6 +430,8 @@ Status: `scoping` → `in progress` → `needs review` → `done`
 ---
 
 ## 🔒 Learned Rules
+
+**2026-08-30 — External API Permissions**: A site-admin image upload failed with a raw Sanity `mutationError` JSON blob dumped into the UI. Root cause: `SANITY_API_TOKEN` held the **Viewer** role, and uploading an asset requires the `create` permission that only Editor grants. The token *was* set, so the existing "is the token configured?" check passed and the real cause stayed invisible. **Prevention rule**: a presence check on a credential is not a capability check. When an integration returns 401/403, never pass the provider's response body through to the UI — translate it into the specific credential at fault and the specific fix (`WSR/site_admin/sanity_client.py::_raise_for_status`).
 
 **2026-05-06 — Schema Migration**: Added columns to an existing table by only updating the SQLAlchemy model. `db.create_all()` creates missing tables but never alters existing ones, so the new columns were absent in production → `UndefinedColumn` crash on first request. **Prevention rule**: Any time a column is added to an existing model, also append an `ALTER TABLE … ADD COLUMN` statement to the `_migrations` list in `WSR/app.py`. The try/except wrapper makes it safe to re-run (silently ignored if column already exists).
 

@@ -216,6 +216,61 @@ class TestUploadValidation:
         assert admin_client.post('/admin/images/refresh').status_code == 200
 
 
+# ── Sanity write failures ─────────────────────────────────────────────────────
+
+class _FakeResponse:
+    def __init__(self, status_code, text=''):
+        self.status_code = status_code
+        self.text = text
+
+
+class TestWriteFailures:
+    """A read-only token is the most likely misconfiguration, so its error has
+    to name the actual remedy rather than echo Sanity's mutationError JSON."""
+
+    # The exact body Sanity returns for a Viewer-role token.
+    FORBIDDEN_BODY = ('{"error":{"description":"transaction failed: Insufficient '
+                      'permissions; permission \\"create\\" required","type":"mutationError"}}')
+
+    @pytest.mark.parametrize('status', [401, 403])
+    def test_permission_error_names_the_fix(self, status):
+        with pytest.raises(sanity_client.SanityError) as exc:
+            sanity_client._raise_for_status(
+                _FakeResponse(status, self.FORBIDDEN_BODY), 'upload')
+        msg = str(exc.value)
+        assert 'Editor' in msg
+        assert 'SANITY_API_TOKEN' in msg
+        assert sanity_client.PROJECT_ID in msg
+        # The raw mutationError must not be what the admin sees.
+        assert 'mutationError' not in msg
+
+    def test_other_errors_still_surface_the_body(self):
+        with pytest.raises(sanity_client.SanityError) as exc:
+            sanity_client._raise_for_status(_FakeResponse(500, 'upstream boom'), 'change')
+        assert 'upstream boom' in str(exc.value)
+
+    def test_success_does_not_raise(self):
+        assert sanity_client._raise_for_status(_FakeResponse(200), 'upload') is None
+
+    def test_upload_surfaces_permission_error_through_the_route(
+            self, admin_client, monkeypatch):
+        """End to end: a 403 from Sanity reaches the admin as guidance, not JSON."""
+        monkeypatch.setenv('SANITY_API_TOKEN', 'sk-viewer-token')
+
+        def forbidden(*args, **kwargs):
+            return _FakeResponse(403, self.FORBIDDEN_BODY)
+        monkeypatch.setattr(sanity_client.requests, 'post', forbidden)
+
+        r = admin_client.post('/admin/images/philosophy-panel',
+                              data={'file': (io.BytesIO(PNG_BYTES), 'panel.png')},
+                              content_type='multipart/form-data')
+        assert r.status_code == 502
+        body = r.get_json()
+        assert body['success'] is False
+        assert 'Editor' in body['error']
+        assert 'mutationError' not in body['error']
+
+
 # ── Slot registry ─────────────────────────────────────────────────────────────
 
 class TestSlotRegistry:

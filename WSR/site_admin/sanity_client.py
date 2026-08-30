@@ -151,6 +151,29 @@ def slot_map(force=False):
 
 # ── Writes ────────────────────────────────────────────────────────────────────
 
+def _raise_for_status(resp, action):
+    """
+    Turn a failed Sanity write into an error an admin can act on.
+
+    A read-only token is the common failure: uploading an asset needs the
+    "create" permission, which the Viewer role does not grant, so the raw
+    response is an opaque mutationError. Translate it instead of surfacing JSON.
+    """
+    if resp.status_code < 400:
+        return
+
+    if resp.status_code in (401, 403):
+        raise SanityError(
+            f'Sanity denied the {action} ({resp.status_code}). SANITY_API_TOKEN is set '
+            'but is not allowed to write — uploads need a token with the Editor role, '
+            'and a Viewer token can read images but not create them. Add one at '
+            'sanity.io/manage under Project \u2192 API \u2192 Tokens, then update '
+            f'SANITY_API_TOKEN in Railway. (project {PROJECT_ID}, dataset {DATASET})'
+        )
+
+    raise SanityError(f'Sanity rejected the {action} ({resp.status_code}): {resp.text[:300]}')
+
+
 def upload_asset(file_bytes, filename, content_type):
     """Upload raw image bytes to the Sanity asset store. Returns the asset doc."""
     url = f'{_write_base()}/assets/images/{DATASET}'
@@ -162,8 +185,7 @@ def upload_asset(file_bytes, filename, content_type):
     except requests.RequestException as e:
         raise SanityError(f'Could not reach Sanity: {e}') from e
 
-    if resp.status_code >= 400:
-        raise SanityError(f'Sanity rejected the upload ({resp.status_code}): {resp.text[:300]}')
+    _raise_for_status(resp, 'upload')
 
     doc = (resp.json() or {}).get('document') or {}
     if not doc.get('_id'):
@@ -181,8 +203,7 @@ def _mutate(mutations):
     except requests.RequestException as e:
         raise SanityError(f'Could not reach Sanity: {e}') from e
 
-    if resp.status_code >= 400:
-        raise SanityError(f'Sanity rejected the change ({resp.status_code}): {resp.text[:300]}')
+    _raise_for_status(resp, 'change')
     return resp.json()
 
 
