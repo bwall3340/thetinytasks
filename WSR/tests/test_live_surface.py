@@ -366,3 +366,117 @@ class TestProcessVtracer:
 
 
 import json  # noqa: E402  (used by the vtracer tests above)
+
+
+# ---------------------------------------------------------------------------
+# Upscale options the live page exposes must reach the backend
+# ---------------------------------------------------------------------------
+
+class TestUpscaleOptionsAreHonoured:
+    """
+    Every checkbox on the upscaler must change the output. A control that is
+    sent but ignored is a silent failure, which CLAUDE.md forbids.
+    """
+
+    ENDPOINT = '/process_upscale'
+
+    def _upscale(self, client, **params):
+        data = {'image': (io.BytesIO(make_png_with_white_bg()), 'logo.png'),
+                'scale_factor': '2'}
+        data.update(params)
+        response = client.post(self.ENDPOINT, data=data,
+                               content_type='multipart/form-data')
+        payload = json.loads(response.data)
+        assert payload['success'] is True, payload.get('error')
+        return payload['upscaled_image']
+
+    def test_page_sends_every_option_the_route_reads(self):
+        """The form fields the live page posts must all be read server-side."""
+        page = read(os.path.join(REPO_ROOT, 'background-remover.html'))
+        upscale_block = page[page.index('/process_upscale') - 3000:
+                             page.index('/process_upscale')]
+        sent = set(re.findall(r"""formData\.append\(\s*['"](\w+)['"]""", upscale_block))
+
+        route = read(os.path.join(WSR_DIR, 'app.py'))
+        route_block = route[route.index("@app.route('/process_upscale'"):]
+        route_block = route_block[:route_block.index('@app.errorhandler')]
+        read_fields = set(re.findall(r"""request\.form\.get\(\s*['"](\w+)['"]""", route_block))
+
+        ignored = sent - read_fields - {'image'}
+        assert not ignored, (
+            'background-remover.html posts fields /process_upscale never reads, '
+            f'so the control does nothing: {sorted(ignored)}')
+
+    def test_enhance_edges_changes_the_output(self, client):
+        on = self._upscale(client, enhance_edges='true')
+        off = self._upscale(client, enhance_edges='false')
+        assert on != off, 'the Enhance Edges checkbox had no effect'
+
+    def test_enhance_edges_defaults_to_on(self, client):
+        assert self._upscale(client) == self._upscale(client, enhance_edges='true')
+
+    def test_flatten_background_changes_the_output(self, client):
+        off = self._upscale(client, flatten_background='false')
+        on = self._upscale(client, flatten_background='true', tolerance='40')
+        assert on != off, 'the Flatten Background checkbox had no effect'
+
+    def test_flatten_background_defaults_to_off(self, client):
+        assert self._upscale(client) == self._upscale(client, flatten_background='false')
+
+    def test_out_of_range_tolerance_is_rejected(self, client):
+        response = client.post(
+            self.ENDPOINT,
+            data={'image': (io.BytesIO(make_png_with_white_bg()), 'logo.png'),
+                  'flatten_background': 'true', 'tolerance': '900'},
+            content_type='multipart/form-data')
+        payload = json.loads(response.data)
+        assert payload['success'] is False
+        assert 'tolerance' in payload['error'].lower()
+
+
+# ---------------------------------------------------------------------------
+# Every tool in the editor's dropdown must actually do something
+# ---------------------------------------------------------------------------
+
+class TestEditorToolModes:
+    """
+    Magic Wand shipped in the dropdown for months with no branch in
+    handleCanvasClick, so selecting it silently did nothing.
+    """
+
+    def _page(self):
+        return read(os.path.join(REPO_ROOT, 'background-remover.html'))
+
+    def test_every_tool_mode_option_is_handled(self):
+        page = self._page()
+
+        select = page[page.index('<select id="toolMode">'):]
+        select = select[:select.index('</select>')]
+        options = set(re.findall(r'<option value="([^"]+)"', select))
+
+        handler = page[page.index('function handleCanvasClick'):]
+        handler = handler[:handler.index('function handleMouseDown')]
+        handled = set(re.findall(r"""toolMode === ['"](\w+)['"]""", handler))
+
+        # 'brush' is handled by the mousedown/mousemove path, not by click.
+        brush_path = page[page.index('function handleMouseDown'):
+                          page.index('function handleBrushAction')]
+        handled |= set(re.findall(r"""value !== ['"](\w+)['"]""", brush_path))
+
+        unhandled = options - handled
+        assert not unhandled, (
+            f'Tool modes offered in the UI that no code responds to: {sorted(unhandled)}')
+
+    def test_magic_wand_is_implemented(self):
+        page = self._page()
+        assert 'function magicWandRemove(' in page
+        assert "toolMode === 'magic'" in page
+
+    def test_magic_wand_is_non_contiguous(self):
+        """Its whole point: it must scan the image, not flood-fill from a seed."""
+        page = self._page()
+        body = page[page.index('function magicWandRemove('):]
+        body = body[:body.index('function flattenArea(')]
+        assert 'for (let y = 0' in body and 'for (let x = 0' in body
+        assert 'stack' not in body, 'magic wand should not be a flood fill'
+        assert 'saveToHistory()' in body, 'magic wand must be undoable'

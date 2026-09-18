@@ -608,8 +608,14 @@ def process_upscale():
         method = request.form.get('method', 'smart_edge')
         preserve_contrast = request.form.get('preserve_contrast', 'true').lower() == 'true'
         logo_type = request.form.get('logo_type', 'styled')
+        enhance_edges = request.form.get('enhance_edges', 'true').lower() == 'true'
+        flatten_background = request.form.get('flatten_background', 'false').lower() == 'true'
+        flatten_tolerance = int(request.form.get('tolerance', 30))
 
         # Validate parameters
+        if flatten_tolerance < 0 or flatten_tolerance > 255:
+            return jsonify({'success': False, 'error': 'Tolerance must be between 0 and 255'})
+
         if scale_factor < 1 or scale_factor > 8:
             return jsonify({'success': False, 'error': 'Scale factor must be between 1 and 8'})
 
@@ -635,13 +641,20 @@ def process_upscale():
             image = Image.open(io.BytesIO(image_data))
             image_array = np.array(image)
 
+            # Flatten the background before upscaling, so the upscaler works
+            # from clean input rather than a gradient it has to invent detail
+            # for. Off by default — the tool ships the checkbox unchecked.
+            if flatten_background:
+                image_array = logo_upscaler.flatten_background(image_array, flatten_tolerance)
+
             # Upscale the image using the LogoUpscaler
             upscale_result = logo_upscaler.upscale_logo(
                 image_array,
                 scale_factor=scale_factor,
                 method=method,
                 preserve_contrast=preserve_contrast,
-                logo_type=logo_type
+                logo_type=logo_type,
+                enhance_edges=enhance_edges
             )
 
             if not upscale_result['success']:
