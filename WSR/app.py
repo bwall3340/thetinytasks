@@ -222,18 +222,15 @@ def white_bg_remover_files(filename):
     return send_from_directory(os.path.join(SITE_DIR, 'WhiteBackgroundRemover'), filename)
 
 
+# Compatibility shims for the two first-generation tool pages.
+# /interactive (vectorizer) and /test (upscaler) were superseded by the single
+# three-mode Background Remover page, which is what the site links to. Their
+# templates are gone; the routes stay so old bookmarks still land somewhere
+# useful, following the same pattern as /market-admin/* above.
 @app.route('/interactive')
-def interactive():
-    """Serve the vectorizer tool"""
-    return render_template('interactive.html')
-
-
-
-
 @app.route('/test')
-def test_page():
-    """Serve the test interface"""
-    return render_template('test.html')
+def legacy_tool_pages():
+    return redirect('/background-remover.html', code=302)
 
 
 

@@ -480,3 +480,68 @@ class TestEditorToolModes:
         assert 'for (let y = 0' in body and 'for (let x = 0' in body
         assert 'stack' not in body, 'magic wand should not be a flood fill'
         assert 'saveToHistory()' in body, 'magic wand must be undoable'
+
+
+# ---------------------------------------------------------------------------
+# Nothing server-side may become unreachable again
+# ---------------------------------------------------------------------------
+
+class TestNoOrphanedServerFiles:
+    """
+    Three generations of the same tool accumulated here because a template
+    could stop being rendered without anything noticing. This fails the moment
+    a template or static file stops being reachable, so the next superseded UI
+    gets deleted with the change that supersedes it.
+    """
+
+    def test_every_template_is_rendered(self):
+        rendered = rendered_templates()
+        templates_dir = os.path.join(WSR_DIR, 'templates')
+
+        orphans = []
+        for dirpath, _, filenames in os.walk(templates_dir):
+            for filename in filenames:
+                if not filename.endswith('.html'):
+                    continue
+                name = os.path.relpath(
+                    os.path.join(dirpath, filename), templates_dir).replace(os.sep, '/')
+                if name not in rendered:
+                    orphans.append(name)
+
+        assert not orphans, (
+            'Templates no route renders — delete them or wire them up: '
+            f'{sorted(orphans)}')
+
+    def test_every_static_file_is_referenced(self):
+        static_dir = os.path.join(WSR_DIR, 'static')
+        if not os.path.isdir(static_dir):
+            pytest.skip('no static directory')
+
+        referenced = set()
+        for name in rendered_templates():
+            path = os.path.join(WSR_DIR, 'templates', name)
+            if os.path.exists(path):
+                referenced |= static_files_referenced_by(read(path))
+
+        orphans = [f for f in sorted(os.listdir(static_dir))
+                   if not f.startswith('.') and f not in referenced]
+
+        assert not orphans, (
+            f'Static files no rendered template references: {orphans}')
+
+    def test_every_python_module_is_imported(self):
+        """Catches the next lambda_function.py before it sits for six months."""
+        imported = set()
+        for dirpath, dirnames, filenames in os.walk(WSR_DIR):
+            dirnames[:] = [d for d in dirnames if d not in ('__pycache__', 'site')]
+            for filename in filenames:
+                if filename.endswith('.py'):
+                    source = read(os.path.join(dirpath, filename))
+                    imported |= set(re.findall(r'^\s*(?:from|import)\s+(\w+)',
+                                               source, re.MULTILINE))
+
+        modules = [f[:-3] for f in os.listdir(WSR_DIR)
+                   if f.endswith('.py') and f != 'app.py']
+
+        orphans = sorted(m for m in modules if m not in imported)
+        assert not orphans, f'Python modules nothing imports: {orphans}'
