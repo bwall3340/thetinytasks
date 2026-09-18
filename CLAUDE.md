@@ -200,7 +200,6 @@ thetinytasks/
 ├── background-remover.html # Background Remover Pro tool UI
 ├── return-stream.html      # Return Stream Digitizer (pure client-side)
 ├── Sankey/                 # Sankey Chart tool (pure client-side HTML)
-├── WhiteBackgroundRemover/ # Simple client-side white bg remover
 ├── WSR/                    # Flask backend (vectorizer / background remover)
 │   ├── app.py              # Flask app, all routes defined here
 │   ├── common/             # Shared admin auth (Google OAuth + ADMIN_EMAILS)
@@ -208,7 +207,6 @@ thetinytasks/
 │   │   ├── slots.py        # Image slot registry (source of truth)
 │   │   ├── sanity_client.py# Sanity upload / query / cache
 │   │   └── assets.py       # /assets resolution + fallback chain
-│   ├── vectorizer_engine.py
 │   ├── detailed_vectorizer.py
 │   ├── extreme_vectorizer.py
 │   ├── test_vectorizer.py  # AdvancedTestVectorizer class (NOT a test file)
@@ -233,14 +231,19 @@ thetinytasks/
 
 | Route | Method | Description |
 |-------|--------|-------------|
-| `/` | GET | Main interactive background remover UI |
-| `/interactive` | GET | Same as `/` |
-| `/test` | GET | Test interface page |
-| `/process_interactive` | POST | Vectorize an already-edited image |
-| `/process_test` | POST | Vectorize with advanced smoothing (test mode) |
-| `/process_upscale` | POST | Upscale image with edge preservation |
-| `/return-stream.html` | GET | Serve the Return Stream Digitizer static page |
+| `/` | GET | Home page — title screen + tool dashboard |
+| `/styles.css` · `/script.js` · `/shared.css` | GET | Home page assets |
+| `/background-remover.html` | GET | Background Remover Pro — the live image tool |
+| `/return-stream.html` | GET | Return Stream Digitizer |
+| `/data-finder.html` | GET | DataFinder Agent UI |
+| `/about.html` · `/bigger-projects.html` | GET | Static content pages |
+| `/Sankey/<filename>` | GET | Sankey Chart tool files |
 | `/assets/<filename>` | GET | Serve a site image — Sanity CDN if uploaded, else the committed file |
+| `/process_interactive` | POST | Vectorize an already-edited image (detailed/extreme engines) |
+| `/process_vtracer` | POST | Colour vectorization via vtracer — used by Vectorizer mode |
+| `/process_upscale` | POST | Upscale with edge preservation, optional background flattening |
+| `/process_test` | POST | Vectorize with edge smoothing (`smoothing_level`) — **no UI calls this** |
+| `/interactive` · `/test` | GET | 302 → `/background-remover.html` (shims for the removed v2 pages) |
 
 ### Admin routes — one pattern for every module
 
@@ -277,7 +280,6 @@ Used by the Impact Sweep (Rule 1). Update this list when modules are added.
 - [ ] Flask Image Processing Backend (`WSR/app.py` + engine files)
 - [ ] Return Stream Digitizer (`return-stream.html` — pure client-side)
 - [ ] Sankey Chart Tool (`Sankey/`)
-- [ ] White Background Remover (`WhiteBackgroundRemover/`)
 - [ ] Docker / Deployment (`Dockerfile`, `railway.toml`)
 
 ---
@@ -372,6 +374,10 @@ cd WSR
 pytest tests/ -v
 ```
 
+`SITE_DIR` falls back to the repo root when `WSR/site/` is absent, so the home
+page and every static tool page work from a plain checkout. Inside the Docker
+image `/app/site` exists and is used instead.
+
 ---
 
 ## 🤝 Collaboration Norms
@@ -421,6 +427,7 @@ console change.
 
 | Feature | Status | Modules Affected | Notes |
 |---------|--------|-----------------|-------|
+| Background Remover de-duplication | needs review | Background Remover Pro UI, Flask Backend, Sankey, Docker | Removed 3 superseded tool UIs (~4,800 lines); ported Magic Wand; wired 2 inert checkboxes |
 | Unified `/<module>/admin` routes | needs review | Market, Meal, Site Admin, Shared Auth | Market moved from `/market-admin`; shared Google OAuth replaces two duplicate flows |
 | Tool page scroll fix (`script.js` guards) | needs review | Home Page, Background Remover Pro UI | Cover-page scroll hijacking no longer runs on pages without a cover |
 | Site image manager | needs review | Site Admin, Home Page, About, Docker | Drag-and-drop uploads to Sanity CDN; `/assets` resolves Sanity → committed file → transparent pixel |
@@ -430,6 +437,22 @@ Status: `scoping` → `in progress` → `needs review` → `done`
 ---
 
 ## 🔒 Learned Rules
+
+**2026-09-18 — Superseded UI Left In Place**: The Background Remover existed in
+four generations at once. `WSR/templates/index.html` posted to `/process`, an
+endpoint that no longer existed; `/interactive` and `/test` were live routes
+nothing linked to; `WhiteBackgroundRemover/` was reachable only from the Sankey
+page. Each new version was added without deleting the one it replaced, and
+nothing failed when a template stopped being rendered, so ~4,800 dead lines
+accumulated silently. Meanwhile the live page shipped a Magic Wand option with
+no code behind it and two checkboxes the backend ignored. **Prevention rule**:
+when a new surface replaces an old one, delete the old one in the same change —
+a route with no inbound link is dead weight, not a fallback. `test_live_surface.py`
+now enforces this: a template nothing renders, a static file nothing references,
+a Python module nothing imports, a relative link pointing at nothing, a tool
+card with no launch case, or a `fetch()` to a route that does not exist all fail
+the suite. Before shipping a control, assert it changes the output — a dropdown
+option or checkbox the backend ignores is a silent failure.
 
 **2026-09-18 — Shared Script on a Page Missing Its Elements**: `background-remover.html` loads `script.js` (the home page controller), but has no `#cover-page`. `isOnCoverPage` initialised to `true` and nothing could clear it, so the non-passive `wheel` handler called `preventDefault()` on every downward scroll — the page felt sticky. `bindEvents()` also threw on the absent `#modal-close-btn`. **Prevention rule**: any script shared across pages must null-guard every `getElementById`/`querySelector` before use, and derive state from the DOM (`this.isOnCoverPage = !!this.coverPage`) rather than assuming a page shape. Never register a non-passive `wheel`/`touchmove` listener that can `preventDefault()` unless the element it depends on is present.
 

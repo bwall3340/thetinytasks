@@ -1,115 +1,69 @@
-# Logo Vectorizer Tool
+# WSR — Flask backend for The Tiny Tasks
 
-A Python tool to remove white backgrounds from logos and convert them to vector SVG format using precise color-based white detection and contour vectorization.
+Image processing for the Background Remover Pro tool, plus the Market Outlook,
+Meal Planner and Site Admin modules. Deployed on Railway via the repo-root
+`Dockerfile`; `app.py` is the only place routes are defined.
 
-## Features
+The tool UI itself is `background-remover.html` at the repo root — this package
+serves it and does the processing. There is no separate vectorizer page.
 
-- **Precise White Removal**: Targets only white pixels (RGB 245+), preserving light yellow and other colors
-- **Hard Edge Preservation**: No blur effects - maintains crisp, sharp logo edges
-- **Vectorization**: Converts raster images to scalable SVG vector format
-- **Three Interfaces**: Command-line tool, Gradio web GUI, and custom HTML interface
-- **Multiple Formats**: Supports PNG, JPG, JPEG, BMP, TIFF input formats
-- **Customizable**: Adjustable contour simplification for different detail levels
+## Running locally
 
-## Installation
-
-1. **Clone or download** this repository
-2. **Install Python 3.7+** if not already installed
-3. **Run the setup script**:
-   ```bash
-   python setup.py
-   ```
-
-This will automatically install all required dependencies.
-
-## Usage
-
-### Web Interfaces (Recommended)
-
-**Gradio Interface:**
 ```bash
-python logo_vectorizer_gui.py
+cd WSR
+pip install -r requirements.txt
+python app.py          # http://localhost:5000
 ```
 
-**Custom HTML Interface:**
+`SITE_DIR` falls back to the repo root when `WSR/site/` is absent, so the home
+page and the tool pages work from a plain checkout. In the Docker image the
+root-level site files are copied to `/app/site` and that is used instead.
+
+## Tests
+
 ```bash
-python run_html.py
+cd WSR
+pytest tests/ -v
 ```
 
-Both interfaces allow you to:
-- Upload your logo image
-- Adjust vectorization settings
-- Preview the results
-- Download PNG and SVG files
+- `test_app.py` — route and processing-endpoint behaviour
+- `test_site_admin.py` — image slots and shared admin auth
+- `test_live_surface.py` — what the deployed site depends on: every `fetch()`
+  resolves to a real route, every linked page is served, every tool card routes
+  somewhere, the Dockerfile copies what the routes serve, and nothing
+  server-side is orphaned. Run this before deleting anything.
 
-### Command Line Interface
+## Processing endpoints
 
-Process a single image:
-```bash
-python logo_vectorizer.py path/to/your/logo.png
-```
+| Endpoint | Engine | Used by |
+|----------|--------|---------|
+| `POST /process_interactive` | `detailed_vectorizer` / `extreme_vectorizer` (by epsilon) | Interactive mode |
+| `POST /process_vtracer` | `vtracer_engine` — colour vectorization | Vectorizer mode |
+| `POST /process_upscale` | `logo_upscaler` | Upscaler mode |
+| `POST /process_test` | `test_vectorizer` — adds `smoothing_level` | **nothing** — see below |
 
-With custom output directory:
-```bash
-python logo_vectorizer.py path/to/your/logo.png --output-dir ./output/
-```
+Every endpoint validates file type, size (10MB) and parameters at the route
+boundary before touching the processing code.
 
-With custom simplification factor:
-```bash
-python logo_vectorizer.py path/to/your/logo.png --epsilon 0.01
-```
+### `/process_test` has no caller
 
-## Output Files
+`test_vectorizer.py` (`AdvancedTestVectorizer`, ~2,100 lines) implements edge
+smoothing that no UI exposes. It is kept because the capability is real and
+unique, not because anything uses it. Either wire `smoothing_level` into the
+Vectorizer mode's detail control, or delete the endpoint and the module — but
+decide, rather than leaving it to rot a second time.
 
-For each processed image, the tool generates:
+## Engines
 
-1. **`*_no_bg.png`** - Image with background removed
-2. **`*_binary.png`** - Binary preprocessing preview
-3. **`*_vector.svg`** - Final vectorized SVG file
+| Module | Role |
+|--------|------|
+| `detailed_vectorizer.py` | High-quality contour vectorization with curves |
+| `extreme_vectorizer.py` | Pixel-perfect vectorization at epsilon ≤ 0.0001 |
+| `vtracer_engine.py` | Colour vectorization via the `vtracer` crate |
+| `logo_upscaler.py` | Upscaling, edge enhancement, background flattening |
+| `test_vectorizer.py` | Edge-smoothing vectorizer — not a test file |
 
-## Parameters
+## Epsilon
 
-- **Epsilon Factor** (0.005 - 0.1): Controls contour simplification
-  - Lower values = more detail, larger files
-  - Higher values = simplified shapes, smaller files
-  - Default: 0.02
-
-## Tips for Best Results
-
-1. **White Backgrounds**: Tool specifically removes white pixels (RGB 245+)
-2. **Light Yellow Safe**: Light yellow, cream, and other near-white colors are preserved
-3. **High Contrast**: Logos with strong contrast work better
-4. **Sharp Edges**: No blur applied - perfect for logos with hard edges
-5. **File Size**: Start with epsilon 0.02, adjust based on results
-
-## Dependencies
-
-- `opencv-python==4.9.0.80` - Image processing and contour detection
-- `Pillow==10.2.0` - Image handling and manipulation
-- `numpy==1.26.4` - Numerical operations
-- `scikit-image==0.22.0` - Image processing algorithms
-- `click==8.1.7` - CLI interface
-- `gradio==4.16.0` - Web GUI
-- `Flask==3.0.0` - HTML web interface
-
-## Troubleshooting
-
-### Installation Issues
-- Ensure Python 3.7+ is installed
-- Try upgrading pip: `python -m pip install --upgrade pip`
-- On Windows, you may need Visual Studio Build Tools for some packages
-
-### Processing Issues
-- **Poor vectorization**: Try adjusting the epsilon factor
-- **Missing details**: Lower the epsilon value
-- **Too many contours**: Increase the epsilon value
-- **Background not removed**: Ensure the image has sufficient contrast
-
-## Example Workflow
-
-1. Start with a logo image (PNG/JPG)
-2. Run through the tool to remove background
-3. Adjust epsilon factor if needed for optimal detail/simplicity balance
-4. Use the generated SVG file in your projects
-
-The SVG files are scalable and perfect for web use, print materials, or further editing in vector graphics software.
+Vectorization detail, validated between 0.0001 and 0.1. Lower means more
+contours and a larger SVG.
