@@ -14,6 +14,14 @@
     --stone:      #D9CCBD;
     --ink:        #2B2A28;
     --border:     #E7DED2;
+
+    /* Status colours. The core palette has no success/warning/error, and the
+       tools had drifted to neon emerald, amber and red. These are the earthy
+       equivalents — same family, still readable as status. See design.md. */
+    --success:    #66725B;   /* olive */
+    --success-dk: #4D5645;
+    --warning:    #A8814A;   /* muted ochre */
+    --danger:     #8C4A34;   /* deep clay */
 }
 
 /* ─── Shared Header ─── */

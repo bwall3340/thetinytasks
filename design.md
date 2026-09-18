@@ -76,6 +76,23 @@ The tone is: *"I build useful systems beautifully."*
 --border:      #E7DED2;  /* Soft border */
 ```
 
+### Status colours
+
+The core palette has no success / warning / error, so tools drifted to stock
+neon (emerald `#10b981`, amber `#f59e0b`, red `#ef4444`). Use these instead —
+they read as status without breaking the workshop feel:
+
+```css
+--success:    #66725B;  /* olive — confirmations, completed states */
+--success-dk: #4D5645;
+--warning:    #A8814A;  /* muted ochre — degraded, offline, retrying */
+--danger:     #8C4A34;  /* deep clay — failures */
+```
+
+Defined in `shared.css`. Every page must link it — a page that only links
+`styles.css` gets no tokens at all, and every `var()` silently resolves to
+nothing.
+
 ---
 
 ## Typography

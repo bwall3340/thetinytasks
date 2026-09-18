@@ -727,3 +727,96 @@ class TestTransportFitting:
         notice = notice[:notice.index('\n        //')]
         assert 'showDocumentNotice(' in notice
         assert 'unchanged' in notice, 'the user should be told their document is intact'
+
+
+# ---------------------------------------------------------------------------
+# Design system — tokens must actually resolve
+# ---------------------------------------------------------------------------
+
+PALETTE = {
+    '#F7F3EC', '#66725B', '#4D5645', '#B46B4E', '#D9CCBD', '#2B2A28', '#E7DED2',
+    '#A8814A', '#8C4A34',
+}
+
+# Transparency checkerboard — a UI convention, not brand colour.
+COLOUR_ALLOWLIST = {'#f0f0f0'}
+
+
+class TestDesignTokens:
+    """
+    background-remover.html linked styles.css but not shared.css, where the
+    tokens are defined. Every var() on the page resolved to nothing, so the
+    fixed header had no background and page content scrolled through it.
+    """
+
+    def _pages(self):
+        from app import SITE_DIR
+        for name in sorted(os.listdir(SITE_DIR)):
+            if name.endswith('.html'):
+                yield name, read(os.path.join(SITE_DIR, name))
+
+    @staticmethod
+    def _links(source, filename):
+        """A real <link> element, not a mention in a comment."""
+        return re.search(
+            r'<link[^>]+href=["\']/?' + re.escape(filename) + r'["\']', source) is not None
+
+    def _tokens_defined_in(self, source):
+        """Tokens a file declares itself, e.g. an inline :root block."""
+        return set(re.findall(r'(--[\w-]+)\s*:', source))
+
+    def _tokens_used_in(self, source):
+        return set(re.findall(r'var\((--[\w-]+)', source))
+
+    def test_every_page_can_resolve_the_tokens_it_uses(self):
+        """
+        A page resolves tokens from its own :root or from shared.css. Using one
+        with neither in reach is silent: the declaration is simply dropped, so
+        a fixed header loses its background and nothing errors.
+        """
+        from app import SITE_DIR
+        shared = self._tokens_defined_in(read(os.path.join(SITE_DIR, 'shared.css')))
+        styles_source = read(os.path.join(SITE_DIR, 'styles.css'))
+
+        broken = []
+        for name, source in self._pages():
+            used = self._tokens_used_in(source)
+            if self._links(source, 'styles.css'):
+                used |= self._tokens_used_in(styles_source)
+            if not used:
+                continue
+
+            available = self._tokens_defined_in(source)
+            if self._links(source, 'shared.css'):
+                available |= shared
+
+            missing = sorted(used - available)
+            if missing:
+                broken.append(f'{name} cannot resolve {missing}')
+
+        assert not broken, ('Pages using tokens they cannot resolve:\n  '
+                            + '\n  '.join(broken))
+
+    def test_tool_page_uses_no_off_palette_colours(self):
+        """design.md: no neon. The tools had drifted to emerald/amber/red."""
+        from app import SITE_DIR
+        source = read(os.path.join(SITE_DIR, 'background-remover.html'))
+
+        found = {c for c in re.findall(r'#[0-9a-fA-F]{6}', source)}
+        off = sorted(c for c in found
+                     if c.upper() not in PALETTE and c.lower() not in COLOUR_ALLOWLIST)
+
+        assert not off, (
+            f'Off-palette colours on the tool page: {off}. Use a token from '
+            'shared.css, or add it to the palette in design.md first.')
+
+
+class TestDocumentNoticePlacement:
+    def test_notice_does_not_sit_over_the_action_buttons(self):
+        """It was bottom-centre, directly on top of Vectorize."""
+        page = read(os.path.join(REPO_ROOT, 'background-remover.html'))
+        block = page[page.index('function showDocumentNotice'):]
+        block = block[:block.index('// Encode the document')]
+
+        assert 'right:' in block, 'the notice should be offset from the action column'
+        assert 'left: 50%' not in block, 'bottom-centre covers the primary action'

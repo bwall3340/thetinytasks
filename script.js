@@ -324,9 +324,28 @@ class TinyTasksApp {
     }
 }
 
+// A slot with no image yet resolves to a 1x1 transparent pixel. Stretching
+// that across a card leaves the browser upscaling a single pixel over the
+// placeholder gradient, which some renderers rasterise as a solid block of
+// garbage colour. Drop the img so the gradient shows as the intended empty
+// state instead.
+function hideEmptySlotImages() {
+    document.querySelectorAll('.tool-card-image img, .philosophy-panel img').forEach(img => {
+        const drop = () => {
+            if (img.naturalWidth <= 1 || img.naturalHeight <= 1) {
+                img.style.display = 'none';
+            }
+        };
+        if (img.complete) drop();
+        img.addEventListener('load', drop);
+        img.addEventListener('error', () => { img.style.display = 'none'; });
+    });
+}
+
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     new TinyTasksApp();
+    hideEmptySlotImages();
 });
 
 // Touch event tracking for mobile
