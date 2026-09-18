@@ -450,6 +450,7 @@ console change.
 
 | Feature | Status | Modules Affected | Notes |
 |---------|--------|-----------------|-------|
+| Image workbench (tool rail) | needs review | Background Remover Pro UI, Home Page | Three mode cards replaced by one surface: tool rail + always-available Vectorize/Upscale actions; palette aligned |
 | Editor foundation (native-resolution document) | needs review | Background Remover Pro UI, Flask Image Backend | Import no longer downscales to 800x600; typed-array fills (6.9s -> 0.46s at 2400px); bounded history; fitted transport |
 | Background Remover de-duplication | needs review | Background Remover Pro UI, Flask Backend, Sankey, Docker | Removed 3 superseded tool UIs (~4,800 lines); ported Magic Wand; wired 2 inert checkboxes |
 | Unified `/<module>/admin` routes | needs review | Market, Meal, Site Admin, Shared Auth | Market moved from `/market-admin`; shared Google OAuth replaces two duplicate flows |
@@ -461,6 +462,23 @@ Status: `scoping` → `in progress` → `needs review` → `done`
 ---
 
 ## 🔒 Learned Rules
+
+**2026-09-18 — Undefined CSS Tokens Fail Silently**: `background-remover.html`
+linked `styles.css` but not `shared.css`, where the design tokens are defined.
+Every `var(--cream)` / `var(--terra)` on the page resolved to nothing. CSS
+drops an invalid declaration without erroring, so nothing failed loudly — the
+fixed header simply had no background, and the toolbar and canvas scrolled
+straight through it with the logo floating on top. It also explains how the
+page drifted off-palette: with no tokens reachable, colours were hardcoded, and
+they drifted to stock neon because the core palette defines no
+success/warning/error. **Prevention rule**: every page links `shared.css`
+before `styles.css` — tokens first, then the rules that consume them. Never
+hardcode a hex that a token already covers; if a colour has no token, add one
+to `shared.css` and `design.md` rather than inlining it. A test now asserts
+every page can resolve the tokens it uses, that none are undefined, and that
+the tool page uses no off-palette colours. Note when writing such a test that
+searching the source for a filename also matches a comment mentioning it —
+match the `<link>` element.
 
 **2026-09-18 — Display Concern Implemented As Data Loss**: `loadImageToCanvas`
 capped every upload at 800x600 before any editing, and that downscaled canvas

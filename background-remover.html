@@ -32,7 +32,6 @@
            Only the h1 followed this; the rest were bold Inter. */
         .bg-remover-container h3,
         .bg-remover-container h4,
-        .mode-card h3,
         .upload-content h3,
         .tips h4 {
             font-family: 'Cormorant Garamond', Georgia, serif;
@@ -64,50 +63,201 @@
             margin: 0 auto;
         }
 
-        .tool-modes {
+        /* ── Workbench: one surface, tools on the left, canvas beside them ──
+           Replaces the three mode cards. Vectorize and Upscale moved below
+           the canvas as actions, so the whole toolset is visible at once. */
+        .workbench {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-bottom: 3rem;
+            grid-template-columns: 232px 1fr;
+            gap: 1.5rem;
+            align-items: start;
+            margin-bottom: 1.5rem;
         }
 
-        .mode-card {
-            background: rgba(255, 255, 255, 0.8);
-            border: 2px solid var(--border);
+        .tool-rail {
+            background: rgba(255, 255, 255, 0.72);
+            border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 2rem;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            padding: 1.25rem;
+            position: sticky;
+            top: 88px;
         }
 
-        .mode-card:hover,
-        .mode-card.active {
-            border-color: var(--terra);
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(180, 107, 78, 0.15);
+        .rail-section + .rail-section {
+            margin-top: 1.5rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid var(--border);
         }
 
-        .mode-card.active {
-            background: rgba(180, 107, 78, 0.05);
-        }
-
-        .mode-icon {
-            font-size: 3rem;
-            color: var(--terra);
-            margin-bottom: 1rem;
-        }
-
-        .mode-card h3 {
-            font-size: 1.25rem;
+        .rail-section h4 {
+            font-size: 0.7rem;
             font-weight: 600;
-            margin-bottom: 0.5rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: rgba(43, 42, 40, 0.45);
+            margin-bottom: 0.75rem;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .rail-tools {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .rail-tool {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            width: 100%;
+            padding: 0.6rem 0.75rem;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.875rem;
+            color: var(--ink);
+            cursor: pointer;
+            text-align: left;
+            transition: background 0.3s ease, border-color 0.3s ease;
+        }
+
+        .rail-tool i {
+            width: 16px;
+            text-align: center;
+            color: rgba(43, 42, 40, 0.4);
+            transition: color 0.3s ease;
+        }
+
+        .rail-tool:hover {
+            background: rgba(180, 107, 78, 0.06);
+        }
+
+        .rail-tool.active {
+            background: rgba(180, 107, 78, 0.10);
+            border-color: rgba(180, 107, 78, 0.35);
+        }
+
+        .rail-tool.active i {
+            color: var(--terra);
+        }
+
+        .rail-hint {
+            margin-top: 0.75rem;
+            font-size: 0.78rem;
+            line-height: 1.5;
+            color: rgba(43, 42, 40, 0.5);
+        }
+
+        .rail-field {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 0.8rem;
+            color: rgba(43, 42, 40, 0.65);
+            margin-bottom: 0.4rem;
+        }
+
+        .rail-field span {
+            font-variant-numeric: tabular-nums;
             color: var(--ink);
         }
 
-        .mode-card p {
-            color: rgba(43, 42, 40, 0.55);
-            font-size: 0.875rem;
+        .tool-rail input[type="range"] {
+            width: 100%;
+            margin-bottom: 0.9rem;
+        }
+
+        .tool-rail .tool-btn {
+            width: 100%;
+            margin-bottom: 0.4rem;
+        }
+
+        /* .tool-btn's base rule is declared further down, so an unscoped
+           .tool-btn-quiet would lose on source order at equal specificity. */
+        .tool-rail .tool-btn-quiet {
+            background: transparent;
+            color: rgba(43, 42, 40, 0.6);
+            border: 1px solid var(--border);
+        }
+
+        /* ── Actions: available whenever there is a document ── */
+        .actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .action-card {
+            background: rgba(255, 255, 255, 0.72);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .action-card h3 {
+            font-size: 1.35rem;
+            color: var(--ink);
+            margin-bottom: 0.25rem;
+        }
+
+        .action-blurb {
+            font-size: 0.82rem;
+            color: rgba(43, 42, 40, 0.5);
+            margin-bottom: 1.25rem;
+            line-height: 1.5;
+        }
+
+        .action-field {
+            margin-bottom: 1.1rem;
+        }
+
+        .action-field > label {
+            display: block;
+            font-size: 0.8rem;
+            color: rgba(43, 42, 40, 0.65);
+            margin-bottom: 0.4rem;
+        }
+
+        .action-field select,
+        .action-field input[type="range"] {
+            width: 100%;
+        }
+
+        .check-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--ink);
+            margin-bottom: 0.35rem;
+        }
+
+        .vtracer-grid label {
+            margin-top: 0.3rem;
+        }
+
+        .action-card .vectorize-btn {
+            width: 100%;
+            margin-top: 0.25rem;
+        }
+
+        @media (max-width: 900px) {
+            .workbench {
+                grid-template-columns: 1fr;
+            }
+            .tool-rail {
+                position: static;
+            }
+            .rail-tools {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+            .rail-tool {
+                width: auto;
+                flex: 1 1 45%;
+            }
         }
 
         .upload-section {
@@ -540,9 +690,6 @@
                 grid-template-columns: 1fr;
             }
 
-            .tool-modes {
-                grid-template-columns: 1fr;
-            }
         }
     </style>
 </head>
@@ -571,32 +718,7 @@
 
             <div class="bg-remover-header">
                 <h1><i class="fas fa-magic"></i> Background Remover</h1>
-                <p>Remove backgrounds and vectorize your images with advanced AI-powered tools</p>
-            </div>
-
-            <!-- Tool Mode Selection -->
-            <div class="tool-modes">
-                <div class="mode-card active" data-mode="interactive">
-                    <div class="mode-icon">
-                        <i class="fas fa-hand-pointer"></i>
-                    </div>
-                    <h3>Interactive Editor</h3>
-                    <p>Click to remove backgrounds with precision control and real-time preview</p>
-                </div>
-                <div class="mode-card" data-mode="vectorizer">
-                    <div class="mode-icon">
-                        <i class="fas fa-vector-square"></i>
-                    </div>
-                    <h3>Logo Vectorizer</h3>
-                    <p>Convert logos to scalable SVG format with detailed vector paths</p>
-                </div>
-                <div class="mode-card" data-mode="upscaler">
-                    <div class="mode-icon">
-                        <i class="fas fa-expand-arrows-alt"></i>
-                    </div>
-                    <h3>Image Upscaler</h3>
-                    <p>Enhance and upscale images while preserving edges and details</p>
-                </div>
+                <p>Clean up an image, then trace it to vector or enlarge it.</p>
             </div>
 
             <!-- Upload Section -->
@@ -617,158 +739,55 @@
 
             <!-- Interactive Editor Section -->
             <div class="editor-section" id="editorSection" style="display: none;">
-                <div class="toolbar">
-                    <div class="tool-group">
-                        <label for="toolMode">
-                            <i class="fas fa-tools"></i> Tool Mode
-                        </label>
-                        <select id="toolMode">
-                            <option value="remove">Remove (Click to delete)</option>
-                            <option value="flatten">Flatten (Click to average color)</option>
-                            <option value="brush">Brush (Paint to remove)</option>
-                            <option value="magic">Magic Wand (Smart select)</option>
-                        </select>
-                    </div>
-
-                    <div class="tool-group">
-                        <label for="toleranceSlider">
-                            <i class="fas fa-crosshairs"></i> Tolerance
-                        </label>
-                        <input type="range" id="toleranceSlider" min="1" max="100" value="15">
-                        <span id="toleranceValue">15</span>
-                    </div>
-
-                    <div class="tool-group" id="brushGroup" style="display: none;">
-                        <label for="brushSize">
-                            <i class="fas fa-circle"></i> Brush Size
-                        </label>
-                        <input type="range" id="brushSize" min="5" max="50" value="20">
-                        <span id="brushSizeValue">20</span>
-                    </div>
-
-                    <div class="tool-group">
-                        <button id="undoBtn" class="tool-btn" disabled>
-                            <i class="fas fa-undo"></i> Undo
-                        </button>
-                        <button id="resetBtn" class="tool-btn">
-                            <i class="fas fa-refresh"></i> Reset
-                        </button>
-                        <button id="startNewBtn" class="tool-btn" style="background: linear-gradient(135deg, var(--success) 0%, var(--success-dk) 100%);">
-                            <i class="fas fa-plus"></i> Start New
-                        </button>
-                    </div>
-
-                    <div class="tool-group" id="vectorModeGroup" style="display: none;">
-                        <label><i class="fas fa-layer-group"></i> Output Format</label>
-                        <div class="vector-mode-toggle">
-                            <button class="vector-mode-btn active" data-vmode="binary">Binary</button>
-                            <button class="vector-mode-btn" data-vmode="color">Color</button>
-                        </div>
-                    </div>
-
-                    <div class="tool-group" id="vectorDetailGroup" style="display: none;">
-                        <label for="detailLevel">
-                            <i class="fas fa-eye"></i> Detail Level
-                        </label>
-                        <select id="detailLevel">
-                            <option value="0.0001">Extreme (Pixel Perfect)</option>
-                            <option value="0.001" selected>Ultra High</option>
-                            <option value="0.005">High</option>
-                            <option value="0.02">Normal</option>
-                            <option value="0.05">Low</option>
-                        </select>
-                    </div>
-
-                    <div class="tool-group" id="vtracerAdvancedGroup" style="display: none;">
-                        <details id="vtracerDetails">
-                            <summary><i class="fas fa-sliders-h"></i> Advanced Settings</summary>
-                            <div class="vtracer-settings">
-                                <div class="vtracer-setting-row">
-                                    <label for="vtracerSpeckle">Noise Removal</label>
-                                    <input type="range" id="vtracerSpeckle" min="1" max="10" value="4">
-                                    <span id="vtracerSpeckleVal">4</span>
-                                </div>
-                                <div class="vtracer-setting-row">
-                                    <label for="vtracerColorPrecision">Color Precision</label>
-                                    <input type="range" id="vtracerColorPrecision" min="2" max="8" value="6">
-                                    <span id="vtracerColorPrecisionVal">6</span>
-                                </div>
-                                <div class="vtracer-setting-row">
-                                    <label for="vtracerLayerDiff">Color Merging</label>
-                                    <input type="range" id="vtracerLayerDiff" min="8" max="64" value="16">
-                                    <span id="vtracerLayerDiffVal">16</span>
-                                </div>
-                                <div class="vtracer-setting-row">
-                                    <label for="vtracerCorner">Corner Sharpness</label>
-                                    <input type="range" id="vtracerCorner" min="10" max="180" value="60">
-                                    <span id="vtracerCornerVal">60</span>
-                                </div>
+                <div class="workbench">
+                    <aside class="tool-rail">
+                        <div class="rail-section">
+                            <h4>Tools</h4>
+                            <div class="rail-tools" role="radiogroup" aria-label="Editing tool">
+                                <button class="rail-tool active" data-tool="remove" role="radio" aria-checked="true">
+                                    <i class="fas fa-eraser"></i><span>Remove</span>
+                                </button>
+                                <button class="rail-tool" data-tool="flatten" role="radio" aria-checked="false">
+                                    <i class="fas fa-fill-drip"></i><span>Flatten</span>
+                                </button>
+                                <button class="rail-tool" data-tool="brush" role="radio" aria-checked="false">
+                                    <i class="fas fa-paint-brush"></i><span>Brush</span>
+                                </button>
+                                <button class="rail-tool" data-tool="magic" role="radio" aria-checked="false">
+                                    <i class="fas fa-magic"></i><span>Magic Wand</span>
+                                </button>
                             </div>
-                        </details>
-                    </div>
-
-                    <div class="tool-group" id="upscaleGroup" style="display: none;">
-                        <label for="scaleFactorSlider">
-                            <i class="fas fa-expand-arrows-alt"></i> Scale Factor
-                        </label>
-                        <input type="range" id="scaleFactorSlider" min="1" max="8" value="2">
-                        <span id="scaleFactorValue">2x</span>
-                    </div>
-
-                    <div class="tool-group" id="upscaleMethodGroup" style="display: none;">
-                        <label for="upscaleMethod">
-                            <i class="fas fa-cogs"></i> Method
-                        </label>
-                        <select id="upscaleMethod">
-                            <option value="smart_edge" selected>Smart Edge</option>
-                            <option value="super_resolution">Super Resolution</option>
-                            <option value="pixel_art">Pixel Art</option>
-                            <option value="hybrid">Hybrid</option>
-                        </select>
-                    </div>
-
-                    <div class="tool-group" id="enhancementGroup" style="display: none;">
-                        <label for="logoType">
-                            <i class="fas fa-palette"></i> Logo Type
-                        </label>
-                        <select id="logoType">
-                            <option value="styled" selected>Styled (Gradients/Effects)</option>
-                            <option value="flat_color">Flat Color</option>
-                        </select>
-                    </div>
-
-                    <div class="tool-group" id="sharpeningGroup" style="display: none;">
-                        <label>
-                            <i class="fas fa-adjust"></i> Enhancements
-                        </label>
-                        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem;">
-                                <input type="checkbox" id="preserveContrast" checked>
-                                Preserve Contrast
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem;">
-                                <input type="checkbox" id="flattenBackground">
-                                Flatten Background
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem;">
-                                <input type="checkbox" id="enhanceEdges" checked>
-                                Enhance Edges
-                            </label>
+                            <p class="rail-hint" id="toolHint">Click an area to delete it.</p>
                         </div>
-                    </div>
 
-                    <div class="tool-group" id="vectorizeButtonGroup" style="display: none;">
-                        <button id="vectorizeBtn" class="vectorize-btn" disabled>
-                            <i class="fas fa-vector-square"></i> Vectorize
-                        </button>
-                    </div>
+                        <div class="rail-section">
+                            <h4>Options</h4>
+                            <label class="rail-field" for="toleranceSlider">
+                                Tolerance <span id="toleranceValue">15</span>
+                            </label>
+                            <input type="range" id="toleranceSlider" min="1" max="100" value="15">
 
-                    <div class="tool-group" id="upscaleButtonGroup" style="display: none;">
-                        <button id="upscaleBtn" class="vectorize-btn" disabled>
-                            <i class="fas fa-expand-arrows-alt"></i> Upscale
-                        </button>
-                    </div>
-                </div>
+                            <div id="brushGroup" style="display: none;">
+                                <label class="rail-field" for="brushSize">
+                                    Brush size <span id="brushSizeValue">20</span>
+                                </label>
+                                <input type="range" id="brushSize" min="5" max="50" value="20">
+                            </div>
+                        </div>
+
+                        <div class="rail-section">
+                            <h4>History</h4>
+                            <button id="undoBtn" class="tool-btn" disabled>
+                                <i class="fas fa-undo"></i> Undo
+                            </button>
+                            <button id="resetBtn" class="tool-btn">
+                                <i class="fas fa-rotate-left"></i> Reset
+                            </button>
+                            <button id="startNewBtn" class="tool-btn tool-btn-quiet">
+                                <i class="fas fa-plus"></i> Start new
+                            </button>
+                        </div>
+                    </aside>
 
                 <div class="canvas-container">
                     <div class="canvas-wrapper">
@@ -786,6 +805,99 @@
                     </div>
                 </div>
 
+                </div>
+
+                <div class="actions">
+                    <section class="action-card">
+                        <h3>Vectorize</h3>
+                        <p class="action-blurb">Trace the image into a scalable SVG.</p>
+
+                        <div class="action-field" id="vectorModeGroup">
+                            <label>Output format</label>
+                            <div class="vector-mode-toggle">
+                                <button class="vector-mode-btn active" data-vmode="binary">Binary</button>
+                                <button class="vector-mode-btn" data-vmode="color">Color</button>
+                            </div>
+                        </div>
+
+                        <div class="action-field" id="vectorDetailGroup">
+                            <label for="detailLevel">Detail level</label>
+                            <select id="detailLevel">
+                                <option value="0.0001">Extreme (Pixel Perfect)</option>
+                                <option value="0.001" selected>Ultra High</option>
+                                <option value="0.005">High</option>
+                                <option value="0.02">Normal</option>
+                                <option value="0.05">Low</option>
+                            </select>
+                        </div>
+
+                        <div class="action-field" id="vtracerAdvancedGroup" style="display: none;">
+                            <label>Colour tracing</label>
+                            <div class="vtracer-grid">
+                                <label class="rail-field" for="vtracerSpeckle">Speckle filter <span id="vtracerSpeckleVal">4</span></label>
+                                <input type="range" id="vtracerSpeckle" min="0" max="20" value="4">
+                                <label class="rail-field" for="vtracerColorPrecision">Colour precision <span id="vtracerColorPrecisionVal">6</span></label>
+                                <input type="range" id="vtracerColorPrecision" min="1" max="8" value="6">
+                                <label class="rail-field" for="vtracerLayerDiff">Layer difference <span id="vtracerLayerDiffVal">16</span></label>
+                                <input type="range" id="vtracerLayerDiff" min="0" max="64" value="16">
+                                <label class="rail-field" for="vtracerCorner">Corner threshold <span id="vtracerCornerVal">60</span></label>
+                                <input type="range" id="vtracerCorner" min="0" max="180" value="60">
+                            </div>
+                            <p class="action-blurb" id="vtracerDetails"></p>
+                        </div>
+
+                        <button id="vectorizeBtn" class="vectorize-btn" disabled>
+                            <i class="fas fa-vector-square"></i> Vectorize
+                        </button>
+                    </section>
+
+                    <section class="action-card">
+                        <h3>Upscale</h3>
+                        <p class="action-blurb">Enlarge the image while preserving edges.</p>
+
+                        <div class="action-field" id="upscaleGroup">
+                            <label class="rail-field" for="scaleFactorSlider">
+                                Scale factor <span id="scaleFactorValue">2x</span>
+                            </label>
+                            <input type="range" id="scaleFactorSlider" min="2" max="8" value="2">
+                        </div>
+
+                        <div class="action-field" id="upscaleMethodGroup">
+                            <label for="upscaleMethod">Method</label>
+                            <select id="upscaleMethod">
+                                <option value="smart_edge" selected>Smart Edge</option>
+                                <option value="super_resolution">Super Resolution</option>
+                                <option value="pixel_art">Pixel Art</option>
+                                <option value="hybrid">Hybrid</option>
+                            </select>
+                        </div>
+
+                        <div class="action-field" id="sharpeningGroup">
+                            <label for="logoType">Image type</label>
+                            <select id="logoType">
+                                <option value="styled" selected>Styled (Gradients/Effects)</option>
+                                <option value="flat_color">Flat Color</option>
+                            </select>
+                        </div>
+
+                        <div class="action-field" id="enhancementGroup">
+                            <label>Enhancements</label>
+                            <label class="check-row">
+                                <input type="checkbox" id="preserveContrast" checked> Preserve contrast
+                            </label>
+                            <label class="check-row">
+                                <input type="checkbox" id="flattenBackground"> Flatten background
+                            </label>
+                            <label class="check-row">
+                                <input type="checkbox" id="enhanceEdges" checked> Enhance edges
+                            </label>
+                        </div>
+
+                        <button id="upscaleBtn" class="vectorize-btn" disabled>
+                            <i class="fas fa-up-right-and-down-left-from-center"></i> Upscale
+                        </button>
+                    </section>
+                </div>
                 <!-- Download Section -->
                 <div class="download-section" id="downloadSection" style="display: none;">
                     <div style="text-align: center; padding: 1rem; background: rgba(255, 255, 255, 0.8); border-radius: 12px; border: 1px solid var(--border);">
@@ -817,9 +929,9 @@
                     <li>Use <strong>Remove</strong> tool to delete unwanted background areas</li>
                     <li>Use <strong>Flatten</strong> tool to smooth color variations and gradients</li>
                     <li>Adjust tolerance for better color matching precision</li>
-                    <li>Interactive mode gives you the most control for editing</li>
-                    <li>Vectorizer mode is perfect for logos and simple graphics</li>
-                    <li>Upscaler mode enhances image quality with advanced algorithms</li>
+                    <li>Use <strong>Magic Wand</strong> to clear one colour everywhere at once</li>
+                    <li><strong>Vectorize</strong> suits logos and flat graphics; Color output keeps gradients</li>
+                    <li><strong>Upscale</strong> works best once the background is already clean</li>
                     <li>Higher tolerance removes/flattens more similar colors</li>
                 </ul>
             </div>
@@ -948,90 +1060,55 @@
         }
 
         // Background Remover Specific JavaScript
-        let currentMode = 'interactive';
+        let currentTool = 'remove';   // remove | flatten | brush | magic
+        let lastOperation = 'edit';   // edit | vectorize | upscale
         let vectorizerColorMode = 'binary'; // 'binary' or 'color'
         let canvas, ctx, originalImageData, editHistory = [];
         let isDrawing = false;
         let processedImageData = null; // Store processed results
         let currentState = 'original'; // Track current display state: 'original', 'processed'
 
-        // Mode switching
-        document.querySelectorAll('.mode-card').forEach(card => {
-            card.addEventListener('click', function() {
-                const previousMode = currentMode;
-                document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('active'));
-                this.classList.add('active');
-                currentMode = this.dataset.mode;
+        // ── Tool rail ───────────────────────────────────────────────────
+        // One surface: the tool rail selects how a click edits the document,
+        // and Vectorize / Upscale are actions available at any time rather
+        // than modes you commit to before you can see the image.
 
-                // Reset to original image when switching tools (except for first load)
-                if (canvas && originalImageData && previousMode !== currentMode) {
-                    resetToOriginal();
-                }
+        const TOOL_HINTS = {
+            remove:  'Click an area to delete it.',
+            flatten: 'Click an area to average it to one colour.',
+            brush:   'Drag over the image to erase.',
+            magic:   'Click a colour to remove it everywhere in the image.'
+        };
 
-                updateUIForMode();
+        function setTool(tool) {
+            currentTool = tool;
 
-                // Enable/disable buttons based on mode and whether image is loaded
-                const hasImage = canvas && originalImageData;
-                if (hasImage) {
-                    if (currentMode === 'vectorizer') {
-                        document.getElementById('vectorizeBtn').disabled = false;
-                    } else if (currentMode === 'upscaler') {
-                        document.getElementById('upscaleBtn').disabled = false;
-                    }
-                }
+            document.querySelectorAll('.rail-tool').forEach(btn => {
+                const active = btn.dataset.tool === tool;
+                btn.classList.toggle('active', active);
+                btn.setAttribute('aria-checked', active ? 'true' : 'false');
             });
+
+            document.getElementById('brushGroup').style.display =
+                tool === 'brush' ? 'block' : 'none';
+            document.getElementById('toolHint').textContent = TOOL_HINTS[tool] || '';
+        }
+
+        document.querySelectorAll('.rail-tool').forEach(btn => {
+            btn.addEventListener('click', () => setTool(btn.dataset.tool));
         });
 
-        function updateUIForMode() {
-            const vectorModeGroup = document.getElementById('vectorModeGroup');
-            const vectorDetailGroup = document.getElementById('vectorDetailGroup');
-            const vtracerAdvancedGroup = document.getElementById('vtracerAdvancedGroup');
-            const upscaleGroup = document.getElementById('upscaleGroup');
-            const upscaleMethodGroup = document.getElementById('upscaleMethodGroup');
-            const enhancementGroup = document.getElementById('enhancementGroup');
-            const sharpeningGroup = document.getElementById('sharpeningGroup');
-            const vectorizeButtonGroup = document.getElementById('vectorizeButtonGroup');
-            const upscaleButtonGroup = document.getElementById('upscaleButtonGroup');
-            const instructionText = document.getElementById('instructionText');
-            const instructionSubtext = document.getElementById('instructionSubtext');
+        function updateVectorOptions() {
+            const isColour = vectorizerColorMode === 'color';
+            document.getElementById('vtracerAdvancedGroup').style.display = isColour ? 'block' : 'none';
+            document.getElementById('vectorDetailGroup').style.display = isColour ? 'none' : 'block';
+        }
 
-            // Hide all mode-specific controls first
-            vectorModeGroup.style.display = 'none';
-            vectorDetailGroup.style.display = 'none';
-            vtracerAdvancedGroup.style.display = 'none';
-            upscaleGroup.style.display = 'none';
-            upscaleMethodGroup.style.display = 'none';
-            enhancementGroup.style.display = 'none';
-            sharpeningGroup.style.display = 'none';
-            vectorizeButtonGroup.style.display = 'none';
-            upscaleButtonGroup.style.display = 'none';
-
-            switch(currentMode) {
-                case 'interactive':
-                    instructionText.textContent = 'Click areas to remove or flatten colors';
-                    instructionSubtext.textContent = 'Choose Remove to delete areas, or Flatten to average colors. Results appear instantly!';
-                    break;
-                case 'vectorizer':
-                    vectorModeGroup.style.display = 'block';
-                    if (vectorizerColorMode === 'color') {
-                        vtracerAdvancedGroup.style.display = 'block';
-                    } else {
-                        vectorDetailGroup.style.display = 'block';
-                    }
-                    vectorizeButtonGroup.style.display = 'block';
-                    instructionText.textContent = 'Edit image, then click Vectorize';
-                    instructionSubtext.textContent = 'Remove/flatten areas first, then convert to scalable vector format';
-                    break;
-                case 'upscaler':
-                    upscaleGroup.style.display = 'block';
-                    upscaleMethodGroup.style.display = 'block';
-                    enhancementGroup.style.display = 'block';
-                    sharpeningGroup.style.display = 'block';
-                    upscaleButtonGroup.style.display = 'block';
-                    instructionText.textContent = 'Edit image, then click Upscale';
-                    instructionSubtext.textContent = 'Remove/flatten areas first, then enhance and upscale with advanced options';
-                    break;
-            }
+        // Both actions operate on whatever is on the canvas, so they become
+        // available as soon as there is a document to act on.
+        function setActionsEnabled(enabled) {
+            document.getElementById('vectorizeBtn').disabled = !enabled;
+            document.getElementById('upscaleBtn').disabled = !enabled;
         }
 
         // File upload handling
@@ -1113,12 +1190,7 @@
 
                 document.getElementById('canvasOverlay').style.display = 'none';
 
-                // Enable buttons based on current mode
-                if (currentMode === 'vectorizer') {
-                    document.getElementById('vectorizeBtn').disabled = false;
-                } else if (currentMode === 'upscaler') {
-                    document.getElementById('upscaleBtn').disabled = false;
-                }
+                setActionsEnabled(true);
 
                 setupCanvasInteraction();
             };
@@ -1126,12 +1198,10 @@
         }
 
         function setupCanvasInteraction() {
-            const toolMode = document.getElementById('toolMode');
             const toleranceSlider = document.getElementById('toleranceSlider');
             const toleranceValue = document.getElementById('toleranceValue');
             const brushSize = document.getElementById('brushSize');
             const brushSizeValue = document.getElementById('brushSizeValue');
-            const brushGroup = document.getElementById('brushGroup');
             const scaleFactorSlider = document.getElementById('scaleFactorSlider');
             const scaleFactorValue = document.getElementById('scaleFactorValue');
 
@@ -1149,10 +1219,6 @@
                 });
             }
 
-            toolMode.addEventListener('change', () => {
-                brushGroup.style.display = toolMode.value === 'brush' ? 'block' : 'none';
-            });
-
             canvas.addEventListener('click', handleCanvasClick);
             canvas.addEventListener('mousedown', handleMouseDown);
             canvas.addEventListener('mousemove', handleMouseMove);
@@ -1160,31 +1226,30 @@
         }
 
         function handleCanvasClick(e) {
-            const toolMode = document.getElementById('toolMode').value;
-            if (toolMode === 'brush') return;
+            if (currentTool === 'brush') return;
 
             const rect = canvas.getBoundingClientRect();
             const x = Math.floor((e.clientX - rect.left) * (canvas.width / rect.width));
             const y = Math.floor((e.clientY - rect.top) * (canvas.height / rect.height));
             const tolerance = parseInt(document.getElementById('toleranceSlider').value);
 
-            if (toolMode === 'remove') {
+            if (currentTool === 'remove') {
                 removeBackground(x, y, tolerance);
-            } else if (toolMode === 'flatten') {
+            } else if (currentTool === 'flatten') {
                 flattenArea(x, y, tolerance);
-            } else if (toolMode === 'magic') {
+            } else if (currentTool === 'magic') {
                 magicWandRemove(x, y, tolerance);
             }
         }
 
         function handleMouseDown(e) {
-            if (document.getElementById('toolMode').value !== 'brush') return;
+            if (currentTool !== 'brush') return;
             isDrawing = true;
             handleBrushAction(e);
         }
 
         function handleMouseMove(e) {
-            if (!isDrawing || document.getElementById('toolMode').value !== 'brush') return;
+            if (!isDrawing || currentTool !== 'brush') return;
             handleBrushAction(e);
         }
 
@@ -1263,7 +1328,7 @@
             saveToHistory();
 
             // Auto-apply mode-specific processing
-            setTimeout(() => applyModeProcessing(), 100);
+            setTimeout(() => afterEdit(), 100);
         }
 
         function magicWandRemove(startX, startY, tolerance) {
@@ -1297,7 +1362,7 @@
             saveToHistory();
 
             // Auto-apply mode-specific processing
-            setTimeout(() => applyModeProcessing(), 100);
+            setTimeout(() => afterEdit(), 100);
         }
 
         function flattenArea(startX, startY, tolerance) {
@@ -1332,7 +1397,7 @@
             saveToHistory();
 
             // Auto-apply mode-specific processing
-            setTimeout(() => applyModeProcessing(), 100);
+            setTimeout(() => afterEdit(), 100);
         }
 
         function brushRemove(centerX, centerY, size) {
@@ -1352,7 +1417,7 @@
             ctx.putImageData(imageData, 0, 0);
 
             // Auto-apply mode-specific processing for brush tool too
-            setTimeout(() => applyModeProcessing(), 100);
+            setTimeout(() => afterEdit(), 100);
         }
 
         function getPixelColor(data, x, y, width) {
@@ -1460,15 +1525,7 @@
                 document.querySelectorAll('.vector-mode-btn').forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
                 vectorizerColorMode = this.dataset.vmode;
-                const detailGroup = document.getElementById('vectorDetailGroup');
-                const advancedGroup = document.getElementById('vtracerAdvancedGroup');
-                if (vectorizerColorMode === 'color') {
-                    detailGroup.style.display = 'none';
-                    advancedGroup.style.display = 'block';
-                } else {
-                    advancedGroup.style.display = 'none';
-                    detailGroup.style.display = 'block';
-                }
+                updateVectorOptions();
             });
         });
 
@@ -1516,17 +1573,8 @@
             document.getElementById('instructionSubtext').textContent = 'Use the tolerance slider to adjust sensitivity';
         });
 
-        function applyModeProcessing() {
-            if (currentMode === 'interactive') {
-                // Just show download options for background removed image
-                showDownloadOptions();
-            } else if (currentMode === 'upscaler') {
-                // Enable upscaler button after background processing
-                document.getElementById('upscaleBtn').disabled = false;
-                document.getElementById('upscaleBtn').innerHTML = '<i class="fas fa-expand-arrows-alt"></i> Ready to Upscale';
-            }
-            // For vectorizer mode, user must click the button
-            // No auto-processing
+        function afterEdit() {
+            showDownloadOptions();
         }
 
         function showDownloadOptions() {
@@ -1802,6 +1850,7 @@
         }
 
         function displayColorSVG(svgContent) {
+            lastOperation = 'vectorize';
             const svgPreview = document.getElementById('svgPreviewContainer');
             const svgImg = document.getElementById('svgPreviewImg');
 
@@ -1931,6 +1980,7 @@
         }
 
         async function displayVectorizedImage(base64Image) {
+            lastOperation = 'vectorize';
             // Display vectorized binary image in canvas
             return new Promise(resolve => {
                 const img = new Image();
@@ -1960,6 +2010,7 @@
         }
 
         async function displayUpscaledImage(base64Image) {
+            lastOperation = 'upscale';
             // Store current state as processed
             return new Promise(resolve => {
                 const img = new Image();
@@ -2118,16 +2169,16 @@
             const link = document.createElement('a');
 
             // Set appropriate filename based on mode
-            if (currentMode === 'upscaler') {
+            if (lastOperation === 'upscale') {
                 link.download = 'upscaled-image.png';
-            } else if (currentMode === 'vectorizer') {
+            } else if (lastOperation === 'vectorize') {
                 link.download = 'vectorized-preview.png';
             } else {
                 link.download = 'background-removed.png';
             }
 
             // For upscaled images, download the full-resolution version
-            if (currentState === 'processed' && processedImageData && currentMode === 'upscaler') {
+            if (currentState === 'processed' && processedImageData && lastOperation === 'upscale') {
                 const actualWidth = parseInt(canvas.getAttribute('data-actual-width'));
                 const actualHeight = parseInt(canvas.getAttribute('data-actual-height'));
 
@@ -2211,7 +2262,8 @@
         }
 
         // Initialize
-        updateUIForMode();
+        setTool('remove');
+        updateVectorOptions();
 
         // Test connection after a short delay
         setTimeout(() => {

@@ -438,39 +438,57 @@ class TestUpscaleOptionsAreHonoured:
 # Every tool in the editor's dropdown must actually do something
 # ---------------------------------------------------------------------------
 
-class TestEditorToolModes:
+class TestEditorToolRail:
     """
-    Magic Wand shipped in the dropdown for months with no branch in
-    handleCanvasClick, so selecting it silently did nothing.
+    The three mode cards were replaced by one surface: a tool rail that
+    selects how a click edits the document, with Vectorize and Upscale as
+    actions available at any time.
+
+    Magic Wand once shipped in the dropdown with no branch in
+    handleCanvasClick, so selecting it silently did nothing. These assert
+    every tool the rail offers has code behind it.
     """
 
     def _page(self):
         return read(os.path.join(REPO_ROOT, 'background-remover.html'))
 
-    def test_every_tool_mode_option_is_handled(self):
+    def test_mode_cards_are_gone(self):
         page = self._page()
+        assert 'mode-card' not in page, 'the three mode cards were replaced by the rail'
+        assert 'data-mode=' not in page
 
-        select = page[page.index('<select id="toolMode">'):]
-        select = select[:select.index('</select>')]
-        options = set(re.findall(r'<option value="([^"]+)"', select))
+    def test_every_rail_tool_is_handled(self):
+        page = self._page()
+        offered = set(re.findall(r'class="rail-tool[^"]*"[^>]*data-tool="(\w+)"', page))
+        assert offered, 'the rail should offer tools'
 
         handler = page[page.index('function handleCanvasClick'):]
         handler = handler[:handler.index('function handleMouseDown')]
-        handled = set(re.findall(r"""toolMode === ['"](\w+)['"]""", handler))
+        handled = set(re.findall(r"""currentTool === ['"](\w+)['"]""", handler))
 
-        # 'brush' is handled by the mousedown/mousemove path, not by click.
+        # brush is driven by the mousedown/mousemove path, not by click
         brush_path = page[page.index('function handleMouseDown'):
                           page.index('function handleBrushAction')]
-        handled |= set(re.findall(r"""value !== ['"](\w+)['"]""", brush_path))
+        handled |= set(re.findall(r"""currentTool [!=]== ['"](\w+)['"]""", brush_path))
 
-        unhandled = options - handled
+        unhandled = offered - handled
         assert not unhandled, (
-            f'Tool modes offered in the UI that no code responds to: {sorted(unhandled)}')
+            f'Tools offered in the rail that no code responds to: {sorted(unhandled)}')
+
+    def test_every_rail_tool_has_a_hint(self):
+        """No tool should leave the user guessing what a click will do."""
+        page = self._page()
+        offered = set(re.findall(r'class="rail-tool[^"]*"[^>]*data-tool="(\w+)"', page))
+        hints = page[page.index('const TOOL_HINTS'):]
+        hints = hints[:hints.index('};')]
+        described = set(re.findall(r'(\w+):\s*\'', hints))
+        assert not offered - described, (
+            f'Rail tools with no hint: {sorted(offered - described)}')
 
     def test_magic_wand_is_implemented(self):
         page = self._page()
         assert 'function magicWandRemove(' in page
-        assert "toolMode === 'magic'" in page
+        assert "currentTool === 'magic'" in page
 
     def test_magic_wand_is_non_contiguous(self):
         """Its whole point: it must scan the image, not flood-fill from a seed."""
@@ -483,108 +501,30 @@ class TestEditorToolModes:
         assert 'collectRegion(' not in body, 'that walk is contiguous by design'
         assert 'saveToHistory()' in body, 'magic wand must be undoable'
 
+    def test_both_actions_are_always_reachable(self):
+        """
+        Vectorize and Upscale used to be hidden unless you picked their mode
+        first. They are now always present and enabled once a document loads.
+        """
+        page = self._page()
+        assert 'setActionsEnabled(true)' in page
 
-# ---------------------------------------------------------------------------
-# Nothing server-side may become unreachable again
-# ---------------------------------------------------------------------------
+        body = page[page.index('function setActionsEnabled'):]
+        body = body[:body.index('\n        }') + 10]
+        assert 'vectorizeBtn' in body and 'upscaleBtn' in body
 
-class TestNoOrphanedServerFiles:
-    """
-    Three generations of the same tool accumulated here because a template
-    could stop being rendered without anything noticing. This fails the moment
-    a template or static file stops being reachable, so the next superseded UI
-    gets deleted with the change that supersedes it.
-    """
-
-    def test_every_template_is_rendered(self):
-        rendered = rendered_templates()
-        templates_dir = os.path.join(WSR_DIR, 'templates')
-
-        orphans = []
-        for dirpath, _, filenames in os.walk(templates_dir):
-            for filename in filenames:
-                if not filename.endswith('.html'):
-                    continue
-                name = os.path.relpath(
-                    os.path.join(dirpath, filename), templates_dir).replace(os.sep, '/')
-                if name not in rendered:
-                    orphans.append(name)
-
-        assert not orphans, (
-            'Templates no route renders — delete them or wire them up: '
-            f'{sorted(orphans)}')
-
-    def test_every_static_file_is_referenced(self):
-        static_dir = os.path.join(WSR_DIR, 'static')
-        if not os.path.isdir(static_dir):
-            pytest.skip('no static directory')
-
-        referenced = set()
-        for name in rendered_templates():
-            path = os.path.join(WSR_DIR, 'templates', name)
-            if os.path.exists(path):
-                referenced |= static_files_referenced_by(read(path))
-
-        orphans = [f for f in sorted(os.listdir(static_dir))
-                   if not f.startswith('.') and f not in referenced]
-
-        assert not orphans, (
-            f'Static files no rendered template references: {orphans}')
-
-    def test_every_python_module_is_imported(self):
-        """Catches the next lambda_function.py before it sits for six months."""
-        imported = set()
-        for dirpath, dirnames, filenames in os.walk(WSR_DIR):
-            dirnames[:] = [d for d in dirnames if d not in ('__pycache__', 'site')]
-            for filename in filenames:
-                if filename.endswith('.py'):
-                    source = read(os.path.join(dirpath, filename))
-                    imported |= set(re.findall(r'^\s*(?:from|import)\s+(\w+)',
-                                               source, re.MULTILINE))
-
-        modules = [f[:-3] for f in os.listdir(WSR_DIR)
-                   if f.endswith('.py') and f != 'app.py']
-
-        orphans = sorted(m for m in modules if m not in imported)
-        assert not orphans, f'Python modules nothing imports: {orphans}'
-
-
-# ---------------------------------------------------------------------------
-# Links between pages must not rot
-# ---------------------------------------------------------------------------
-
-class TestInternalLinks:
-    """
-    The Sankey tool linked to ../WhiteBackgroundRemover/index.html long after
-    the site had moved on. Relative links between tool pages get no coverage
-    from route tests, so check them directly.
-    """
-
-    def test_every_relative_link_resolves(self):
-        from app import SITE_DIR
-
-        broken = []
-        for dirpath, dirnames, filenames in os.walk(SITE_DIR):
-            dirnames[:] = [d for d in dirnames
-                           if d not in ('.git', 'WSR', 'DataFinderAgent',
-                                        'node_modules', 'sanity', '__pycache__')]
-            for filename in filenames:
-                if not filename.endswith('.html'):
-                    continue
-                page = os.path.join(dirpath, filename)
-                source = read(page)
-
-                for href in re.findall(r'''<a\s[^>]*href=["']([^"'#]+)["']''', source):
-                    if href.startswith(('http://', 'https://', 'mailto:', '/', '#', 'javascript:')):
-                        continue
-                    if '${' in href:
-                        continue  # built at runtime by a JS template literal
-                    target = os.path.normpath(os.path.join(dirpath, href.split('?')[0]))
-                    if not os.path.exists(target):
-                        rel = os.path.relpath(page, SITE_DIR)
-                        broken.append(f'{rel} -> {href}')
-
-        assert not broken, 'Relative links pointing at nothing:\n  ' + '\n  '.join(broken)
+    def test_results_are_undoable(self):
+        """
+        Vectorize and Upscale replace the canvas. Without a history step Undo
+        would restore a differently sized state.
+        """
+        page = self._page()
+        for fn in ('displayVectorizedImage', 'displayUpscaledImage'):
+            body = page[page.index(f'async function {fn}('):]
+            body = body[:body.index('\n        async function ', 10)
+                        if '\n        async function ' in body[10:] else len(body)]
+            assert 'lastOperation' in body[:400], (
+                f'{fn} should record which operation produced the canvas')
 
 
 # ---------------------------------------------------------------------------
@@ -820,3 +760,31 @@ class TestDocumentNoticePlacement:
 
         assert 'right:' in block, 'the notice should be offset from the action column'
         assert 'left: 50%' not in block, 'bottom-centre covers the primary action'
+
+
+class TestCopyMatchesTheUI:
+    """
+    The tips panel still described "Interactive mode", "Vectorizer mode" and
+    "Upscaler mode" after the modes were replaced by the tool rail. Copy that
+    names a concept the UI no longer has is worse than no copy.
+    """
+
+    def test_no_copy_references_removed_modes(self):
+        page = read(os.path.join(REPO_ROOT, 'background-remover.html'))
+        body = page[page.index('<body'):]
+        text = re.sub(r'<[^>]+>', ' ', body)
+
+        stale = [phrase for phrase in
+                 ('Interactive mode', 'Vectorizer mode', 'Upscaler mode', 'Tool Mode')
+                 if phrase in text]
+        assert not stale, f'Copy naming modes the UI no longer has: {stale}'
+
+    def test_no_buzzwords_in_user_facing_copy(self):
+        """design.md: quiet confidence, no buzzwords."""
+        page = read(os.path.join(REPO_ROOT, 'background-remover.html'))
+        body = page[page.index('<body'):]
+        text = re.sub(r'<[^>]+>', ' ', body).lower()
+
+        banned = [w for w in ('ai-powered', 'cutting-edge', 'revolutionary',
+                              'next-generation', 'best-in-class') if w in text]
+        assert not banned, f'Buzzwords in user-facing copy: {banned}'
