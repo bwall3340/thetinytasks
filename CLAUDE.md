@@ -422,6 +422,7 @@ console change.
 | Feature | Status | Modules Affected | Notes |
 |---------|--------|-----------------|-------|
 | Unified `/<module>/admin` routes | needs review | Market, Meal, Site Admin, Shared Auth | Market moved from `/market-admin`; shared Google OAuth replaces two duplicate flows |
+| Tool page scroll fix (`script.js` guards) | needs review | Home Page, Background Remover Pro UI | Cover-page scroll hijacking no longer runs on pages without a cover |
 | Site image manager | needs review | Site Admin, Home Page, About, Docker | Drag-and-drop uploads to Sanity CDN; `/assets` resolves Sanity → committed file → transparent pixel |
 
 Status: `scoping` → `in progress` → `needs review` → `done`
@@ -429,6 +430,8 @@ Status: `scoping` → `in progress` → `needs review` → `done`
 ---
 
 ## 🔒 Learned Rules
+
+**2026-09-18 — Shared Script on a Page Missing Its Elements**: `background-remover.html` loads `script.js` (the home page controller), but has no `#cover-page`. `isOnCoverPage` initialised to `true` and nothing could clear it, so the non-passive `wheel` handler called `preventDefault()` on every downward scroll — the page felt sticky. `bindEvents()` also threw on the absent `#modal-close-btn`. **Prevention rule**: any script shared across pages must null-guard every `getElementById`/`querySelector` before use, and derive state from the DOM (`this.isOnCoverPage = !!this.coverPage`) rather than assuming a page shape. Never register a non-passive `wheel`/`touchmove` listener that can `preventDefault()` unless the element it depends on is present.
 
 **2026-05-06 — Schema Migration**: Added columns to an existing table by only updating the SQLAlchemy model. `db.create_all()` creates missing tables but never alters existing ones, so the new columns were absent in production → `UndefinedColumn` crash on first request. **Prevention rule**: Any time a column is added to an existing model, also append an `ALTER TABLE … ADD COLUMN` statement to the `_migrations` list in `WSR/app.py`. The try/except wrapper makes it safe to re-run (silently ignored if column already exists).
 
