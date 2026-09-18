@@ -476,9 +476,11 @@ class TestEditorToolModes:
         """Its whole point: it must scan the image, not flood-fill from a seed."""
         page = self._page()
         body = page[page.index('function magicWandRemove('):]
-        body = body[:body.index('function flattenArea(')]
-        assert 'for (let y = 0' in body and 'for (let x = 0' in body
+        body = body[:body.index('\n        function ', 10)]
+
+        assert 'data.length' in body, 'magic wand must scan the whole buffer'
         assert 'stack' not in body, 'magic wand should not be a flood fill'
+        assert 'collectRegion(' not in body, 'that walk is contiguous by design'
         assert 'saveToHistory()' in body, 'magic wand must be undoable'
 
 
@@ -583,3 +585,145 @@ class TestInternalLinks:
                         broken.append(f'{rel} -> {href}')
 
         assert not broken, 'Relative links pointing at nothing:\n  ' + '\n  '.join(broken)
+
+
+# ---------------------------------------------------------------------------
+# Editor foundation — the document must survive import
+# ---------------------------------------------------------------------------
+
+class TestDocumentModel:
+    """
+    Every upload used to be downscaled to 800x600 before editing, and that
+    downscaled canvas was what went to the backend — so a 2x upscale of a
+    2400px logo returned something smaller than the file the user supplied.
+    """
+
+    def _page(self):
+        return read(os.path.join(REPO_ROOT, 'background-remover.html'))
+
+    def test_uploads_are_not_downscaled_for_display(self):
+        page = self._page()
+        loader = page[page.index('function loadImageToCanvas'):]
+        loader = loader[:loader.index('function setupCanvasInteraction')]
+
+        assert 'maxWidth = 800' not in loader, 'the 800x600 import cap is back'
+        assert 'maxHeight = 600' not in loader
+        assert 'MAX_DOCUMENT_PIXELS' in loader, (
+            'the document should only be bounded by a memory ceiling')
+
+    def test_canvas_scales_proportionally(self):
+        """max-width alone squashes a canvas; height:auto keeps the ratio."""
+        page = self._page()
+        rule = page[page.index('#imageCanvas {'):]
+        rule = rule[:rule.index('}')]
+        assert 'max-width: 100%' in rule
+        assert 'height: auto' in rule, 'a native-resolution canvas would be squashed'
+
+    def test_click_mapping_uses_bounding_rect(self):
+        """Display is CSS-scaled, so coordinates must come from the rect."""
+        page = self._page()
+        handler = page[page.index('function handleCanvasClick'):]
+        handler = handler[:handler.index('function handleMouseDown')]
+        assert 'getBoundingClientRect()' in handler
+        assert 'offsetX' not in handler and 'offsetY' not in handler
+
+
+class TestEditPerformance:
+    """
+    The import cap existed to hide a slow flood fill: a Set of "x,y" strings
+    plus an object per pixel cost ~7s on a 2400x2400 document. Removing the cap
+    is only safe while the typed-array implementation is in place.
+    """
+
+    def _page(self):
+        return read(os.path.join(REPO_ROOT, 'background-remover.html'))
+
+    def test_region_fill_uses_typed_arrays(self):
+        page = self._page()
+        body = page[page.index('function collectRegion('):]
+        body = body[:body.index('function removeBackground(')]
+
+        assert 'Uint8Array' in body, 'visited mask should be a typed array'
+        assert 'Int32Array' in body, 'the stack should be a flat integer array'
+        assert 'new Set' not in body, 'a Set of coordinate strings is the slow path'
+        assert 'push({' not in body, 'no per-pixel object allocation'
+
+    @pytest.mark.parametrize('fn', ['removeBackground', 'flattenArea'])
+    def test_fills_share_one_region_walk(self, fn):
+        page = self._page()
+        body = page[page.index(f'function {fn}('):]
+        body = body[:body.index('\n        function ', 10)]
+        assert 'collectRegion(' in body, f'{fn} should reuse the shared region walk'
+        assert 'new Set' not in body
+
+    def test_magic_wand_has_no_per_pixel_allocation(self):
+        page = self._page()
+        body = page[page.index('function magicWandRemove('):]
+        body = body[:body.index('\n        function ', 10)]
+        assert 'getPixelColor' not in body, (
+            'allocating an object per pixel across a full-image scan is the slow path')
+
+
+class TestHistoryIsBounded:
+    """A full snapshot per step is ~23MB on a 2400x2400 document."""
+
+    def test_history_is_capped(self):
+        page = read(os.path.join(REPO_ROOT, 'background-remover.html'))
+        body = page[page.index('function saveToHistory()'):]
+        body = body[:body.index('\n        document.getElementById(\'undoBtn\').addEventListener')]
+
+        assert 'HISTORY_BYTE_BUDGET' in body, 'history must be bounded by memory'
+        assert 'HISTORY_MAX_STEPS' in body, 'history must be bounded by step count'
+        assert 'splice(1, 1)' in body, 'the original must be preserved for Reset'
+
+
+class TestTransportFitting:
+    """
+    canvas.toBlob re-encodes far larger than the source file, so a
+    native-resolution document has to be fitted for the request even though it
+    is kept intact locally.
+    """
+
+    def _page(self):
+        return read(os.path.join(REPO_ROOT, 'background-remover.html'))
+
+    def test_frontend_limit_matches_the_route_limit(self):
+        """
+        The page must not guess the backend's ceiling. If someone raises the
+        route limit, this fails until the page is updated to match.
+        """
+        page = self._page()
+        match = re.search(r'const TRANSPORT_BYTE_LIMIT\s*=\s*([\d\s*]+);', page)
+        assert match, 'the page should declare its transport limit'
+        frontend = eval(match.group(1))            # a literal arithmetic expression
+
+        route = read(os.path.join(WSR_DIR, 'app.py'))
+        limits = set(re.findall(r'len\(image_data\)\s*>\s*([\d\s*]+):', route))
+        assert limits, 'the routes should enforce a size limit'
+        backend = {eval(limit) for limit in limits}
+
+        assert backend == {frontend}, (
+            f'the page fits uploads to {frontend} bytes but the routes reject '
+            f'above {backend} — they must agree')
+
+    def test_no_raw_toblob_reaches_the_backend(self):
+        page = self._page()
+        for endpoint in ('/process_interactive', '/process_vtracer', '/process_upscale'):
+            block = page[:page.index(endpoint)]
+            block = block[block.rindex('async function'):]
+            assert 'encodeForTransport()' in block, (
+                f'the {endpoint} call should fit the payload first')
+            assert 'canvas.toBlob' not in block, (
+                f'the {endpoint} call sends the raw canvas, which a large '
+                'document will blow past the size limit')
+
+    def test_fitting_is_never_silent(self):
+        """CLAUDE.md: no silent failures."""
+        page = self._page()
+        assert page.count("noticeIfFitted(fitted, '") == 3, (
+            'every backend call that may run on a fitted copy must say so')
+
+        notice = page[page.index('function noticeIfFitted'):]
+        notice = notice[:notice.index('\n        //')]
+        assert 'showDocumentNotice(' in notice
+        assert 'unchanged' in notice, 'the user should be told their document is intact'

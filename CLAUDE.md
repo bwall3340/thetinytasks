@@ -340,6 +340,29 @@ images can be swapped or reverted without a deploy.
 
 Validate file type, size, and parameters at the top of each route before passing to processing functions. Never pass raw user input into shell commands or `eval()`.
 
+### Canvas tools — the document is native, the transport is fitted
+
+The document is the user's image at its own resolution. Nothing downscales it
+on import; the canvas is scaled for display only (`max-width: 100%` **plus**
+`height: auto`, or the canvas squashes), and coordinates come from
+`getBoundingClientRect()` so clicks stay correct at any display scale.
+
+Two things follow, and both are load-bearing:
+
+- **Region fills must use typed arrays.** A `Set` of `"x,y"` keys with an
+  object per pixel costs ~7s per click on a 2400x2400 document. A
+  `Uint8Array` visited mask with an `Int32Array` stack is ~15x faster. The old
+  800x600 import cap existed to hide this; the cap can only stay gone while the
+  fast path does.
+- **`canvas.toBlob` re-encodes much larger than the source file**, so a
+  native-resolution document must be fitted before it is POSTed.
+  `encodeForTransport()` shrinks only the copy that travels, and
+  `noticeIfFitted()` tells the user, because processing something smaller than
+  what is on screen without saying so is a silent failure.
+
+`TRANSPORT_BYTE_LIMIT` in the page must equal the routes' `10 * 1024 * 1024`
+check. A test asserts they agree — raise one and you must raise the other.
+
 ### Return Stream Digitizer — canvas sizing invariant
 
 All three stacked canvases (`chart-canvas`, `overlay-canvas`, `interaction-canvas`) must use identical CSS sizing. Always use `getBoundingClientRect()` via `eventToImageCoords()` for pixel mapping — never read `offsetX`/`offsetY` directly.
@@ -427,6 +450,7 @@ console change.
 
 | Feature | Status | Modules Affected | Notes |
 |---------|--------|-----------------|-------|
+| Editor foundation (native-resolution document) | needs review | Background Remover Pro UI, Flask Image Backend | Import no longer downscales to 800x600; typed-array fills (6.9s -> 0.46s at 2400px); bounded history; fitted transport |
 | Background Remover de-duplication | needs review | Background Remover Pro UI, Flask Backend, Sankey, Docker | Removed 3 superseded tool UIs (~4,800 lines); ported Magic Wand; wired 2 inert checkboxes |
 | Unified `/<module>/admin` routes | needs review | Market, Meal, Site Admin, Shared Auth | Market moved from `/market-admin`; shared Google OAuth replaces two duplicate flows |
 | Tool page scroll fix (`script.js` guards) | needs review | Home Page, Background Remover Pro UI | Cover-page scroll hijacking no longer runs on pages without a cover |
@@ -437,6 +461,20 @@ Status: `scoping` → `in progress` → `needs review` → `done`
 ---
 
 ## 🔒 Learned Rules
+
+**2026-09-18 — Display Concern Implemented As Data Loss**: `loadImageToCanvas`
+capped every upload at 800x600 before any editing, and that downscaled canvas
+was what got POSTed. A 2400x2400 logo was edited, vectorized and upscaled as
+600x600, so "Extreme (Pixel Perfect)" traced a downscaled raster and a 2x
+upscale returned an image *smaller than the file the user uploaded*. The cap
+was really hiding a slow flood fill (a `Set` of coordinate strings, ~7s per
+click at 2400px), and uncapped full-snapshot undo (~23MB per step) depended on
+the small canvas too — so all three had to be fixed together. **Prevention
+rule**: never solve a display problem by changing the data. Fit the canvas with
+CSS, not by resampling the document. Before adding a size cap, ask what it is
+really hiding; if the honest answer is "an algorithm that is too slow", fix the
+algorithm. And when a payload must shrink to satisfy a server limit, shrink the
+copy that travels and tell the user — never the document.
 
 **2026-09-18 — Superseded UI Left In Place**: The Background Remover existed in
 four generations at once. `WSR/templates/index.html` posted to `/process`, an

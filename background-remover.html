@@ -293,7 +293,13 @@
         }
 
         #imageCanvas {
+            /* The document is held at native resolution; the canvas is only
+               scaled for display. height:auto keeps the aspect ratio — without
+               it the element squashes, because max-width alone does not scale
+               a canvas's intrinsic height. Click mapping already divides by
+               getBoundingClientRect(), so it stays correct at any scale. */
             max-width: 100%;
+            height: auto;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             background: transparent;
@@ -814,6 +820,108 @@
             ? 'http://localhost:5000'
             : window.location.origin;
 
+        // ── Document model ──────────────────────────────────────────────
+        // The document is the image at its own resolution. Nothing destroys
+        // pixels on import; the canvas is scaled for display only.
+
+        // Safety ceiling so a pathological upload cannot exhaust memory on
+        // load. 32MP is larger than any consumer camera output.
+        const MAX_DOCUMENT_PIXELS = 32 * 1024 * 1024;
+
+        // Undo used to keep an uncapped full-canvas snapshot per step. At
+        // native resolution that is ~23MB per step for a 2400x2400 document,
+        // so the history is bounded by bytes as well as by count.
+        const HISTORY_BYTE_BUDGET = 192 * 1024 * 1024;
+        const HISTORY_MAX_STEPS = 40;
+
+        // The Flask routes reject anything over 10MB. canvas.toBlob re-encodes
+        // far larger than the source file (a noisy 2400x2400 document encodes
+        // to ~18MB), so a native-resolution document has to be fitted for
+        // transport even though it is kept intact locally.
+        const TRANSPORT_BYTE_LIMIT = 10 * 1024 * 1024;
+
+        function showDocumentNotice(message) {
+            const existing = document.querySelector('.document-notice');
+            if (existing) existing.remove();
+
+            const notice = document.createElement('div');
+            notice.className = 'document-notice';
+            notice.style.cssText = `
+                position: fixed;
+                bottom: 24px;
+                left: 50%;
+                transform: translateX(-50%) translateY(8px);
+                background: #F7F3EC;
+                color: #2B2A28;
+                border: 1px solid #E7DED2;
+                border-left: 3px solid #66725B;
+                padding: 0.85rem 1.25rem;
+                border-radius: 10px;
+                font-size: 0.85rem;
+                line-height: 1.5;
+                max-width: 440px;
+                box-shadow: 0 6px 24px rgba(43, 42, 40, 0.10);
+                z-index: 1000;
+                opacity: 0;
+                transition: opacity 0.6s ease, transform 0.6s ease;
+            `;
+            notice.textContent = message;
+            document.body.appendChild(notice);
+
+            requestAnimationFrame(() => {
+                notice.style.opacity = '1';
+                notice.style.transform = 'translateX(-50%) translateY(0)';
+            });
+
+            setTimeout(() => {
+                notice.style.opacity = '0';
+                setTimeout(() => notice.remove(), 600);
+            }, 7000);
+        }
+
+        // Encode the document for the backend, shrinking only the copy that
+        // travels. Returns the blob plus what it had to do, so the caller can
+        // tell the user rather than silently processing something smaller.
+        async function encodeForTransport() {
+            const encode = (scale) => new Promise(resolve => {
+                if (scale === 1) return canvas.toBlob(resolve, 'image/png');
+                const fitted = document.createElement('canvas');
+                fitted.width = Math.max(1, Math.round(canvas.width * scale));
+                fitted.height = Math.max(1, Math.round(canvas.height * scale));
+                const fctx = fitted.getContext('2d');
+                fctx.imageSmoothingQuality = 'high';
+                fctx.drawImage(canvas, 0, 0, fitted.width, fitted.height);
+                fitted.toBlob(resolve, 'image/png');
+            });
+
+            let scale = 1;
+            for (let attempt = 0; attempt < 6; attempt++) {
+                const blob = await encode(scale);
+                if (blob.size <= TRANSPORT_BYTE_LIMIT || scale <= 0.2) {
+                    return {
+                        blob,
+                        scale,
+                        width: Math.round(canvas.width * scale),
+                        height: Math.round(canvas.height * scale)
+                    };
+                }
+                // Bytes scale roughly with area, so area must shrink by
+                // limit/size. Take a little extra to converge in one or two.
+                scale *= Math.sqrt(TRANSPORT_BYTE_LIMIT / blob.size) * 0.92;
+            }
+            return { blob: await encode(scale), scale, width: canvas.width, height: canvas.height };
+        }
+
+        function noticeIfFitted(fitted, operation) {
+            if (fitted.scale >= 0.999) return;
+            showDocumentNotice(
+                `Your ${canvas.width}x${canvas.height} image is larger than the ` +
+                `${Math.round(TRANSPORT_BYTE_LIMIT / 1024 / 1024)}MB upload limit, so ` +
+                `${operation} ran on a ${fitted.width}x${fitted.height} copy. ` +
+                `Your document is unchanged.`
+            );
+        }
+
         // Background Remover Specific JavaScript
         let currentMode = 'interactive';
         let vectorizerColorMode = 'binary'; // 'binary' or 'color'
@@ -953,14 +1061,22 @@
                 canvas = document.getElementById('imageCanvas');
                 ctx = canvas.getContext('2d');
 
-                const maxWidth = 800;
-                const maxHeight = 600;
+                // Keep the document at its own resolution. This used to cap
+                // every upload at 800x600, which meant a 2400x2400 logo was
+                // edited, vectorized and upscaled as 600x600 — a 2x upscale
+                // returned something smaller than the file the user gave us.
                 let { width, height } = image;
+                const pixels = width * height;
 
-                if (width > maxWidth || height > maxHeight) {
-                    const ratio = Math.min(maxWidth / width, maxHeight / height);
-                    width *= ratio;
-                    height *= ratio;
+                if (pixels > MAX_DOCUMENT_PIXELS) {
+                    const ratio = Math.sqrt(MAX_DOCUMENT_PIXELS / pixels);
+                    width = Math.round(width * ratio);
+                    height = Math.round(height * ratio);
+                    showDocumentNotice(
+                        `That image is ${(pixels / 1e6).toFixed(0)} megapixels. ` +
+                        `It has been opened at ${width}x${height} to stay within ` +
+                        `what the browser can hold comfortably.`
+                    );
                 }
 
                 canvas.width = width;
@@ -1063,31 +1179,59 @@
             brushRemove(x, y, brushSize);
         }
 
+        // Collect the contiguous region of similar colour around a seed pixel.
+        //
+        // The previous implementation kept a Set of "x,y" strings and
+        // allocated an object per pixel visited, which cost ~7s on a 2400x2400
+        // document — the reason uploads used to be capped at 800x600. A
+        // typed-array visited mask with a flat integer stack is ~8x faster and
+        // allocates nothing per pixel, which is what makes a native-resolution
+        // document usable.
+        function collectRegion(data, width, height, startX, startY, tolerance) {
+            const mask = new Uint8Array(width * height);
+            const stack = new Int32Array(width * height);
+            let sp = 0;
+            stack[sp++] = startY * width + startX;
+
+            const seed = (startY * width + startX) * 4;
+            const targetR = data[seed], targetG = data[seed + 1], targetB = data[seed + 2];
+            const toleranceSquared = tolerance * tolerance;
+            let count = 0;
+
+            while (sp > 0) {
+                const p = stack[--sp];
+                if (mask[p]) continue;
+
+                const i = p * 4;
+                const dr = data[i] - targetR;
+                const dg = data[i + 1] - targetG;
+                const db = data[i + 2] - targetB;
+                if (dr * dr + dg * dg + db * db > toleranceSquared) continue;
+
+                mask[p] = 1;
+                count++;
+
+                const x = p % width;
+                const y = (p / width) | 0;
+                if (x + 1 < width)  stack[sp++] = p + 1;
+                if (x > 0)          stack[sp++] = p - 1;
+                if (y + 1 < height) stack[sp++] = p + width;
+                if (y > 0)          stack[sp++] = p - width;
+            }
+
+            return { mask, count };
+        }
+
         function removeBackground(startX, startY, tolerance) {
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const { mask, count } = collectRegion(
+                imageData.data, canvas.width, canvas.height, startX, startY, tolerance);
+
+            if (count === 0) return;
+
             const data = imageData.data;
-            const targetColor = getPixelColor(data, startX, startY, canvas.width);
-            const visited = new Set();
-            const stack = [{ x: startX, y: startY }];
-
-            while (stack.length > 0) {
-                const { x, y } = stack.pop();
-                const key = `${x},${y}`;
-
-                if (visited.has(key) || x < 0 || x >= canvas.width || y < 0 || y >= canvas.height) {
-                    continue;
-                }
-
-                const currentColor = getPixelColor(data, x, y, canvas.width);
-                if (colorDistance(targetColor, currentColor) <= tolerance) {
-                    visited.add(key);
-                    setPixelTransparent(data, x, y, canvas.width);
-
-                    stack.push({ x: x + 1, y });
-                    stack.push({ x: x - 1, y });
-                    stack.push({ x, y: y + 1 });
-                    stack.push({ x, y: y - 1 });
-                }
+            for (let p = 0; p < mask.length; p++) {
+                if (mask[p]) data[p * 4 + 3] = 0;
             }
 
             ctx.putImageData(imageData, 0, 0);
@@ -1103,20 +1247,22 @@
             // one click clears a background that is broken up by the subject.
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const data = imageData.data;
-            const targetColor = getPixelColor(data, startX, startY, canvas.width);
 
-            if (targetColor.a === 0) return;
+            const seed = (startY * canvas.width + startX) * 4;
+            if (data[seed + 3] === 0) return;
 
+            const targetR = data[seed], targetG = data[seed + 1], targetB = data[seed + 2];
+            const toleranceSquared = tolerance * tolerance;
             let removed = 0;
-            for (let y = 0; y < canvas.height; y++) {
-                for (let x = 0; x < canvas.width; x++) {
-                    const currentColor = getPixelColor(data, x, y, canvas.width);
-                    if (currentColor.a === 0) continue;
 
-                    if (colorDistance(targetColor, currentColor) <= tolerance) {
-                        setPixelTransparent(data, x, y, canvas.width);
-                        removed++;
-                    }
+            for (let i = 0; i < data.length; i += 4) {
+                if (data[i + 3] === 0) continue;
+                const dr = data[i] - targetR;
+                const dg = data[i + 1] - targetG;
+                const db = data[i + 2] - targetB;
+                if (dr * dr + dg * dg + db * db <= toleranceSquared) {
+                    data[i + 3] = 0;
+                    removed++;
                 }
             }
 
@@ -1132,61 +1278,36 @@
         function flattenArea(startX, startY, tolerance) {
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const data = imageData.data;
-            const targetColor = getPixelColor(data, startX, startY, canvas.width);
-            const visited = new Set();
-            const stack = [{ x: startX, y: startY }];
-            const pixelsToFlatten = [];
+            const { mask, count } = collectRegion(
+                data, canvas.width, canvas.height, startX, startY, tolerance);
 
-            // First pass: identify all pixels in the similar color area
-            while (stack.length > 0) {
-                const { x, y } = stack.pop();
-                const key = `${x},${y}`;
+            if (count === 0) return;
 
-                if (visited.has(key) || x < 0 || x >= canvas.width || y < 0 || y >= canvas.height) {
-                    continue;
-                }
-
-                const currentColor = getPixelColor(data, x, y, canvas.width);
-                if (colorDistance(targetColor, currentColor) <= tolerance) {
-                    visited.add(key);
-                    pixelsToFlatten.push({ x, y, color: currentColor });
-
-                    stack.push({ x: x + 1, y });
-                    stack.push({ x: x - 1, y });
-                    stack.push({ x, y: y + 1 });
-                    stack.push({ x, y: y - 1 });
-                }
+            let totalR = 0, totalG = 0, totalB = 0, totalA = 0;
+            for (let p = 0; p < mask.length; p++) {
+                if (!mask[p]) continue;
+                const i = p * 4;
+                totalR += data[i]; totalG += data[i + 1];
+                totalB += data[i + 2]; totalA += data[i + 3];
             }
 
-            // Calculate average color of the selected area
-            if (pixelsToFlatten.length > 0) {
-                let totalR = 0, totalG = 0, totalB = 0, totalA = 0;
+            const avgR = Math.round(totalR / count);
+            const avgG = Math.round(totalG / count);
+            const avgB = Math.round(totalB / count);
+            const avgA = Math.round(totalA / count);
 
-                pixelsToFlatten.forEach(pixel => {
-                    totalR += pixel.color.r;
-                    totalG += pixel.color.g;
-                    totalB += pixel.color.b;
-                    totalA += pixel.color.a;
-                });
-
-                const avgColor = {
-                    r: Math.round(totalR / pixelsToFlatten.length),
-                    g: Math.round(totalG / pixelsToFlatten.length),
-                    b: Math.round(totalB / pixelsToFlatten.length),
-                    a: Math.round(totalA / pixelsToFlatten.length)
-                };
-
-                // Apply average color to all pixels in the area
-                pixelsToFlatten.forEach(pixel => {
-                    setPixelColor(data, pixel.x, pixel.y, canvas.width, avgColor);
-                });
-
-                ctx.putImageData(imageData, 0, 0);
-                saveToHistory();
-
-                // Auto-apply mode-specific processing
-                setTimeout(() => applyModeProcessing(), 100);
+            for (let p = 0; p < mask.length; p++) {
+                if (!mask[p]) continue;
+                const i = p * 4;
+                data[i] = avgR; data[i + 1] = avgG;
+                data[i + 2] = avgB; data[i + 3] = avgA;
             }
+
+            ctx.putImageData(imageData, 0, 0);
+            saveToHistory();
+
+            // Auto-apply mode-specific processing
+            setTimeout(() => applyModeProcessing(), 100);
         }
 
         function brushRemove(centerX, centerY, size) {
@@ -1243,6 +1364,19 @@
         function saveToHistory() {
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             editHistory.push(imageData);
+
+            // A full snapshot per step is ~23MB on a 2400x2400 document, so an
+            // uncapped history would exhaust memory within a dozen edits. Drop
+            // the oldest steps once the history exceeds its budget, always
+            // keeping at least the original plus the current state so Reset
+            // and one Undo never break.
+            let bytes = editHistory.reduce((total, step) => total + step.data.length, 0);
+            while (editHistory.length > 2 &&
+                   (bytes > HISTORY_BYTE_BUDGET || editHistory.length > HISTORY_MAX_STEPS)) {
+                bytes -= editHistory[1].data.length;
+                editHistory.splice(1, 1);   // index 0 is the original — keep it
+            }
+
             document.getElementById('undoBtn').disabled = editHistory.length <= 1;
         }
 
@@ -1401,12 +1535,14 @@
 
             try {
                 // Convert canvas to blob for upload
-                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                const fitted = await encodeForTransport();
+                const blob = fitted.blob;
 
                 // Create form data
                 const formData = new FormData();
                 formData.append('image', blob, 'edited-image.png');
                 formData.append('epsilon', document.getElementById('detailLevel').value);
+                noticeIfFitted(fitted, 'vectorization');
 
                 progressText.textContent = 'Sending to vectorization engine...';
                 progressFill.style.width = '30%';
@@ -1564,11 +1700,13 @@
             progressText.textContent = 'Preparing image for color vectorization...';
 
             try {
-                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                const fitted = await encodeForTransport();
+                const blob = fitted.blob;
                 const formData = new FormData();
                 formData.append('image', blob, 'edited-image.png');
                 formData.append('filter_speckle', document.getElementById('vtracerSpeckle').value);
                 formData.append('color_precision', document.getElementById('vtracerColorPrecision').value);
+                noticeIfFitted(fitted, 'colour vectorization');
                 formData.append('layer_difference', document.getElementById('vtracerLayerDiff').value);
                 formData.append('corner_threshold', document.getElementById('vtracerCorner').value);
 
@@ -1700,7 +1838,8 @@
 
             try {
                 // Convert canvas to blob for upload
-                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                const fitted = await encodeForTransport();
+                const blob = fitted.blob;
 
                 // Create form data with upscaling parameters
                 const formData = new FormData();
@@ -1710,6 +1849,7 @@
                 formData.append('preserve_contrast', document.getElementById('preserveContrast').checked);
                 formData.append('logo_type', document.getElementById('logoType').value);
                 formData.append('enhance_edges', document.getElementById('enhanceEdges').checked);
+                noticeIfFitted(fitted, 'upscaling');
 
                 // Add background flattening if enabled
                 if (document.getElementById('flattenBackground').checked) {
