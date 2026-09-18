@@ -281,7 +281,6 @@ class TinyTasksApp {
                 break;
 
             case 'background-remover':
-            case 'white-background-remover':
                 window.location.href = './background-remover.html';
                 break;
 

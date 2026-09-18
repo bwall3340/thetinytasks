@@ -217,11 +217,6 @@ def sankey_files(filename):
     return send_from_directory(os.path.join(SITE_DIR, 'Sankey'), filename)
 
 
-@app.route('/WhiteBackgroundRemover/<path:filename>')
-def white_bg_remover_files(filename):
-    return send_from_directory(os.path.join(SITE_DIR, 'WhiteBackgroundRemover'), filename)
-
-
 # Compatibility shims for the two first-generation tool pages.
 # /interactive (vectorizer) and /test (upscaler) were superseded by the single
 # three-mode Background Remover page, which is what the site links to. Their

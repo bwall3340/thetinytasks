@@ -545,3 +545,41 @@ class TestNoOrphanedServerFiles:
 
         orphans = sorted(m for m in modules if m not in imported)
         assert not orphans, f'Python modules nothing imports: {orphans}'
+
+
+# ---------------------------------------------------------------------------
+# Links between pages must not rot
+# ---------------------------------------------------------------------------
+
+class TestInternalLinks:
+    """
+    The Sankey tool linked to ../WhiteBackgroundRemover/index.html long after
+    the site had moved on. Relative links between tool pages get no coverage
+    from route tests, so check them directly.
+    """
+
+    def test_every_relative_link_resolves(self):
+        from app import SITE_DIR
+
+        broken = []
+        for dirpath, dirnames, filenames in os.walk(SITE_DIR):
+            dirnames[:] = [d for d in dirnames
+                           if d not in ('.git', 'WSR', 'DataFinderAgent',
+                                        'node_modules', 'sanity', '__pycache__')]
+            for filename in filenames:
+                if not filename.endswith('.html'):
+                    continue
+                page = os.path.join(dirpath, filename)
+                source = read(page)
+
+                for href in re.findall(r'''<a\s[^>]*href=["']([^"'#]+)["']''', source):
+                    if href.startswith(('http://', 'https://', 'mailto:', '/', '#', 'javascript:')):
+                        continue
+                    if '${' in href:
+                        continue  # built at runtime by a JS template literal
+                    target = os.path.normpath(os.path.join(dirpath, href.split('?')[0]))
+                    if not os.path.exists(target):
+                        rel = os.path.relpath(page, SITE_DIR)
+                        broken.append(f'{rel} -> {href}')
+
+        assert not broken, 'Relative links pointing at nothing:\n  ' + '\n  '.join(broken)
