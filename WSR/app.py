@@ -28,8 +28,15 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 from werkzeug.middleware.proxy_fix import ProxyFix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
-# Directory containing the static home-page files (copied in by Docker)
-SITE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'site')
+# Directory containing the static home-page files.
+# In the Docker image the root-level site files are copied to WSR/site/.
+# When running from a checkout that directory does not exist, so fall back to
+# the repo root, where those same files live. Without this the home page and
+# every static tool page 404 locally, which also makes the test suite unrunnable
+# outside Docker.
+_PACKAGED_SITE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'site')
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SITE_DIR = _PACKAGED_SITE_DIR if os.path.isdir(_PACKAGED_SITE_DIR) else _REPO_ROOT
 
 # ── Market commentary module ──────────────────────────────────────────────────
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-change-in-production')
