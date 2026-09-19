@@ -17,7 +17,7 @@ class LogoUpscaler:
         self.edge_threshold = 30  # Threshold for edge detection
         self.contrast_boost = 1.2  # Contrast enhancement factor
 
-    def upscale_logo(self, image_array, scale_factor=2, method="smart_edge", preserve_contrast=True, logo_type="styled"):
+    def upscale_logo(self, image_array, scale_factor=2, method="smart_edge", preserve_contrast=True, logo_type="styled", enhance_edges=True):
         """
         Upscale logo with multiple advanced methods
 
@@ -54,8 +54,9 @@ class LogoUpscaler:
             if preserve_contrast:
                 upscaled = self.preserve_contrast(upscaled, image_array)
 
-            # Final edge enhancement
-            upscaled = self.enhance_edges(upscaled)
+            # Final edge enhancement (the tool exposes this as a checkbox)
+            if enhance_edges:
+                upscaled = self.enhance_edges(upscaled)
 
             print(f"Upscaling completed: {upscaled.shape}")
 

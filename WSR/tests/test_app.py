@@ -21,16 +21,25 @@ class TestPageRoutes:
         response = client.get('/')
         assert response.status_code == 200
 
-    def test_interactive_returns_200(self, client):
-        response = client.get('/interactive')
-        assert response.status_code == 200
+    @pytest.mark.parametrize('legacy_path', ['/interactive', '/test'])
+    def test_legacy_tool_pages_redirect_to_the_live_tool(self, client, legacy_path):
+        """
+        The first-generation vectorizer and upscaler pages were replaced by the
+        single three-mode Background Remover. The routes stay as shims so old
+        bookmarks still land somewhere useful.
+        """
+        response = client.get(legacy_path)
+        assert response.status_code == 302
+        assert response.headers['Location'].endswith('/background-remover.html')
 
-    def test_test_page_returns_200(self, client):
-        response = client.get('/test')
+    @pytest.mark.parametrize('legacy_path', ['/interactive', '/test'])
+    def test_legacy_redirect_lands_on_a_real_page(self, client, legacy_path):
+        response = client.get(legacy_path, follow_redirects=True)
         assert response.status_code == 200
+        assert b'Background Remover' in response.data
 
     def test_unknown_route_returns_404_page(self, client):
-        # The app renders interactive.html on 404 (not a JSON error)
+        # The app serves the home page on 404 (not a JSON error)
         response = client.get('/nonexistent-path')
         assert response.status_code == 404
 

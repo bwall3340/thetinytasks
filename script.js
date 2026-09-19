@@ -8,7 +8,9 @@ class TinyTasksApp {
         this.mobileMenu = document.getElementById('mobile-menu');
         this.comingSoonModal = document.getElementById('coming-soon-modal');
         this.scrollThreshold = 50;
-        this.isOnCoverPage = true;
+        // Pages without a cover (tool pages) must never enter cover mode —
+        // the wheel/touch handlers preventDefault() while it is true.
+        this.isOnCoverPage = !!this.coverPage;
         this.scrollPosition = 0;
         this.isTransitioning = false;
 
@@ -21,18 +23,25 @@ class TinyTasksApp {
     }
 
     bindEvents() {
-        window.addEventListener('scroll', (e) => this.handleScroll(e));
-        window.addEventListener('wheel', (e) => this.handleWheel(e), { passive: false });
-        window.addEventListener('touchstart', (e) => this.handleTouchStart(e));
-        window.addEventListener('touchmove', (e) => this.handleTouch(e), { passive: false });
+        // Cover-page scroll hijacking — only bind it where a cover page exists.
+        if (this.coverPage) {
+            window.addEventListener('scroll', (e) => this.handleScroll(e));
+            window.addEventListener('wheel', (e) => this.handleWheel(e), { passive: false });
+            window.addEventListener('touchstart', (e) => this.handleTouchStart(e));
+            window.addEventListener('touchmove', (e) => this.handleTouch(e), { passive: false });
+        }
 
-        this.hamburgerMenu.addEventListener('click', () => this.toggleMobileMenu());
+        if (this.hamburgerMenu) {
+            this.hamburgerMenu.addEventListener('click', () => this.toggleMobileMenu());
+        }
 
-        this.mobileMenu.addEventListener('click', (e) => {
-            if (e.target === this.mobileMenu) {
-                this.closeMobileMenu();
-            }
-        });
+        if (this.mobileMenu) {
+            this.mobileMenu.addEventListener('click', (e) => {
+                if (e.target === this.mobileMenu) {
+                    this.closeMobileMenu();
+                }
+            });
+        }
 
         document.querySelectorAll('.tool-card').forEach(card => {
             card.addEventListener('click', (e) => this.handleToolClick(e));
@@ -44,13 +53,19 @@ class TinyTasksApp {
 
         document.addEventListener('keydown', (e) => this.handleKeydown(e));
 
-        document.getElementById('modal-close-btn').addEventListener('click', () => this.closeComingSoonModal());
-        this.comingSoonModal.addEventListener('click', (e) => {
-            if (e.target === this.comingSoonModal) this.closeComingSoonModal();
-        });
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+        if (modalCloseBtn) {
+            modalCloseBtn.addEventListener('click', () => this.closeComingSoonModal());
+        }
+
+        if (this.comingSoonModal) {
+            this.comingSoonModal.addEventListener('click', (e) => {
+                if (e.target === this.comingSoonModal) this.closeComingSoonModal();
+            });
+        }
 
         const toolsNavLink = document.querySelector('.main-nav a[href="#tools"]');
-        if (toolsNavLink) {
+        if (toolsNavLink && this.mainPage) {
             toolsNavLink.addEventListener('click', (e) => {
                 e.preventDefault();
                 const toolsEl = document.getElementById('tools');
@@ -87,7 +102,7 @@ class TinyTasksApp {
     }
 
     handleScroll(e) {
-        if (this.isTransitioning) return;
+        if (!this.coverPage || this.isTransitioning) return;
 
         const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
         this.scrollPosition = scrollTop;
@@ -100,7 +115,7 @@ class TinyTasksApp {
     }
 
     handleWheel(e) {
-        if (this.isTransitioning) return;
+        if (!this.coverPage || this.isTransitioning) return;
 
         if (this.isOnCoverPage && e.deltaY > 0) {
             e.preventDefault();
@@ -120,7 +135,7 @@ class TinyTasksApp {
     }
 
     handleTouch(e) {
-        if (this.isTransitioning) return;
+        if (!this.coverPage || this.isTransitioning) return;
 
         if (e.touches.length === 1) {
             const touch = e.touches[0];
@@ -141,12 +156,12 @@ class TinyTasksApp {
     }
 
     handleKeydown(e) {
-        if ((e.key === 'ArrowDown' || e.key === ' ') && this.isOnCoverPage) {
+        if ((e.key === 'ArrowDown' || e.key === ' ') && this.coverPage && this.isOnCoverPage) {
             e.preventDefault();
             this.transitionToMainPage();
         }
 
-        if (e.key === 'ArrowUp' && !this.isOnCoverPage) {
+        if (e.key === 'ArrowUp' && this.coverPage && !this.isOnCoverPage) {
             const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
             if (scrollTop <= this.scrollThreshold) {
                 e.preventDefault();
@@ -194,7 +209,7 @@ class TinyTasksApp {
         document.body.style.overflow = 'hidden';
         document.body.style.height = '100vh';
 
-        this.mainPage.scrollTop = 0;
+        if (this.mainPage) this.mainPage.scrollTop = 0;
 
         // Reset cards so they re-animate next time
         document.querySelectorAll('.tool-card').forEach(card => {
@@ -215,20 +230,30 @@ class TinyTasksApp {
     }
 
     toggleMobileMenu() {
+        if (!this.hamburgerMenu || !this.mobileMenu) return;
+
         this.hamburgerMenu.classList.toggle('active');
         this.mobileMenu.classList.toggle('active');
 
         if (this.mobileMenu.classList.contains('active')) {
             document.body.style.overflow = 'hidden';
         } else {
-            document.body.style.overflow = 'auto';
+            this.restoreBodyScroll();
         }
     }
 
     closeMobileMenu() {
+        if (!this.hamburgerMenu || !this.mobileMenu) return;
+
         this.hamburgerMenu.classList.remove('active');
         this.mobileMenu.classList.remove('active');
-        document.body.style.overflow = 'auto';
+        this.restoreBodyScroll();
+    }
+
+    // The cover page locks body scroll on purpose; everywhere else the body
+    // must be free to scroll once the menu closes.
+    restoreBodyScroll() {
+        document.body.style.overflow = this.isOnCoverPage ? 'hidden' : 'auto';
     }
 
     handleToolClick(e) {
@@ -256,7 +281,6 @@ class TinyTasksApp {
                 break;
 
             case 'background-remover':
-            case 'white-background-remover':
                 window.location.href = './background-remover.html';
                 break;
 
@@ -290,18 +314,38 @@ class TinyTasksApp {
         const displayName = toolName
             .replace(/-/g, ' ')
             .replace(/\b\w/g, c => c.toUpperCase());
-        document.getElementById('modal-tool-name').textContent = displayName;
-        this.comingSoonModal.classList.add('active');
+        const nameEl = document.getElementById('modal-tool-name');
+        if (nameEl) nameEl.textContent = displayName;
+        if (this.comingSoonModal) this.comingSoonModal.classList.add('active');
     }
 
     closeComingSoonModal() {
-        this.comingSoonModal.classList.remove('active');
+        if (this.comingSoonModal) this.comingSoonModal.classList.remove('active');
     }
+}
+
+// A slot with no image yet resolves to a 1x1 transparent pixel. Stretching
+// that across a card leaves the browser upscaling a single pixel over the
+// placeholder gradient, which some renderers rasterise as a solid block of
+// garbage colour. Drop the img so the gradient shows as the intended empty
+// state instead.
+function hideEmptySlotImages() {
+    document.querySelectorAll('.tool-card-image img, .philosophy-panel img').forEach(img => {
+        const drop = () => {
+            if (img.naturalWidth <= 1 || img.naturalHeight <= 1) {
+                img.style.display = 'none';
+            }
+        };
+        if (img.complete) drop();
+        img.addEventListener('load', drop);
+        img.addEventListener('error', () => { img.style.display = 'none'; });
+    });
 }
 
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     new TinyTasksApp();
+    hideEmptySlotImages();
 });
 
 // Touch event tracking for mobile

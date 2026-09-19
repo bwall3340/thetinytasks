@@ -5,15 +5,11 @@ Flask web application for Logo Vectorizer Tool
 
 from flask import Flask, render_template, request, jsonify, redirect, send_from_directory
 import os
-import cv2
 import numpy as np
 from PIL import Image
-from skimage import morphology
 import io
-import base64
 import time
 import traceback
-from vectorizer_engine import ImprovedVectorizer
 from detailed_vectorizer import DetailedVectorizer
 from extreme_vectorizer import ExtremeDetailVectorizer
 from test_vectorizer import AdvancedTestVectorizer
@@ -28,8 +24,15 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 from werkzeug.middleware.proxy_fix import ProxyFix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
-# Directory containing the static home-page files (copied in by Docker)
-SITE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'site')
+# Directory containing the static home-page files.
+# In the Docker image the root-level site files are copied to WSR/site/.
+# When running from a checkout that directory does not exist, so fall back to
+# the repo root, where those same files live. Without this the home page and
+# every static tool page 404 locally, which also makes the test suite unrunnable
+# outside Docker.
+_PACKAGED_SITE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'site')
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SITE_DIR = _PACKAGED_SITE_DIR if os.path.isdir(_PACKAGED_SITE_DIR) else _REPO_ROOT
 
 # ── Market commentary module ──────────────────────────────────────────────────
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-change-in-production')
@@ -138,129 +141,7 @@ def handle_options(path=None):
     return response
 
 
-class LogoVectorizerAPI:
-    def __init__(self):
-        pass
-
-    def remove_white_background(self, image_data, white_threshold=245):
-        """Remove only white background pixels, preserving light yellow and other colors"""
-        try:
-            # Load image from bytes
-            image = Image.open(io.BytesIO(image_data))
-            image_array = np.array(image)
-
-            # Convert to RGBA if not already
-            if len(image_array.shape) == 3 and image_array.shape[2] == 3:
-                # Add alpha channel
-                alpha = np.ones((image_array.shape[0], image_array.shape[1], 1), dtype=np.uint8) * 255
-                image_array = np.concatenate([image_array, alpha], axis=2)
-            elif len(image_array.shape) == 2:
-                # Grayscale to RGBA
-                rgb = np.stack([image_array, image_array, image_array], axis=2)
-                alpha = np.ones((image_array.shape[0], image_array.shape[1], 1), dtype=np.uint8) * 255
-                image_array = np.concatenate([rgb, alpha], axis=2)
-
-            # Create mask for white pixels only
-            # Check if all RGB channels are above white_threshold
-            white_mask = (
-                (image_array[:, :, 0] >= white_threshold) &
-                (image_array[:, :, 1] >= white_threshold) &
-                (image_array[:, :, 2] >= white_threshold)
-            )
-
-            # Set alpha to 0 for white pixels only
-            image_array[white_mask, 3] = 0
-
-            return image_array
-
-        except Exception as e:
-            raise Exception(f"Error removing white background: {e}")
-
-    def preprocess_for_vectorization(self, image_array, binary_threshold=128):
-        """Preprocess image for vectorization with hard borders"""
-        # Convert to grayscale if it's RGBA
-        if len(image_array.shape) == 3 and image_array.shape[2] == 4:
-            # Use alpha channel to create mask
-            alpha = image_array[:, :, 3]
-            # Convert RGB to grayscale
-            gray = cv2.cvtColor(image_array[:, :, :3], cv2.COLOR_RGB2GRAY)
-            # Apply alpha mask - set transparent areas to white
-            gray = np.where(alpha > 0, gray, 255)
-        else:
-            gray = cv2.cvtColor(image_array, cv2.COLOR_RGB2GRAY)
-
-        # NO Gaussian blur - preserve hard edges!
-        # Direct binary threshold for crisp edges
-        binary = gray < binary_threshold
-
-        # Minimal cleanup - only remove very small artifacts
-        cleaned = morphology.remove_small_objects(binary, min_size=10)
-        cleaned = morphology.remove_small_holes(cleaned, area_threshold=10)
-
-        return cleaned.astype(np.uint8) * 255
-
-    def extract_contours(self, binary_image):
-        """Extract contours from binary image"""
-        contours, _ = cv2.findContours(
-            binary_image,
-            cv2.RETR_EXTERNAL,
-            cv2.CHAIN_APPROX_SIMPLE
-        )
-        return contours
-
-    def simplify_contours(self, contours, epsilon_factor=0.02):
-        """Simplify contours to reduce complexity"""
-        simplified = []
-        for contour in contours:
-            epsilon = epsilon_factor * cv2.arcLength(contour, True)
-            approx = cv2.approxPolyDP(contour, epsilon, True)
-            if len(approx) >= 3:  # At least a triangle
-                simplified.append(approx)
-        return simplified
-
-    def contours_to_svg(self, contours, image_shape):
-        """Convert contours to SVG format"""
-        height, width = image_shape[:2]
-
-        svg_content = f'''<?xml version="1.0" encoding="UTF-8"?>
-<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}"
-     xmlns="http://www.w3.org/2000/svg">
-'''
-
-        for i, contour in enumerate(contours):
-            if len(contour) < 3:
-                continue
-
-            path_data = f"M {contour[0][0][0]} {contour[0][0][1]}"
-
-            for point in contour[1:]:
-                x, y = point[0][0], point[0][1]
-                path_data += f" L {x} {y}"
-
-            path_data += " Z"
-
-            svg_content += f'  <path d="{path_data}" fill="black" stroke="none"/>\n'
-
-        svg_content += '</svg>'
-
-        return svg_content
-
-    def image_to_base64(self, image_array):
-        """Convert numpy array to base64 string"""
-        if len(image_array.shape) == 3:
-            image = Image.fromarray(image_array)
-        else:
-            image = Image.fromarray(image_array, mode='L')
-
-        buffer = io.BytesIO()
-        image.save(buffer, format='PNG')
-        return base64.b64encode(buffer.getvalue()).decode()
-
-
-
-# Initialize the APIs
-vectorizer_api = LogoVectorizerAPI()
-improved_vectorizer = ImprovedVectorizer()
+# Initialize the engines
 detailed_vectorizer = DetailedVectorizer()
 extreme_vectorizer = ExtremeDetailVectorizer()
 test_vectorizer = AdvancedTestVectorizer()
@@ -336,23 +217,15 @@ def sankey_files(filename):
     return send_from_directory(os.path.join(SITE_DIR, 'Sankey'), filename)
 
 
-@app.route('/WhiteBackgroundRemover/<path:filename>')
-def white_bg_remover_files(filename):
-    return send_from_directory(os.path.join(SITE_DIR, 'WhiteBackgroundRemover'), filename)
-
-
+# Compatibility shims for the two first-generation tool pages.
+# /interactive (vectorizer) and /test (upscaler) were superseded by the single
+# three-mode Background Remover page, which is what the site links to. Their
+# templates are gone; the routes stay so old bookmarks still land somewhere
+# useful, following the same pattern as /market-admin/* above.
 @app.route('/interactive')
-def interactive():
-    """Serve the vectorizer tool"""
-    return render_template('interactive.html')
-
-
-
-
 @app.route('/test')
-def test_page():
-    """Serve the test interface"""
-    return render_template('test.html')
+def legacy_tool_pages():
+    return redirect('/background-remover.html', code=302)
 
 
 
@@ -601,8 +474,14 @@ def process_upscale():
         method = request.form.get('method', 'smart_edge')
         preserve_contrast = request.form.get('preserve_contrast', 'true').lower() == 'true'
         logo_type = request.form.get('logo_type', 'styled')
+        enhance_edges = request.form.get('enhance_edges', 'true').lower() == 'true'
+        flatten_background = request.form.get('flatten_background', 'false').lower() == 'true'
+        flatten_tolerance = int(request.form.get('tolerance', 30))
 
         # Validate parameters
+        if flatten_tolerance < 0 or flatten_tolerance > 255:
+            return jsonify({'success': False, 'error': 'Tolerance must be between 0 and 255'})
+
         if scale_factor < 1 or scale_factor > 8:
             return jsonify({'success': False, 'error': 'Scale factor must be between 1 and 8'})
 
@@ -628,13 +507,20 @@ def process_upscale():
             image = Image.open(io.BytesIO(image_data))
             image_array = np.array(image)
 
+            # Flatten the background before upscaling, so the upscaler works
+            # from clean input rather than a gradient it has to invent detail
+            # for. Off by default — the tool ships the checkbox unchecked.
+            if flatten_background:
+                image_array = logo_upscaler.flatten_background(image_array, flatten_tolerance)
+
             # Upscale the image using the LogoUpscaler
             upscale_result = logo_upscaler.upscale_logo(
                 image_array,
                 scale_factor=scale_factor,
                 method=method,
                 preserve_contrast=preserve_contrast,
-                logo_type=logo_type
+                logo_type=logo_type,
+                enhance_edges=enhance_edges
             )
 
             if not upscale_result['success']:

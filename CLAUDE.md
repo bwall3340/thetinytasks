@@ -200,7 +200,6 @@ thetinytasks/
 ├── background-remover.html # Background Remover Pro tool UI
 ├── return-stream.html      # Return Stream Digitizer (pure client-side)
 ├── Sankey/                 # Sankey Chart tool (pure client-side HTML)
-├── WhiteBackgroundRemover/ # Simple client-side white bg remover
 ├── WSR/                    # Flask backend (vectorizer / background remover)
 │   ├── app.py              # Flask app, all routes defined here
 │   ├── common/             # Shared admin auth (Google OAuth + ADMIN_EMAILS)
@@ -208,7 +207,6 @@ thetinytasks/
 │   │   ├── slots.py        # Image slot registry (source of truth)
 │   │   ├── sanity_client.py# Sanity upload / query / cache
 │   │   └── assets.py       # /assets resolution + fallback chain
-│   ├── vectorizer_engine.py
 │   ├── detailed_vectorizer.py
 │   ├── extreme_vectorizer.py
 │   ├── test_vectorizer.py  # AdvancedTestVectorizer class (NOT a test file)
@@ -233,14 +231,19 @@ thetinytasks/
 
 | Route | Method | Description |
 |-------|--------|-------------|
-| `/` | GET | Main interactive background remover UI |
-| `/interactive` | GET | Same as `/` |
-| `/test` | GET | Test interface page |
-| `/process_interactive` | POST | Vectorize an already-edited image |
-| `/process_test` | POST | Vectorize with advanced smoothing (test mode) |
-| `/process_upscale` | POST | Upscale image with edge preservation |
-| `/return-stream.html` | GET | Serve the Return Stream Digitizer static page |
+| `/` | GET | Home page — title screen + tool dashboard |
+| `/styles.css` · `/script.js` · `/shared.css` | GET | Home page assets |
+| `/background-remover.html` | GET | Background Remover Pro — the live image tool |
+| `/return-stream.html` | GET | Return Stream Digitizer |
+| `/data-finder.html` | GET | DataFinder Agent UI |
+| `/about.html` · `/bigger-projects.html` | GET | Static content pages |
+| `/Sankey/<filename>` | GET | Sankey Chart tool files |
 | `/assets/<filename>` | GET | Serve a site image — Sanity CDN if uploaded, else the committed file |
+| `/process_interactive` | POST | Vectorize an already-edited image (detailed/extreme engines) |
+| `/process_vtracer` | POST | Colour vectorization via vtracer — used by Vectorizer mode |
+| `/process_upscale` | POST | Upscale with edge preservation, optional background flattening |
+| `/process_test` | POST | Vectorize with edge smoothing (`smoothing_level`) — **no UI calls this** |
+| `/interactive` · `/test` | GET | 302 → `/background-remover.html` (shims for the removed v2 pages) |
 
 ### Admin routes — one pattern for every module
 
@@ -277,7 +280,6 @@ Used by the Impact Sweep (Rule 1). Update this list when modules are added.
 - [ ] Flask Image Processing Backend (`WSR/app.py` + engine files)
 - [ ] Return Stream Digitizer (`return-stream.html` — pure client-side)
 - [ ] Sankey Chart Tool (`Sankey/`)
-- [ ] White Background Remover (`WhiteBackgroundRemover/`)
 - [ ] Docker / Deployment (`Dockerfile`, `railway.toml`)
 
 ---
@@ -338,6 +340,29 @@ images can be swapped or reverted without a deploy.
 
 Validate file type, size, and parameters at the top of each route before passing to processing functions. Never pass raw user input into shell commands or `eval()`.
 
+### Canvas tools — the document is native, the transport is fitted
+
+The document is the user's image at its own resolution. Nothing downscales it
+on import; the canvas is scaled for display only (`max-width: 100%` **plus**
+`height: auto`, or the canvas squashes), and coordinates come from
+`getBoundingClientRect()` so clicks stay correct at any display scale.
+
+Two things follow, and both are load-bearing:
+
+- **Region fills must use typed arrays.** A `Set` of `"x,y"` keys with an
+  object per pixel costs ~7s per click on a 2400x2400 document. A
+  `Uint8Array` visited mask with an `Int32Array` stack is ~15x faster. The old
+  800x600 import cap existed to hide this; the cap can only stay gone while the
+  fast path does.
+- **`canvas.toBlob` re-encodes much larger than the source file**, so a
+  native-resolution document must be fitted before it is POSTed.
+  `encodeForTransport()` shrinks only the copy that travels, and
+  `noticeIfFitted()` tells the user, because processing something smaller than
+  what is on screen without saying so is a silent failure.
+
+`TRANSPORT_BYTE_LIMIT` in the page must equal the routes' `10 * 1024 * 1024`
+check. A test asserts they agree — raise one and you must raise the other.
+
 ### Return Stream Digitizer — canvas sizing invariant
 
 All three stacked canvases (`chart-canvas`, `overlay-canvas`, `interaction-canvas`) must use identical CSS sizing. Always use `getBoundingClientRect()` via `eventToImageCoords()` for pixel mapping — never read `offsetX`/`offsetY` directly.
@@ -371,6 +396,10 @@ uvicorn api:app --port 8000
 cd WSR
 pytest tests/ -v
 ```
+
+`SITE_DIR` falls back to the repo root when `WSR/site/` is absent, so the home
+page and every static tool page work from a plain checkout. Inside the Docker
+image `/app/site` exists and is used instead.
 
 ---
 
@@ -421,7 +450,11 @@ console change.
 
 | Feature | Status | Modules Affected | Notes |
 |---------|--------|-----------------|-------|
+| Image workbench (tool rail) | needs review | Background Remover Pro UI, Home Page | Three mode cards replaced by one surface: tool rail + always-available Vectorize/Upscale actions; palette aligned |
+| Editor foundation (native-resolution document) | needs review | Background Remover Pro UI, Flask Image Backend | Import no longer downscales to 800x600; typed-array fills (6.9s -> 0.46s at 2400px); bounded history; fitted transport |
+| Background Remover de-duplication | needs review | Background Remover Pro UI, Flask Backend, Sankey, Docker | Removed 3 superseded tool UIs (~4,800 lines); ported Magic Wand; wired 2 inert checkboxes |
 | Unified `/<module>/admin` routes | needs review | Market, Meal, Site Admin, Shared Auth | Market moved from `/market-admin`; shared Google OAuth replaces two duplicate flows |
+| Tool page scroll fix (`script.js` guards) | needs review | Home Page, Background Remover Pro UI | Cover-page scroll hijacking no longer runs on pages without a cover |
 | Site image manager | needs review | Site Admin, Home Page, About, Docker | Drag-and-drop uploads to Sanity CDN; `/assets` resolves Sanity → committed file → transparent pixel |
 
 Status: `scoping` → `in progress` → `needs review` → `done`
@@ -429,6 +462,55 @@ Status: `scoping` → `in progress` → `needs review` → `done`
 ---
 
 ## 🔒 Learned Rules
+
+**2026-09-18 — Undefined CSS Tokens Fail Silently**: `background-remover.html`
+linked `styles.css` but not `shared.css`, where the design tokens are defined.
+Every `var(--cream)` / `var(--terra)` on the page resolved to nothing. CSS
+drops an invalid declaration without erroring, so nothing failed loudly — the
+fixed header simply had no background, and the toolbar and canvas scrolled
+straight through it with the logo floating on top. It also explains how the
+page drifted off-palette: with no tokens reachable, colours were hardcoded, and
+they drifted to stock neon because the core palette defines no
+success/warning/error. **Prevention rule**: every page links `shared.css`
+before `styles.css` — tokens first, then the rules that consume them. Never
+hardcode a hex that a token already covers; if a colour has no token, add one
+to `shared.css` and `design.md` rather than inlining it. A test now asserts
+every page can resolve the tokens it uses, that none are undefined, and that
+the tool page uses no off-palette colours. Note when writing such a test that
+searching the source for a filename also matches a comment mentioning it —
+match the `<link>` element.
+
+**2026-09-18 — Display Concern Implemented As Data Loss**: `loadImageToCanvas`
+capped every upload at 800x600 before any editing, and that downscaled canvas
+was what got POSTed. A 2400x2400 logo was edited, vectorized and upscaled as
+600x600, so "Extreme (Pixel Perfect)" traced a downscaled raster and a 2x
+upscale returned an image *smaller than the file the user uploaded*. The cap
+was really hiding a slow flood fill (a `Set` of coordinate strings, ~7s per
+click at 2400px), and uncapped full-snapshot undo (~23MB per step) depended on
+the small canvas too — so all three had to be fixed together. **Prevention
+rule**: never solve a display problem by changing the data. Fit the canvas with
+CSS, not by resampling the document. Before adding a size cap, ask what it is
+really hiding; if the honest answer is "an algorithm that is too slow", fix the
+algorithm. And when a payload must shrink to satisfy a server limit, shrink the
+copy that travels and tell the user — never the document.
+
+**2026-09-18 — Superseded UI Left In Place**: The Background Remover existed in
+four generations at once. `WSR/templates/index.html` posted to `/process`, an
+endpoint that no longer existed; `/interactive` and `/test` were live routes
+nothing linked to; `WhiteBackgroundRemover/` was reachable only from the Sankey
+page. Each new version was added without deleting the one it replaced, and
+nothing failed when a template stopped being rendered, so ~4,800 dead lines
+accumulated silently. Meanwhile the live page shipped a Magic Wand option with
+no code behind it and two checkboxes the backend ignored. **Prevention rule**:
+when a new surface replaces an old one, delete the old one in the same change —
+a route with no inbound link is dead weight, not a fallback. `test_live_surface.py`
+now enforces this: a template nothing renders, a static file nothing references,
+a Python module nothing imports, a relative link pointing at nothing, a tool
+card with no launch case, or a `fetch()` to a route that does not exist all fail
+the suite. Before shipping a control, assert it changes the output — a dropdown
+option or checkbox the backend ignores is a silent failure.
+
+**2026-09-18 — Shared Script on a Page Missing Its Elements**: `background-remover.html` loads `script.js` (the home page controller), but has no `#cover-page`. `isOnCoverPage` initialised to `true` and nothing could clear it, so the non-passive `wheel` handler called `preventDefault()` on every downward scroll — the page felt sticky. `bindEvents()` also threw on the absent `#modal-close-btn`. **Prevention rule**: any script shared across pages must null-guard every `getElementById`/`querySelector` before use, and derive state from the DOM (`this.isOnCoverPage = !!this.coverPage`) rather than assuming a page shape. Never register a non-passive `wheel`/`touchmove` listener that can `preventDefault()` unless the element it depends on is present.
 
 **2026-05-06 — Schema Migration**: Added columns to an existing table by only updating the SQLAlchemy model. `db.create_all()` creates missing tables but never alters existing ones, so the new columns were absent in production → `UndefinedColumn` crash on first request. **Prevention rule**: Any time a column is added to an existing model, also append an `ALTER TABLE … ADD COLUMN` statement to the `_migrations` list in `WSR/app.py`. The try/except wrapper makes it safe to re-run (silently ignored if column already exists).
 
